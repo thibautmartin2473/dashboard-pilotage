@@ -78,7 +78,10 @@ async function fetchVercelSignal(repo) {
   const token = process.env.VERCEL_TOKEN;
   if (!token) throw new Error('VERCEL_TOKEN missing');
 
-  const res = await fetch(`https://api.vercel.com/v6/deployments?projectId=${repo.ref}&limit=1`, {
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const teamParam = teamId ? `&teamId=${teamId}` : '';
+
+  const res = await fetch(`https://api.vercel.com/v6/deployments?projectId=${repo.ref}&limit=1${teamParam}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
