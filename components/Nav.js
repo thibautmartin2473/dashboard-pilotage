@@ -14,6 +14,9 @@ export default function Nav() {
           <Link href="/map" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             Carte d&apos;interactions
           </Link>
+          <Link href="/brain" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+            Claude Brain
+          </Link>
         </nav>
       </div>
     </header>
