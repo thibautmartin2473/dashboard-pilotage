@@ -6,11 +6,14 @@
 //
 // Variables d'environnement requises, à définir dans ".claude/hook.env" (à
 // côté de ce script, gitignored — voir .claude/hook.env.example) :
-//   DASHBOARD_URL              ex: https://dashboard-pilotage.vercel.app
+//   DASHBOARD_URL              ex: https://dashboard-pilotage-omega.vercel.app
 //   HOOK_SECRET                doit correspondre à HOOK_SECRET côté dashboard
 //   DASHBOARD_PROJECT_SLUG     ex: edhec-ai / stage / spircle
-// Optionnelle :
+// Optionnelles :
 //   DASHBOARD_EXPO_USED=1      à définir dans les repos Spircle qui utilisent Expo Go
+//   VERCEL_BYPASS_SECRET       "Protection Bypass for Automation" de Vercel —
+//                              requis tant que Deployment Protection est activée
+//                              sur le projet dashboard-pilotage
 //
 // Si l'une des 3 variables requises manque, le script ne fait rien (ne bloque
 // jamais la fin d'une session Claude Code).
@@ -70,14 +73,26 @@ async function main() {
     expo_used: process.env.DASHBOARD_EXPO_USED === '1',
   };
 
+  const headers = { 'Content-Type': 'application/json', 'x-hook-secret': hookSecret };
+  if (process.env.VERCEL_BYPASS_SECRET) {
+    headers['x-vercel-protection-bypass'] = process.env.VERCEL_BYPASS_SECRET;
+  }
+
   try {
-    await fetch(`${dashboardUrl.replace(/\/$/, '')}/api/hooks/session-end`, {
+    const res = await fetch(`${dashboardUrl.replace(/\/$/, '')}/api/hooks/session-end`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-hook-secret': hookSecret },
+      headers,
       body: JSON.stringify(body),
     });
-  } catch {
-    // jamais faire échouer la session Claude Code pour un problème réseau
+    if (!res.ok) {
+      // Ne bloque jamais la session, mais un échec silencieux ici (secret
+      // expiré, Deployment Protection Vercel, 500 côté Supabase) a déjà pu
+      // stopper tout l'envoi de données sans aucun signal.
+      const text = await res.text().catch(() => '');
+      console.error(`[claude-hook-session-end] POST failed: ${res.status} ${text.slice(0, 200)}`);
+    }
+  } catch (err) {
+    console.error(`[claude-hook-session-end] POST error: ${err.message}`);
   }
 
   process.exit(0);

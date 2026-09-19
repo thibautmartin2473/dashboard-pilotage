@@ -65,7 +65,9 @@ export async function POST(request) {
     return NextResponse.json({ error: sessionError.message }, { status: 500 });
   }
 
-  await supabaseAdmin.from('activity_signals').upsert(
+  const warnings = [];
+
+  const { error: signalError } = await supabaseAdmin.from('activity_signals').upsert(
     {
       project_id: project.id,
       source: 'claude_code',
@@ -74,9 +76,13 @@ export async function POST(request) {
     },
     { onConflict: 'project_id,source' }
   );
+  if (signalError) {
+    console.error(`[hooks/session-end] activity_signals(claude_code) failed: ${signalError.message}`);
+    warnings.push(`activity_signals(claude_code): ${signalError.message}`);
+  }
 
   if (expo_used) {
-    await supabaseAdmin.from('activity_signals').upsert(
+    const { error: expoError } = await supabaseAdmin.from('activity_signals').upsert(
       {
         project_id: project.id,
         source: 'expo',
@@ -85,18 +91,26 @@ export async function POST(request) {
       },
       { onConflict: 'project_id,source' }
     );
+    if (expoError) {
+      console.error(`[hooks/session-end] activity_signals(expo) failed: ${expoError.message}`);
+      warnings.push(`activity_signals(expo): ${expoError.message}`);
+    }
   }
 
   if (Array.isArray(milestone_updates)) {
     for (const update of milestone_updates) {
       if (!update?.label || !update?.status) continue;
-      await supabaseAdmin
+      const { error: milestoneError } = await supabaseAdmin
         .from('milestones')
         .update({ status: update.status, updated_by: 'hook', updated_at: nowIso })
         .eq('project_id', project.id)
         .eq('label', update.label);
+      if (milestoneError) {
+        console.error(`[hooks/session-end] milestone "${update.label}" update failed: ${milestoneError.message}`);
+        warnings.push(`milestone "${update.label}": ${milestoneError.message}`);
+      }
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, warnings });
 }

@@ -46,8 +46,18 @@ export async function GET(request) {
 
       results.push({ repo: repo.label ?? repo.ref, ok: true });
     } catch (err) {
+      console.error(`[cron/refresh] ${repo.label ?? repo.ref}: ${err.message}`);
       results.push({ repo: repo.label ?? repo.ref, ok: false, error: err.message });
     }
+  }
+
+  const failures = results.filter((r) => !r.ok);
+  if (results.length > 0 && failures.length === results.length) {
+    // Tout a échoué (ex: GITHUB_TOKEN/VERCEL_TOKEN révoqués) : un 200 ici
+    // rendrait la panne invisible pour le monitoring Vercel Cron, basé sur
+    // le code HTTP.
+    console.error(`[cron/refresh] all ${results.length} repos failed`);
+    return NextResponse.json({ results }, { status: 502 });
   }
 
   return NextResponse.json({ results });
