@@ -15,8 +15,9 @@ export default function ProjectDetailClient({ initialProject }) {
     try {
       const fresh = await getProjectBySlug(initialProject.slug);
       if (fresh) setProject(fresh);
-    } catch {
+    } catch (err) {
       // on garde l'état précédent si le refetch échoue
+      console.error('project refresh failed', err);
     }
   }, [initialProject.slug]);
 

@@ -12,8 +12,9 @@ export default function OverviewClient({ initialProjects }) {
     try {
       const fresh = await getAllProjects();
       setProjects(fresh);
-    } catch {
+    } catch (err) {
       // on laisse l'état précédent affiché si le refetch échoue
+      console.error('overview refresh failed', err);
     }
   }, []);
 

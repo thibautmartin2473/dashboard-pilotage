@@ -35,8 +35,12 @@ export default function MilestoneChecklist({ milestones, compact = false, editab
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (!res.ok) throw new Error('update failed');
-    } catch {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `update failed: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('milestone update failed', err);
       setOverrides((prev) => ({ ...prev, [milestone.id]: current }));
     } finally {
       setPendingId(null);

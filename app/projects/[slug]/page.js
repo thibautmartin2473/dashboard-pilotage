@@ -8,5 +8,8 @@ export default async function ProjectPage({ params }) {
 
   if (!project) notFound();
 
-  return <ProjectDetailClient initialProject={project} />;
+  // key={slug} force un remount complet au changement de projet — sans ça,
+  // React réutilise l'instance (back/forward entre deux pages projet) et
+  // useState(initialProject) garde l'ancien projet affiché.
+  return <ProjectDetailClient key={slug} initialProject={project} />;
 }
