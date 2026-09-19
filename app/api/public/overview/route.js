@@ -6,7 +6,15 @@ import { corsHeaders } from '@/lib/cors';
 // Tour de Contrôle (Artifact Claude) pour la vue fusionnée vie + projets.
 // Rien de sensible ici — pas de fichiers touchés, pas de contenu de notes.
 export async function GET() {
-  const projects = await getAllProjects();
+  let projects;
+  try {
+    projects = await getAllProjects();
+  } catch (err) {
+    // Sans try/catch ici, une erreur Supabase renvoie la page d'erreur Next
+    // par défaut sans corsHeaders — invisible pour l'artifact (échec CORS
+    // opaque côté fetch() au lieu du vrai message d'erreur).
+    return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
+  }
 
   const summary = projects.map((project) => {
     const sessions = (project.sessions ?? [])

@@ -30,5 +30,9 @@ export function proxy(request) {
 }
 
 export const config = {
-  matcher: ['/((?!api/cron|api/hooks|_next/static|_next/image|favicon.ico).*)'],
+  // api/public et api/brain-notes (POST) sont appelés cross-origin depuis des
+  // Artifacts Claude publics (Tour de Contrôle, Spircle Control), qui ne
+  // peuvent pas fournir de Basic Auth — doivent rester exclus, sinon le
+  // fetch() de l'artifact reçoit un 401 (bug constaté le 2026-09-17).
+  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico).*)'],
 };

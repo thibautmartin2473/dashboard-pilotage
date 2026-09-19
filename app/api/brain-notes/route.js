@@ -29,35 +29,63 @@ export async function GET(request) {
   return NextResponse.json({ notes: data ?? [] });
 }
 
-// POST est appelé depuis l'UI du dashboard (même origine, pas de secret
-// requis — même logique que PATCH /api/milestones/[id]).
+const MAX_CONTENT_LENGTH = 4000;
+const MAX_PENDING_NOTES = 200;
+
+// POST est appelé cross-origin depuis des Artifacts Claude publics (Tour de
+// Contrôle, Spircle Control) sans authentification possible — un secret ici
+// serait visible dans le code source de l'artifact, donc pas une vraie
+// protection. On borne plutôt la taille et le volume de notes en attente
+// pour limiter l'abus (flood, coût Supabase), et on renvoie corsHeaders sur
+// TOUTES les réponses (pas seulement le succès) pour que l'artifact puisse
+// lire le message d'erreur réel au lieu d'un échec CORS opaque.
 export async function POST(request) {
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
+    return NextResponse.json({ error: 'invalid JSON body' }, { status: 400, headers: corsHeaders });
   }
 
   const { content, project_slug } = body;
-  if (!content || !content.trim()) {
-    return NextResponse.json({ error: 'content is required' }, { status: 400 });
+  const trimmed = typeof content === 'string' ? content.trim() : '';
+  if (!trimmed) {
+    return NextResponse.json({ error: 'content is required' }, { status: 400, headers: corsHeaders });
+  }
+  if (trimmed.length > MAX_CONTENT_LENGTH) {
+    return NextResponse.json(
+      { error: `content too long (max ${MAX_CONTENT_LENGTH} chars)` },
+      { status: 413, headers: corsHeaders }
+    );
   }
 
   let supabaseAdmin;
   try {
     supabaseAdmin = getSupabaseAdmin();
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 503 });
+    return NextResponse.json({ error: err.message }, { status: 503, headers: corsHeaders });
+  }
+
+  const { count, error: countError } = await supabaseAdmin
+    .from('brain_notes')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'new');
+
+  if (countError) return NextResponse.json({ error: countError.message }, { status: 500, headers: corsHeaders });
+  if ((count ?? 0) >= MAX_PENDING_NOTES) {
+    return NextResponse.json(
+      { error: 'too many pending notes, triage some first' },
+      { status: 429, headers: corsHeaders }
+    );
   }
 
   const { data, error } = await supabaseAdmin
     .from('brain_notes')
-    .insert({ content: content.trim(), project_slug: project_slug || null })
+    .insert({ content: trimmed, project_slug: project_slug || null })
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
 
   return NextResponse.json({ note: data }, { headers: corsHeaders });
 }
