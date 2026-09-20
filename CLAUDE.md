@@ -17,8 +17,9 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   Spircle ; pas encore installé sur ce repo.
 - **Claude Brain** : table `brain_notes`, `GET`/`POST /api/brain-notes`,
   `PATCH /api/brain-notes/[id]` (voir `../../claude.brain/CLAUDE.md`).
-- **API publique** `GET /api/public/overview` (CORS ouvert), lue par l'artifact
-  Tour de Contrôle.
+- **API publique** `GET /api/public/overview` (CORS ouvert). Un artifact ne
+  pouvant pas l'appeler (règle de la plateforme), Claude en copie l'instantané dans
+  la base de l'artifact Tour de Contrôle au wrap-up (`../../Tools/artifact-sync/`).
 - **Rafraîchissement** : cron Vercel quotidien `/api/cron/refresh`.
 - **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public et
   brain-notes. RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
