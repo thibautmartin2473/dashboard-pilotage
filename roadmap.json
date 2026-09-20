@@ -5,9 +5,33 @@
     "repo_path_local": "C:\\Users\\thiba\\CLAUDE.GLOBAL\\Apps\\dashboard-pilotage"
   },
   "milestones": [
-    { "label": "Suivi automatique de l'avancement du dashboard (roadmap.json vers jalons)", "status": "done" },
-    { "label": "Schéma de la base consultable par l'agent de développement", "status": "done" },
-    { "label": "Refonte de la lecture des idées (page /brain)", "status": "todo" },
-    { "label": "Résumés de session : vérifier la remontée du hook (EDHEC AI, Stage)", "status": "todo" }
+    {
+      "label": "Suivi automatique de l'avancement du dashboard (roadmap.json vers jalons)",
+      "status": "done"
+    },
+    {
+      "label": "Schéma de la base consultable par l'agent de développement",
+      "status": "done"
+    },
+    {
+      "label": "Refonte de la lecture des idées (page /brain)",
+      "status": "todo"
+    },
+    {
+      "label": "Résumés de session : vérifier la remontée du hook (EDHEC AI, Stage)",
+      "status": "todo"
+    },
+    {
+      "label": "Accueil : synthèse du jour et panneaux de tâches (table à créer)",
+      "status": "in_progress"
+    },
+    {
+      "label": "Accueil : grille des apps cliquable et installation mobile",
+      "status": "todo"
+    },
+    {
+      "label": "Idées Instagram : import local et suggestions de next steps (table à créer)",
+      "status": "todo"
+    }
   ]
 }
