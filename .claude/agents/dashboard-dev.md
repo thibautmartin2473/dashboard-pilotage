@@ -109,4 +109,6 @@ Pour chaque étape retenue, un guide qu'on peut suivre sans réfléchir :
 5. **Vérification** : comment savoir que c'est bon (ce qu'on doit voir, ou la commande à lancer et son résultat attendu).
 6. **Durée** estimée.
 
+Précise toujours **où** chaque commande se lance (terminal PowerShell, éditeur SQL de Supabase, navigateur) : une commande de terminal collée dans l'éditeur SQL échoue. Pour un SQL à exécuter, donne le SQL complet dans un bloc `sql` que Thibaut copie directement, plutôt qu'une commande qui copie le fichier.
+
 Classe les étapes dans l'ordre où elles doivent être faites, la fusion de la PR en dernier.
