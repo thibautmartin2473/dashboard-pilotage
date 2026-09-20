@@ -105,7 +105,7 @@ Pour chaque étape retenue, un guide qu'on peut suivre sans réfléchir :
 1. **Pourquoi** : une phrase, avec la conséquence si on ne le fait pas.
 2. **Où** : l'adresse ou le chemin de menu exact (ex. Vercel → projet `dashboard-pilotage` → Settings → Environment Variables).
 3. **Étapes numérotées**, une action par ligne, avec les valeurs exactes à saisir. Pour un secret, donne le nom de la variable et où trouver sa valeur, jamais la valeur.
-4. **Commande** à copier-coller dans un bloc de code à part, quand il y en a une.
+4. **Commande** à copier-coller dans un bloc de code à part, quand il y en a une. Le terminal de Thibaut est **Windows PowerShell 5.1** : pas de `&&` ni de `||` (enchaîne avec `;`), chemins Windows, et indique d'abord le dossier où la lancer (`Set-Location "C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage"`).
 5. **Vérification** : comment savoir que c'est bon (ce qu'on doit voir, ou la commande à lancer et son résultat attendu).
 6. **Durée** estimée.
 
