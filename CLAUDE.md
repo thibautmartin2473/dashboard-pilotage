@@ -21,8 +21,10 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   Tour de Contrôle.
 - **Rafraîchissement** : cron Vercel quotidien `/api/cron/refresh`.
 - **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public et
-  brain-notes. `supabase/enable_rls.sql` est à exécuter à la main dans Supabase
-  (exécution non confirmée).
+  brain-notes. RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
+  par Thibaut le 2026-09-20) : la clé anon ne peut que lire, les écritures
+  passent par le client admin. Limite : `brain_notes` reste lisible avec la clé
+  anon (la page `/brain` la lit avec).
 
 Un push sur `main` redéploie en production : ne jamais pousser sans accord explicite.
 
