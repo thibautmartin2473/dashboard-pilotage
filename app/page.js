@@ -18,7 +18,7 @@ import { supabaseConfigured } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [projects, { tasks, suggestions, ideas, events, mails, apps, settings }] = await Promise.all([
+  const [projects, { tasks, suggestions, ideas, events, mails, apps, settings, notifications }] = await Promise.all([
     getAllProjects(),
     loadHomePanels(),
   ]);
@@ -52,7 +52,7 @@ export default async function HomePage() {
     agenda: <AgendaPanel week={week} state={events} now={now.getTime()} />,
     ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} />,
     suggestions: <SuggestionsPanel suggestions={suggestions.data} state={suggestions} projects={slim} />,
-    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} />,
+    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} notifications={notifications} />,
     mails: <MailsPanel state={mails} savedFilter={mailFilter} settings={settings} now={now.getTime()} />,
     apps: <AppsPanel apps={apps.data} state={apps} projects={slim} />,
   };
@@ -75,6 +75,9 @@ export default async function HomePage() {
             {summary.overdueCount} en retard
           </span>
         )}
+        <span data-testid="notification-count">
+          {notifications.data ? `${notifications.data.length} notification(s)` : 'notifications indisponibles'}
+        </span>
         {week?.conflicts > 0 && (
           <span className="font-medium text-red-600 dark:text-red-400">{week.conflicts} conflit(s) d&apos;agenda</span>
         )}

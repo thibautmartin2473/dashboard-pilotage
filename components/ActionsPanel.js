@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import NotificationsPanel from './NotificationsPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, mutedClass, useAction } from './ui';
 import { addTask, completeTask } from '@/app/actions';
@@ -161,7 +162,7 @@ function TaskRow({ task, first, last, today, projects }) {
 // Actions à faire : compteurs (notifications), puis les tâches par section. Les événements du jour
 // s'ajoutent à la section « Aujourd'hui » (lecture seule, ils se modifient dans l'agenda) : on n'écrit
 // « Rien ici » que si le jour n'a ni tâche ni événement.
-export default function ActionsPanel({ sections, todayEvents, projects, state, today }) {
+export default function ActionsPanel({ sections, todayEvents, projects, state, today, notifications }) {
   const events = todayEvents ?? [];
   const count = (s) => (s === 'today' ? sections?.today.length + events.length : sections?.[s].length);
 
@@ -174,6 +175,7 @@ export default function ActionsPanel({ sections, todayEvents, projects, state, t
           </span>
         ))}
       </p>
+      <NotificationsPanel state={notifications} />
       <AddTask projects={projects} />
       {SECTIONS.map((s) => {
         const list = sections?.[s] ?? [];
