@@ -2,6 +2,7 @@ import ActionsPanel from '@/components/ActionsPanel';
 import AgendaPanel from '@/components/AgendaPanel';
 import AppsPanel from '@/components/AppsPanel';
 import AutoRefresh from '@/components/AutoRefresh';
+import CommandBox from '@/components/CommandBox';
 import IdeasPanel from '@/components/IdeasPanel';
 import LayoutEditor from '@/components/LayoutEditor';
 import MailsPanel from '@/components/MailsPanel';
@@ -83,6 +84,10 @@ export default async function HomePage() {
           Sans activité depuis plus de {STALE_DAYS} j : {summary.staleProjects.join(', ') || 'aucun'}
         </span>
       </p>
+
+      <div className="mt-4">
+        <CommandBox />
+      </div>
 
       <div className="mt-3">
         <LayoutEditor layout={layout} settings={settings} />
