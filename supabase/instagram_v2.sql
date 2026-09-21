@@ -54,7 +54,7 @@ alter table instagram_saves
 create or replace function instagram_saves_search_update() returns trigger
 language plpgsql
 set search_path = pg_catalog, public
-as $
+as $$
 begin
   new.search :=
     setweight(to_tsvector('public.french_unaccent'::regconfig, concat_ws(' ',
