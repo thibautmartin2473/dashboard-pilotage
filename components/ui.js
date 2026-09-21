@@ -8,11 +8,12 @@ import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
 
 const BUTTON =
-  'rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900';
-const FIELD = 'rounded-lg border border-zinc-300 bg-white px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900';
+  'rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm font-medium text-zinc-100 hover:border-[var(--color-accent)] hover:bg-zinc-800 disabled:opacity-50';
+const FIELD =
+  'rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-accent)]';
 
 export const fieldClass = FIELD;
-export const mutedClass = 'text-xs text-zinc-500 dark:text-zinc-400';
+export const mutedClass = 'tabular font-mono text-[11px] text-zinc-400';
 
 // Lance une Server Action : `pending` pendant l'appel, `error` si elle renvoie
 // { error } ou lève. Jamais d'échec silencieux : l'erreur s'affiche avec <ErrorLine>.
@@ -63,7 +64,7 @@ export function ToggleButton({ pressed, className = '', ...props }) {
     <button
       type="button"
       aria-pressed={pressed}
-      className={`${BUTTON} ${pressed ? 'border-zinc-900 bg-zinc-900 font-semibold text-white hover:bg-zinc-800 dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200' : ''} ${className}`}
+      className={`${BUTTON} ${pressed ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] font-semibold text-[var(--color-accent)]' : ''} ${className}`}
       {...props}
     />
   );

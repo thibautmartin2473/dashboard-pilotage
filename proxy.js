@@ -31,9 +31,10 @@ export function proxy(request) {
 
 export const config = {
   // privacy.html et terms.html : pages légales publiques exigées par Google pour l'écran de consentement OAuth.
-  // api/public et api/brain-notes (POST) sont appelés cross-origin depuis des
-  // Artifacts Claude publics (Tour de Contrôle, Spircle Control), qui ne
-  // peuvent pas fournir de Basic Auth — doivent rester exclus, sinon le
-  // fetch() de l'artifact reçoit un 401 (bug constaté le 2026-09-17).
+  // api/public et api/brain-notes (POST) sont appelés cross-origin depuis
+  // l'artifact Claude « Spircle Control », qui ne peut pas fournir de Basic
+  // Auth — doivent rester exclus, sinon son fetch() reçoit un 401 (bug
+  // constaté le 2026-09-17). « Tour de Contrôle » figurait ici jusqu'au
+  // 2026-09-21 : il a été supprimé, le site est le seul tableau de bord.
   matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
 };
