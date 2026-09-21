@@ -23,7 +23,7 @@
     },
     {
       "label": "Accueil : synthèse du jour et panneaux de tâches (table à créer)",
-      "status": "blocked"
+      "status": "done"
     },
     {
       "label": "Accueil : grille des apps cliquable et installation mobile",
@@ -31,7 +31,7 @@
     },
     {
       "label": "Idées Instagram : import local et suggestions de next steps (table à créer)",
-      "status": "blocked"
+      "status": "done"
     }
   ]
 }
