@@ -10,6 +10,12 @@ import { timeAgo, formatDuration } from '@/lib/format';
 
 export default function ProjectDetailClient({ initialProject }) {
   const [project, setProject] = useState(initialProject);
+  // Nouvelles données du serveur (après une écriture ou router.refresh) : on les adopte.
+  const [seen, setSeen] = useState(initialProject);
+  if (seen !== initialProject) {
+    setSeen(initialProject);
+    setProject(initialProject);
+  }
 
   const refresh = useCallback(async () => {
     try {
@@ -48,7 +54,7 @@ export default function ProjectDetailClient({ initialProject }) {
       <section className="mt-8">
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Jalons</h2>
         <div className="mt-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-          <MilestoneChecklist milestones={project.milestones} editable />
+          <MilestoneChecklist projectId={project.id} milestones={project.milestones} />
         </div>
       </section>
 

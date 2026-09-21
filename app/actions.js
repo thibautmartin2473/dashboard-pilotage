@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { BUCKETS, isMissingTable, todayParis } from '@/lib/home';
+import { nextPosition } from '@/lib/db-ops';
+import { BUCKETS, isMissingTable } from '@/lib/home';
 
 // Server Actions de l'accueil. Elles passent par la page `/`, donc derrière le
 // Basic Auth de proxy.js. Retour : { ok: true } ou { error } (jamais d'échec silencieux).
@@ -40,7 +41,7 @@ export async function addTask({ title, bucket, due_date, project_slug }) {
     must(due_date === null || /^\d{4}-\d{2}-\d{2}$/.test(due_date), 'Date invalide');
     const { error } = await db
       .from('tasks')
-      .insert({ title, bucket, due_date, project_slug: project_slug || null, source: 'manual' });
+      .insert({ title, bucket, due_date, project_slug: project_slug || null, source: 'manual', ...(await nextPosition(db, 'tasks')) });
     if (error) throw error;
   });
 }
@@ -49,20 +50,6 @@ export async function completeTask(id) {
   return run(async (db) => {
     must(UUID.test(id), 'Identifiant invalide');
     await touch(db.from('tasks').update({ done_at: new Date().toISOString() }).eq('id', id).is('done_at', null));
-  });
-}
-
-// Quitter « Aujourd'hui » efface aussi une échéance du jour ou dépassée, sinon
-// la tâche y reviendrait aussitôt.
-export async function moveTask(id, bucket) {
-  return run(async (db) => {
-    must(UUID.test(id), 'Identifiant invalide');
-    must(BUCKETS.includes(bucket), 'Liste invalide');
-    await touch(db.from('tasks').update({ bucket }).eq('id', id));
-    if (bucket !== 'today') {
-      const { error } = await db.from('tasks').update({ due_date: null }).eq('id', id).lte('due_date', todayParis());
-      if (error) throw error;
-    }
   });
 }
 
@@ -78,7 +65,7 @@ export async function acceptSuggestion(id) {
     );
     const { error } = await db
       .from('tasks')
-      .insert({ title: s.text, bucket: 'next_session', project_slug: s.project_slug, source: 'suggestion' });
+      .insert({ title: s.text, bucket: 'next_session', project_slug: s.project_slug, source: 'suggestion', ...(await nextPosition(db, 'tasks')) });
     if (error) {
       await db.from('suggestions').update({ status: 'new' }).eq('id', id);
       throw error;

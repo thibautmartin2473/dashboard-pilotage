@@ -1,34 +1,64 @@
-import Link from 'next/link';
-import OverviewClient from '@/components/OverviewClient';
-import Panel from '@/components/Panel';
-import { AgendaPanel, MailsPanel } from '@/components/HomeAgenda';
-import { AddTask, SuggestionsPanel, TaskPanel } from '@/components/HomeTasks';
-import { getAllProjects, lastActivityAt } from '@/lib/data';
+import ActionsPanel from '@/components/ActionsPanel';
+import AgendaPanel from '@/components/AgendaPanel';
+import AppsPanel from '@/components/AppsPanel';
+import AutoRefresh from '@/components/AutoRefresh';
+import IdeasPanel from '@/components/IdeasPanel';
+import LayoutEditor from '@/components/LayoutEditor';
+import MailsPanel from '@/components/MailsPanel';
+import { SuggestionsPanel } from '@/components/HomeTasks';
+import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
-import { STALE_DAYS, buildAgenda, splitTasks, summarize, todayParis } from '@/lib/home';
+import {
+  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, resolveLayout, splitTasks, summarize, todayEvents, todayLine, todayParis,
+} from '@/lib/home';
 import { supabaseConfigured } from '@/lib/supabase';
-import { timeAgo } from '@/lib/format';
 
-// Les tâches sont lues à chaque requête (données personnelles, jamais figées au build).
+// Les données personnelles sont lues à chaque requête (jamais figées au build).
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [projects, { tasks, suggestions, ideas, events, mails }] = await Promise.all([
+  const [projects, { tasks, suggestions, ideas, events, mails, apps, settings }] = await Promise.all([
     getAllProjects(),
     loadHomePanels(),
   ]);
   const now = new Date();
   const today = todayParis(now);
-  const agenda = events.data ? buildAgenda(events.data, now) : null;
-  const panels = tasks.data && splitTasks(tasks.data, today);
+  const week = events.data ? buildWeek(events.data, now) : null;
+  const todayList = todayEvents(week);
+  const sections = tasks.data && splitTasks(tasks.data, today);
   const summary = summarize({
     tasks: tasks.data ?? null,
     projects: projects.map((p) => ({ name: p.name, lastActivity: lastActivityAt(p) })),
     today,
   });
 
+  // Données publiques des projets, allégées pour le client (les sessions n'ont rien à faire dans les props).
+  const slim = projects.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    done: p.milestones.filter((m) => m.status === 'done').length,
+    total: p.milestones.length,
+    status: projectStatus(p),
+  }));
+
+  const setting = (key) => settings.data?.find((row) => row.key === key)?.value;
+  const layout = resolveLayout(setting('home_layout'));
+  const filter = setting('mail_filter');
+  const mailFilter = MAIL_SOURCES.includes(filter) ? filter : 'all';
+
+  const panels = {
+    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} />,
+    ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} />,
+    suggestions: <SuggestionsPanel suggestions={suggestions.data} state={suggestions} projects={slim} />,
+    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} />,
+    mails: <MailsPanel state={mails} savedFilter={mailFilter} settings={settings} now={now.getTime()} />,
+    apps: <AppsPanel apps={apps.data} state={apps} projects={slim} />,
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <AutoRefresh />
       {!supabaseConfigured && (
         <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
           Mode démo : Supabase n&apos;est pas configuré (variables <code>NEXT_PUBLIC_SUPABASE_URL</code>/
@@ -38,69 +68,34 @@ export default async function HomePage() {
 
       <h1 className="text-2xl font-semibold">Accueil</h1>
       <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-600 dark:text-zinc-400" data-testid="summary">
-        <span>
-          {summary.todayCount === null ? 'Tâches indisponibles' : `${summary.todayCount} tâche(s) aujourd'hui`}
-        </span>
+        <span>{todayLine(todayList ? todayList.length : null, sections ? sections.today.length : null)}</span>
         {summary.overdueCount !== null && (
           <span className={summary.overdueCount ? 'font-medium text-red-600 dark:text-red-400' : ''}>
             {summary.overdueCount} en retard
           </span>
         )}
-        {agenda?.conflicts > 0 && (
-          <span className="font-medium text-red-600 dark:text-red-400">{agenda.conflicts} conflit(s) d&apos;agenda</span>
+        {week?.conflicts > 0 && (
+          <span className="font-medium text-red-600 dark:text-red-400">{week.conflicts} conflit(s) d&apos;agenda</span>
         )}
-        {agenda?.next && <span>Prochain événement à {agenda.next.time}</span>}
+        {week?.next && <span>Prochain événement à {week.next.time}</span>}
         <span>Dernier projet actif : {summary.latestProject ?? 'aucun'}</span>
         <span>
           Sans activité depuis plus de {STALE_DAYS} j : {summary.staleProjects.join(', ') || 'aucun'}
         </span>
       </p>
 
-      <div className="mt-4">
-        <AddTask projects={projects.map(({ slug, name }) => ({ slug, name }))} disabled={Boolean(tasks.error)} />
+      <div className="mt-3">
+        <LayoutEditor layout={layout} settings={settings} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <TaskPanel title="Aujourd'hui" panel="today" tasks={panels?.today} state={tasks} today={today} />
-        <AgendaPanel agenda={agenda} state={events} />
-        <TaskPanel title="Actions à faire" panel="inbox" tasks={panels?.inbox} state={tasks} today={today} />
-        <MailsPanel state={mails} />
-
-        <Panel title="Idées" count={ideas.data?.length} state={ideas} file="brain_notes.sql">
-          {ideas.data?.length ? (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
-              {ideas.data.map((n) => (
-                <li key={n.id} className="py-2">
-                  <p className="line-clamp-2 break-words text-sm">{n.content}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {n.project_slug && `${n.project_slug} · `}
-                    {timeAgo(n.created_at)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucune idée en attente.</p>
-          )}
-          <Link href="/brain" className="mt-2 inline-block text-sm underline">
-            Toutes les idées
-          </Link>
-        </Panel>
-
-        <TaskPanel
-          title="Prochaine session"
-          panel="next_session"
-          tasks={panels?.next_session}
-          state={tasks}
-          today={today}
-        />
-
-        <SuggestionsPanel suggestions={suggestions.data} state={suggestions} />
-      </div>
-
-      <h2 className="mt-8 text-sm font-semibold">Mes apps</h2>
-      <div className="mt-3">
-        <OverviewClient initialProjects={projects} compact />
+        {layout.order
+          .filter((id) => !layout.hidden.includes(id))
+          .map((id) => (
+            <div key={id} className={`min-w-0 ${HOME_PANELS[id].wide ? 'md:col-span-2' : ''}`}>
+              {panels[id]}
+            </div>
+          ))}
       </div>
     </div>
   );
