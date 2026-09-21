@@ -2,76 +2,117 @@
 
 import { useState } from 'react';
 import { MILESTONE_STATUSES, STATUS_LABELS } from '@/lib/constants';
-import StatusBadge from './StatusBadge';
+import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, useAction } from './ui';
+import { addMilestone, deleteMilestone, moveMilestone, updateMilestone } from '@/app/edit-actions';
 
-const STATUS_DOT = {
-  todo: 'border-zinc-400',
-  in_progress: 'border-amber-500 bg-amber-500',
-  blocked: 'border-red-500 bg-red-500',
-  done: 'border-emerald-500 bg-emerald-500',
-};
-
-function nextStatus(status) {
-  const idx = MILESTONE_STATUSES.indexOf(status);
-  return MILESTONE_STATUSES[(idx + 1) % MILESTONE_STATUSES.length];
-}
-
-export default function MilestoneChecklist({ milestones, compact = false, editable = false }) {
-  // Overrides optimistes le temps que l'API réponde — le prop `milestones`
-  // (rafraîchi par le parent en temps réel) reste la source de vérité.
-  const [overrides, setOverrides] = useState({});
-  const [pendingId, setPendingId] = useState(null);
-
-  async function cycleStatus(milestone) {
-    if (!editable || pendingId) return;
-    const current = overrides[milestone.id] ?? milestone.status;
-    const newStatus = nextStatus(current);
-    setPendingId(milestone.id);
-    setOverrides((prev) => ({ ...prev, [milestone.id]: newStatus }));
-
-    try {
-      const res = await fetch(`/api/milestones/${milestone.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `update failed: ${res.status}`);
-      }
-    } catch (err) {
-      console.error('milestone update failed', err);
-      setOverrides((prev) => ({ ...prev, [milestone.id]: current }));
-    } finally {
-      setPendingId(null);
-    }
-  }
-
-  const resolved = milestones.map((m) => ({ ...m, status: overrides[m.id] ?? m.status }));
-  const list = compact ? resolved.slice(0, 5) : resolved;
+function MilestoneRow({ milestone, first, last }) {
+  const { pending, error, run } = useAction();
+  const [renaming, setRenaming] = useState(false);
+  const [label, setLabel] = useState(milestone.label);
 
   return (
-    <ul className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      {list.map((m) => (
-        <li key={m.id} className="flex items-center gap-2 text-sm">
-          <button
-            type="button"
-            disabled={!editable || pendingId === m.id}
-            onClick={() => cycleStatus(m)}
-            title={editable ? `Statut : ${STATUS_LABELS[m.status]} — cliquer pour changer` : STATUS_LABELS[m.status]}
-            className={`h-3.5 w-3.5 shrink-0 rounded-full border-2 ${STATUS_DOT[m.status] ?? STATUS_DOT.todo} ${
-              editable ? 'cursor-pointer' : 'cursor-default'
-            } ${pendingId === m.id ? 'opacity-50' : ''}`}
-          />
-          <span className={`flex-1 truncate ${m.status === 'done' ? 'text-zinc-400 line-through' : ''}`}>
-            {m.label}
+    <li className={`py-2 ${pending ? 'opacity-50' : ''}`}>
+      {renaming ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(async () => {
+              const result = await updateMilestone({ id: milestone.id, label });
+              if (!result.error) setRenaming(false);
+              return result;
+            });
+          }}
+          className="flex flex-col gap-2 sm:flex-row"
+        >
+          <Field value={label} onChange={(e) => setLabel(e.target.value)} maxLength={200} required aria-label="Libellé du jalon" className="flex-1" />
+          <Button type="submit" disabled={pending}>
+            Enregistrer
+          </Button>
+          <Button
+            disabled={pending}
+            onClick={() => {
+              setLabel(milestone.label);
+              setRenaming(false);
+            }}
+          >
+            Annuler
+          </Button>
+        </form>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={milestone.status}
+            disabled={pending}
+            onChange={(e) => run(() => updateMilestone({ id: milestone.id, status: e.target.value }))}
+            aria-label={`Statut : ${milestone.label}`}
+          >
+            {MILESTONE_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
+          </Select>
+          <span className={`min-w-0 flex-1 basis-40 break-words text-sm ${milestone.status === 'done' ? 'text-zinc-400 line-through' : ''}`}>
+            {milestone.label}
           </span>
-          {!compact && <StatusBadge status={m.status} />}
-        </li>
-      ))}
-      {compact && resolved.length > 5 && (
-        <li className="text-xs text-zinc-400">+ {resolved.length - 5} autres</li>
+          <IconButton label={`Monter : ${milestone.label}`} disabled={pending || first} onClick={() => run(() => moveMilestone(milestone.id, 'up'))}>
+            ↑
+          </IconButton>
+          <IconButton label={`Descendre : ${milestone.label}`} disabled={pending || last} onClick={() => run(() => moveMilestone(milestone.id, 'down'))}>
+            ↓
+          </IconButton>
+          <IconButton label={`Renommer : ${milestone.label}`} disabled={pending} onClick={() => {
+              setLabel(milestone.label);
+              setRenaming(true);
+            }}>
+            ✎
+          </IconButton>
+          <ConfirmDelete pending={pending} onConfirm={() => run(() => deleteMilestone(milestone.id))} label={`Supprimer : ${milestone.label}`} />
+        </div>
       )}
-    </ul>
+      <ErrorLine error={error} />
+    </li>
+  );
+}
+
+function AddMilestone({ projectId }) {
+  const { pending, error, run } = useAction();
+  const [label, setLabel] = useState('');
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(async () => {
+          const result = await addMilestone({ project_id: projectId, label });
+          if (!result.error) setLabel('');
+          return result;
+        });
+      }}
+      className="mt-3"
+    >
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Field value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nouveau jalon…" aria-label="Nouveau jalon" maxLength={200} required className="flex-1" />
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Ajout…' : 'Ajouter'}
+        </Button>
+      </div>
+      <ErrorLine error={error} />
+    </form>
+  );
+}
+
+// Jalons d'un projet : statut, renommage, ordre et suppression, ajout. `milestones`
+// (props du serveur) reste la source de vérité : la page se met à jour après chaque écriture.
+export default function MilestoneChecklist({ projectId, milestones }) {
+  return (
+    <div>
+      {milestones.length === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucun jalon.</p>}
+      <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
+        {milestones.map((m, i) => (
+          <MilestoneRow key={m.id} milestone={m} first={i === 0} last={i === milestones.length - 1} />
+        ))}
+      </ul>
+      <AddMilestone projectId={projectId} />
+    </div>
   );
 }
