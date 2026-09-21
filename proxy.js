@@ -30,9 +30,10 @@ export function proxy(request) {
 }
 
 export const config = {
+  // privacy.html et terms.html : pages légales publiques exigées par Google pour l'écran de consentement OAuth.
   // api/public et api/brain-notes (POST) sont appelés cross-origin depuis des
   // Artifacts Claude publics (Tour de Contrôle, Spircle Control), qui ne
   // peuvent pas fournir de Basic Auth — doivent rester exclus, sinon le
   // fetch() de l'artifact reçoit un 401 (bug constaté le 2026-09-17).
-  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
 };
