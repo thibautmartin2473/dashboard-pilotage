@@ -9,8 +9,10 @@ lesquelles restent à faire, en un seul endroit.
 Statut au 2026-09-20 : construit et déployé sur Vercel
 (`dashboard-pilotage-omega.vercel.app`), données dans Supabase. Ce qui existe :
 
-- **UI** : vue d'ensemble (`/`), détail projet avec jalons éditables
-  (`/projects/[slug]`), carte des interactions (`/map`), boîte à idées (`/brain`).
+- **UI** : accueil (`/`) = synthèse du jour, panneaux tâches / idées / suggestions et
+  grille d'apps (une app externe par projet dans `lib/apps.js`, sinon
+  `/projects/[slug]`) ; détail projet avec jalons éditables, carte des
+  interactions (`/map`), boîte à idées (`/brain`). Manifest : installable sur mobile.
 - **Suivi des sessions Claude** : hook de fin de session
   (`scripts/claude-hook-session-end.mjs`, à copier dans chaque repo suivi) →
   `POST /api/hooks/session-end`. Actif dans EDHEC AI, Stage et 3 sous-projets
@@ -26,6 +28,17 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   par Thibaut le 2026-09-20) : la clé anon ne peut que lire, les écritures
   passent par le client admin. Limite : `brain_notes` reste lisible avec la clé
   anon (la page `/brain` la lit avec).
+- **Données personnelles** : `tasks` (`supabase/tasks.sql`), `instagram_saves` et
+  `suggestions` (`supabase/instagram.sql`) ont RLS **sans aucune policy anon** : lues
+  et écrites côté serveur seulement (`lib/home-data.js`, `app/actions.js`, clé
+  service_role), derrière le Basic Auth, jamais dans `/api/public/overview`.
+
+## Suggestions de next steps (boucle Claude, sans modèle côté site)
+
+1. `node --env-file=.env.local scripts/import-instagram.mjs` copie les notes du skill `instagram-memoire` dans `instagram_saves` (idempotent, `--dry-run`).
+2. En session, Claude lit `instagram_saves` (récentes) et les projets, et insère dans `suggestions` des lignes `{ project_slug, text, source_save_id, status: 'new' }` via `getSupabaseAdmin()`.
+3. L'accueil les affiche : « Ajouter à la prochaine session » crée une tâche `next_session`, « Ignorer » passe la suggestion à `dismissed`.
+4. Aucun appel à Instagram ni à un modèle depuis le site : rien de plus à configurer.
 
 Un push sur `main` redéploie en production : ne jamais pousser sans accord explicite.
 
