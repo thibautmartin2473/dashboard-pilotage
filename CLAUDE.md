@@ -9,7 +9,7 @@ lesquelles restent à faire, en un seul endroit.
 Statut au 2026-09-20 : construit et déployé sur Vercel
 (`dashboard-pilotage-omega.vercel.app`), données dans Supabase. Ce qui existe :
 
-- **UI** : accueil (`/`) = synthèse du jour, panneaux tâches / idées / suggestions et
+- **UI** : accueil (`/`) = synthèse du jour, panneaux tâches / agenda / non lus / idées / suggestions et
   grille d'apps (une app externe par projet dans `lib/apps.js`, sinon
   `/projects/[slug]`) ; détail projet avec jalons éditables, carte des
   interactions (`/map`), boîte à idées (`/brain`). Manifest : installable sur mobile.
@@ -29,7 +29,8 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   passent par le client admin. Limite : `brain_notes` reste lisible avec la clé
   anon (la page `/brain` la lit avec).
 - **Données personnelles** : `tasks` (`supabase/tasks.sql`), `instagram_saves` et
-  `suggestions` (`supabase/instagram.sql`) ont RLS **sans aucune policy anon** : lues
+  `suggestions` (`supabase/instagram.sql`), `calendar_events` et `mail_items`
+  (`supabase/agenda.sql`) ont RLS **sans aucune policy anon** : lues
   et écrites côté serveur seulement (`lib/home-data.js`, `app/actions.js`, clé
   service_role), derrière le Basic Auth, jamais dans `/api/public/overview`.
 
@@ -39,6 +40,13 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 2. En session, Claude lit `instagram_saves` (récentes) et les projets, et insère dans `suggestions` des lignes `{ project_slug, text, source_save_id, status: 'new' }` via `getSupabaseAdmin()`.
 3. L'accueil les affiche : « Ajouter à la prochaine session » crée une tâche `next_session`, « Ignorer » passe la suggestion à `dismissed`.
 4. Aucun appel à Instagram ni à un modèle depuis le site : rien de plus à configurer.
+
+## Agenda et notifications de l'accueil (instantané poussé par Claude)
+
+1. Le site n'a aucun accès direct à Google (pas d'OAuth, pas d'appel réseau) : les connecteurs Agenda/Gmail n'existent que dans les sessions Claude.
+2. En session, Claude lit l'agenda (aujourd'hui + 7 jours) et les non lus, écrit un JSON `{ events, mails }` (format en tête de `scripts/push-agenda.mjs`) et lance `node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]`.
+3. Le script upsert dans `calendar_events` et `mail_items` (`supabase/agenda.sql`, RLS sans policy anon, expéditeur/sujet/date seulement) puis supprime les lignes absentes du fichier : ce sont des caches.
+4. L'accueil les affiche (`components/HomeAgenda.js`, logique dans `lib/home.js`, testée par `scripts/check-home.mjs`) avec « Mis à jour il y a X » = max de `synced_at` : rien n'est en direct.
 
 Un push sur `main` redéploie en production : ne jamais pousser sans accord explicite.
 
