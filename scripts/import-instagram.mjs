@@ -5,7 +5,7 @@
 //
 // Source : les notes Obsidian du skill instagram-memoire (frontmatter `source:
 // instagram`, `url`, `author`, `saved_at`, `topics`, `category`, `kind`, lieu,
-// `resume`, `retenir` ; légende = corps de la note avant « ## Transcription »,
+// `resume`, `retenir`, `repond_a`, `recos`, `attention`, `type` ; légende = corps de la note avant « ## Transcription »,
 // transcription = texte après). Par défaut le dossier Vault/03 Ressources/Instagram.
 // Idempotent : upsert sur `url`, on peut relancer. Les colonnes viennent de
 // supabase/instagram_v2.sql (à exécuter d'abord). N'appelle jamais Instagram.
@@ -79,6 +79,10 @@ function parseNote(text) {
     resume: text1(fm.resume),
     retenir: text1(fm.retenir),
     transcript: transcript || null,
+    media_type: fm.type === 'reel' || fm.type === 'post' ? fm.type : null,
+    repond_a: text1(fm.repond_a),
+    recos: Array.isArray(fm.recos) ? fm.recos.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim()) : [],
+    attention: text1(fm.attention),
   };
 }
 
@@ -101,7 +105,7 @@ console.log(`${files.length} notes lues dans ${dir} : ${rows.length} saves, ${fi
 if (dry) {
   console.log('[dry-run] rien écrit. Exemples :');
   const n = (f) => rows.filter(f).length;
-  console.log(`  ${n((r) => r.category)} thèmes, ${n((r) => r.kind)} usages, ${n((r) => r.arrondissements.length)} avec arrondissement, ${n((r) => r.cuisine)} avec cuisine, ${n((r) => r.resume)} résumés, ${n((r) => r.retenir)} à retenir, ${n((r) => r.transcript)} transcriptions.`);
+  console.log(`  ${n((r) => r.category)} thèmes, ${n((r) => r.kind)} usages, ${n((r) => r.arrondissements.length)} avec arrondissement, ${n((r) => r.cuisine)} avec cuisine, ${n((r) => r.resume)} résumés, ${n((r) => r.retenir)} à retenir, ${n((r) => r.transcript)} transcriptions, ${n((r) => r.repond_a)} « répond à », ${n((r) => r.recos.length)} avec recommandations, ${n((r) => r.attention)} avec réserves.`);
   for (const r of rows.slice(0, 3)) console.log(`  ${r.url} | @${r.author} | ${r.saved_at} | ${r.category}/${r.kind} | ${r.tags.length} tags | ${(r.caption ?? '').slice(0, 60).replace(/\s+/g, ' ')}`);
   process.exit(0);
 }

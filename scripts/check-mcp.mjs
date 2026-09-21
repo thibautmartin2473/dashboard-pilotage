@@ -12,7 +12,8 @@ const SECRET = 'test-secret-0123456789-abcdefghij';
 const save = (code, o) => ({
   url: `https://www.instagram.com/p/${code}/`, caption: '', author: 'compte', saved_at: '2026-03-01', tags: [],
   category: 'Humour & Memes', kind: 'loisir', ville: null, arrondissement: null, arrondissements: [],
-  cuisine: null, adresse: null, resume: null, retenir: null, transcript: null, ...o,
+  cuisine: null, adresse: null, resume: null, retenir: null, transcript: null, media_type: 'reel',
+  repond_a: null, recos: [], attention: null, ...o,
 });
 const ROWS = [
   save('BAR1', { author: 'parisbars', category: 'Restos & Bars', cuisine: 'bar & cocktails', ville: 'Paris', arrondissement: 3, arrondissements: [3],
@@ -27,10 +28,13 @@ const ROWS = [
     saved_at: '2026-04-03', resume: 'Trattoria du 11e.', caption: 'Pasta fraîche Paris 11e' }),
   save('CC1', { author: 'devclaude', category: 'IA & Tech', kind: 'skill', tags: ['claude-code'], saved_at: '2026-09-10',
     resume: '5 astuces pour progresser sur Claude Code.', retenir: 'Écris un CLAUDE.md court.', caption: 'Claude Code tips', transcript: 'Bienvenue, Claude Code est un outil...' }),
+  save('TAB', { author: 'yannisflowlabs', category: 'Cuisine & Recettes', kind: 'skill', saved_at: '2026-08-30',
+    resume: 'Trois adresses à Lisbonne.', repond_a: 'Où manger un pastel de nata à Lisbonne ?',
+    recos: ['Manteigaria : pastel de nata tiède au comptoir', 'Zé da Mouraria : morue pour deux'], attention: 'Prix relevés en 2024, à revérifier.' }),
   save('CC0', { author: 'devclaude', category: 'IA & Tech', kind: 'skill', tags: ['claude-code'], saved_at: '2025-01-05', resume: 'Vieux tuto Claude Code.', caption: 'Claude Code' }),
   save('MEME', { author: 'rigolo', caption: 'Un meme drôle', saved_at: '2026-09-15' }),
 ];
-const HAS_TEXT = (r) => norm([r.author, r.category, r.kind, r.tags.join(' '), r.cuisine, r.adresse, r.resume, r.retenir, r.caption, r.transcript].join(' '));
+const HAS_TEXT = (r) => norm([r.author, r.category, r.kind, r.tags.join(' '), r.cuisine, r.adresse, r.resume, r.retenir, r.caption, r.transcript, r.repond_a, r.recos.join(' '), r.attention].join(' '));
 
 // Base factice : mêmes méthodes de lecture que postgrest-js ; AUCUNE méthode d'écriture (un insert lèverait TypeError).
 function fakeDb({ fail } = {}) {
@@ -122,6 +126,16 @@ assert.deepEqual(codes(r), ['CC1']);
 r = await run({ query: 'claude code', kind: 'skill' });
 assert.deepEqual(codes(r), ['CC1', 'CC0']); // le plus pertinent d'abord
 
+// Nouveaux champs : trouvés par la recherche (recommandations, question), renvoyés avec la formule à citer.
+r = await run({ query: 'pastel nata' });
+assert.deepEqual(codes(r), ['TAB']); // seuls « recos » et « repond_a » contiennent ces mots
+const tab = await saveTools(() => fakeDb(), () => NOW)[0].run({ query: 'pastel nata' });
+assert.match(tab, /Répond à : Où manger un pastel de nata à Lisbonne \?/);
+assert.match(tab, /Recommandations \(2\/2\) :\n\s+- Manteigaria/);
+assert.match(tab, /Attention : Prix relevés en 2024/);
+assert.match(tab, /Source à citer : d'après la vidéo de @yannisflowlabs enregistrée le 30\/08\/2026 \(https:\/\/www\.instagram\.com\/p\/TAB\/\)/);
+assert.equal(codes(await run({ query: 'revérifier prix' }))[0], 'TAB'); // « attention » est cherché aussi
+
 // Filtre strict d'arrondissement ; requête sans résultat ; requête trop vague ; échec de base.
 assert.deepEqual(codes(await run({ query: 'manger', arrondissement: 11 })).sort(), ['ITA11', 'KOR11']);
 assert.match(await saveTools(() => fakeDb(), () => NOW)[0].run({ query: 'xyzzy' }), /^Aucune save trouvée/);
@@ -203,6 +217,9 @@ assert.equal(out.result.isError, true);
 assert.match(out.result.content[0].text, /arrondissement invalide/);
 out = await j(rpc('tools/call', { name: 'get_save', arguments: { url: 'https://www.instagram.com/reel/CC1/' } }));
 assert.match(out.result.content[0].text, /Transcription :\nBienvenue/);
+assert.match(out.result.content[0].text, /Source à citer : d'après la vidéo de @devclaude enregistrée le 10\/09\/2026/);
+out = await j(rpc('tools/call', { name: 'get_save', arguments: { url: 'https://www.instagram.com/p/TAB/' } }));
+assert.match(out.result.content[0].text, /Répond à : .*\nRecommandations \(2\/2\) :\n- Manteigaria.*\n- Zé da Mouraria.*\nAttention : Prix/);
 out = await j(rpc('tools/call', { name: 'get_save', arguments: { url: 'https://www.instagram.com/p/INCONNU12/' } }));
 assert.equal(out.result.isError, true);
 out = await j(rpc('tools/call', { name: 'get_save', arguments: { url: 'https://example.com/x' } }));

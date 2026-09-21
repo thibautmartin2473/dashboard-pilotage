@@ -4,6 +4,8 @@
 -- À EXÉCUTER PAR THIBAUT dans le SQL Editor de Supabase, APRÈS instagram.sql,
 -- JAMAIS depuis une session Claude. Idempotent : peut être relancé sans dégât.
 -- Ensuite : node --env-file=.env.local scripts/import-instagram.mjs (remplit les nouvelles colonnes).
+-- Ce fichier a été complété (repond_a, recos, attention, media_type) : le relancer est sans risque,
+-- même s'il a déjà été exécuté (colonnes ajoutées, déclencheur remplacé, `search` recalculé).
 --
 -- RLS inchangée : activée et AUCUNE policy, la clé anon ne lit ni n'écrit rien.
 -- Les lectures passent par le serveur (service_role), derrière MCP_SECRET.
@@ -41,17 +43,22 @@ alter table instagram_saves
   add column if not exists resume text,
   add column if not exists retenir text,
   add column if not exists transcript text,
+  add column if not exists media_type text,
+  add column if not exists repond_a text,
+  add column if not exists recos text[] not null default '{}',
+  add column if not exists attention text,
   add column if not exists search tsvector;
 
 -- Colonne recalculée par un déclencheur (unaccent n'est pas « immutable » : une colonne générée est impossible).
--- Poids : A = compte, thème, usage, sujets, lieu, résumé ; B = légende ; C = transcription.
+-- Poids : A = compte, thème, usage, sujets, lieu, résumé, question, recommandations ; B = légende, réserves ; C = transcription.
 create or replace function instagram_saves_search_update() returns trigger
 language plpgsql as $$
 begin
   new.search :=
     setweight(to_tsvector('public.french_unaccent'::regconfig, concat_ws(' ',
-      new.author, new.category, new.kind, array_to_string(new.tags, ' '), new.cuisine, new.adresse, new.resume, new.retenir)), 'A') ||
-    setweight(to_tsvector('public.french_unaccent'::regconfig, coalesce(new.caption, '')), 'B') ||
+      new.author, new.category, new.kind, array_to_string(new.tags, ' '), new.cuisine, new.adresse, new.resume, new.retenir,
+      new.repond_a, array_to_string(new.recos, ' '))), 'A') ||
+    setweight(to_tsvector('public.french_unaccent'::regconfig, concat_ws(' ', new.caption, new.attention)), 'B') ||
     setweight(to_tsvector('public.french_unaccent'::regconfig, coalesce(new.transcript, '')), 'C');
   return new;
 end $$;
@@ -65,8 +72,8 @@ create trigger instagram_saves_search
 
 create index if not exists instagram_saves_search_idx on instagram_saves using gin (search);
 
--- Remplit `search` pour les lignes déjà présentes (le déclencheur le recalcule).
-update instagram_saves set imported_at = imported_at where search is null;
+-- Recalcule `search` pour toutes les lignes déjà présentes (le déclencheur se déclenche à chaque update).
+update instagram_saves set imported_at = imported_at;
 
 -- Rappel de sécurité (idempotent) : données personnelles, aucune policy anon.
 alter table instagram_saves enable row level security;

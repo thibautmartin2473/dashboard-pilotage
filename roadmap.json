@@ -50,6 +50,10 @@
       "status": "done"
     },
     {
+      "label": "Connecteur MCP des saves : champs répond à, recos et réserves, citation de la source",
+      "status": "done"
+    },
+    {
       "label": "Connecteur MCP des saves : mise en service (SQL, secret, claude.ai)",
       "status": "blocked"
     }
