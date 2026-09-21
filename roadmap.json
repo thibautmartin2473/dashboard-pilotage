@@ -75,11 +75,11 @@
     },
     {
       "label": "Accueil : zone Commande en langage naturel (aperçu puis confirmation)",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "label": "Accueil : notifications issues des mails (table à créer)",
-      "status": "in_progress"
+      "status": "blocked"
     }
   ]
 }

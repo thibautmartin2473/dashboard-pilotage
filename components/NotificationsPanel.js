@@ -71,6 +71,7 @@ function NotificationRow({ n }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const [label, pill] = KINDS[n.kind] ?? [n.kind, KINDS.info[1]];
+  const link = /^https?:\/\//i.test(n.mail_link ?? '') ? n.mail_link : null;
   const when = n.starts_at
     ? describeWhen({ starts_at: n.starts_at, ends_at: n.ends_at, all_day: false })
     : n.due_date && `pour le ${n.due_date}`;
@@ -82,12 +83,12 @@ function NotificationRow({ n }) {
         <span className="min-w-0 break-words text-sm font-medium">{n.title}</span>
       </div>
       {n.detail && <p className={`break-words ${mutedClass}`}>{n.detail}</p>}
-      {(when || n.mail_link) && (
+      {(when || link) && (
         <p className={mutedClass}>
           {when}
-          {when && n.mail_link && ' · '}
-          {n.mail_link && /^https?:\/\//i.test(n.mail_link) && (
-            <a href={n.mail_link} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+          {when && link && ' · '}
+          {link && (
+            <a href={link} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
               Ouvrir le mail
             </a>
           )}
