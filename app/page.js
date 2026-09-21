@@ -60,7 +60,7 @@ export default async function HomePage() {
         <AddTask projects={projects.map(({ slug, name }) => ({ slug, name }))} disabled={Boolean(tasks.error)} />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <TaskPanel title="Aujourd'hui" panel="today" tasks={panels?.today} state={tasks} today={today} />
         <AgendaPanel agenda={agenda} state={events} />
         <TaskPanel title="Actions à faire" panel="inbox" tasks={panels?.inbox} state={tasks} today={today} />
