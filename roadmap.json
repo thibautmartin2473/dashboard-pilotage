@@ -32,6 +32,14 @@
     {
       "label": "Idées Instagram : import local et suggestions de next steps (table à créer)",
       "status": "done"
+    },
+    {
+      "label": "Accueil : tables de cache et script de synchro poussée par Claude (à créer)",
+      "status": "done"
+    },
+    {
+      "label": "Accueil : panneaux agenda (conflits) et notifications, instantané daté",
+      "status": "done"
     }
   ]
 }

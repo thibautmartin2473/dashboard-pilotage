@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import OverviewClient from '@/components/OverviewClient';
 import Panel from '@/components/Panel';
+import { AgendaPanel, MailsPanel } from '@/components/HomeAgenda';
 import { AddTask, SuggestionsPanel, TaskPanel } from '@/components/HomeTasks';
 import { getAllProjects, lastActivityAt } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
-import { STALE_DAYS, splitTasks, summarize, todayParis } from '@/lib/home';
+import { STALE_DAYS, buildAgenda, splitTasks, summarize, todayParis } from '@/lib/home';
 import { supabaseConfigured } from '@/lib/supabase';
 import { timeAgo } from '@/lib/format';
 
@@ -12,8 +13,13 @@ import { timeAgo } from '@/lib/format';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [projects, { tasks, suggestions, ideas }] = await Promise.all([getAllProjects(), loadHomePanels()]);
-  const today = todayParis();
+  const [projects, { tasks, suggestions, ideas, events, mails }] = await Promise.all([
+    getAllProjects(),
+    loadHomePanels(),
+  ]);
+  const now = new Date();
+  const today = todayParis(now);
+  const agenda = events.data ? buildAgenda(events.data, now) : null;
   const panels = tasks.data && splitTasks(tasks.data, today);
   const summary = summarize({
     tasks: tasks.data ?? null,
@@ -40,6 +46,10 @@ export default async function HomePage() {
             {summary.overdueCount} en retard
           </span>
         )}
+        {agenda?.conflicts > 0 && (
+          <span className="font-medium text-red-600 dark:text-red-400">{agenda.conflicts} conflit(s) d&apos;agenda</span>
+        )}
+        {agenda?.next && <span>Prochain événement à {agenda.next.time}</span>}
         <span>Dernier projet actif : {summary.latestProject ?? 'aucun'}</span>
         <span>
           Sans activité depuis plus de {STALE_DAYS} j : {summary.staleProjects.join(', ') || 'aucun'}
@@ -50,9 +60,11 @@ export default async function HomePage() {
         <AddTask projects={projects.map(({ slug, name }) => ({ slug, name }))} disabled={Boolean(tasks.error)} />
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <TaskPanel title="Actions à faire" panel="inbox" tasks={panels?.inbox} state={tasks} today={today} />
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <TaskPanel title="Aujourd'hui" panel="today" tasks={panels?.today} state={tasks} today={today} />
+        <AgendaPanel agenda={agenda} state={events} />
+        <TaskPanel title="Actions à faire" panel="inbox" tasks={panels?.inbox} state={tasks} today={today} />
+        <MailsPanel state={mails} />
 
         <Panel title="Idées" count={ideas.data?.length} state={ideas} file="brain_notes.sql">
           {ideas.data?.length ? (
