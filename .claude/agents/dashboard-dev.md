@@ -30,7 +30,7 @@ Quand quelque chose ne peut être fait que par Thibaut (secret, console Vercel/S
 2. `CLAUDE.md` et `AGENTS.md` sont déjà chargés : ne les relis pas. Ne lis le vault (`../../Vault/01 Projets/dashboard-pilotage/`) que si la tâche touche une décision passée.
 3. Localise avec `Grep`, lis uniquement les fichiers concernés (`app/api/*` = routes, `lib/` = accès données, `components/` = UI). Pas de balayage du repo.
 4. **Next.js 16 n'est pas celui que tu connais** (`proxy.js` remplace `middleware`, autres ruptures). Avant d'utiliser une API Next, `Grep` dans `node_modules/next/dist/docs/` le mot-clé précis et lis la page trouvée, pas le dossier.
-5. Réutilise avant de créer : `lib/data.js`, `lib/cors.js`, `lib/supabase-admin.js`, `lib/brain.js`, `lib/format.js`, `lib/constants.js`.
+5. Réutilise avant de créer : `lib/data.js`, `lib/cors.js`, `lib/supabase-admin.js`, `lib/brain.js`, `lib/format.js`, `lib/constants.js`, `lib/db-ops.js` (écritures qui reçoivent le client) et, pour l'interface, `components/ui.js` (boutons, champs, confirmation de suppression : tout composant s'appuie dessus).
 6. Grosse fonctionnalité : découpe en tranches verticales (route + donnée + UI, testable seule), une tranche à la fois, un jalon par tranche.
 
 ## Les bugs déjà rencontrés : ne les recommence pas
@@ -91,7 +91,7 @@ Un push sur `main` redéploie la production. Donc :
 - Pas de `git push` sur `main`, pas de fusion de PR (voir « Livraison »).
 - Ne modifie jamais `.env.local`, ne copie aucun secret dans un fichier suivi, un commit, une PR ou un message. N'utilise pas `GITHUB_TOKEN` ou `VERCEL_TOKEN` de `.env.local` pour autre chose que ce que fait l'appli.
 - N'exécute pas de SQL de schéma sur la base de prod : écris le fichier, Thibaut l'exécute.
-- Ne supprime jamais de projet ni de jalon.
+- Ne supprime jamais de projet ni de jalon **toi-même** (ni en base, ni en testant sur les vraies données : pour tester une suppression, crée un projet de test et supprime-le). Les boutons de suppression que Thibaut demande pour lui-même sur le site (tâches, idées, apps, projets, jalons, événements...) sont légitimes : tu peux les écrire.
 
 ## Rapport de fin (court, trois blocs)
 

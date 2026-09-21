@@ -5,12 +5,17 @@
 //
 // Le site ne peut pas lire Google : Claude récupère les données en session, écrit
 // ce fichier, puis lance ce script. Format (dates ISO 8601 avec fuseau) :
-//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link" }],
-//     "mails":  [{ "id", "from", "subject", "received_at", "important", "link" }] }
+//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link", "origin" }],
+//     "mails":  [{ "id", "from", "subject", "received_at", "source", "unread", "link" }] }
 // Un événement « toute la journée » accepte aussi une date seule (AAAA-MM-JJ).
+// "origin" (facultatif) : "google" par défaut ; "local" = créé sur le site, jamais purgé.
+// Mails : "source" = "gmail" (défaut) ou "edhec" ; "unread" = true par défaut. Règle EDHEC : un mail
+// est "edhec" s'il porte le libellé Gmail EDHEC ou si l'expéditeur ou un destinataire est en
+// edhec.com ; sinon "gmail". Seuls les 50 mails les plus récents sont gardés.
 //
-// Ce sont des caches d'un instantané : upsert des lignes reçues, puis suppression
-// des lignes de ces deux tables absentes du fichier (seule suppression du script).
+// Ce sont des caches d'un instantané : upsert des lignes reçues, puis suppression des lignes
+// absentes du fichier : tous les mails, mais uniquement les événements d'origine "google"
+// (les événements créés sur le site, origin = 'local', ne sont jamais touchés).
 // --dry-run valide le fichier et n'écrit rien (n'exige pas Supabase).
 
 import { readFileSync } from 'node:fs';
@@ -73,9 +78,19 @@ function link(where, value) {
   return v;
 }
 
-function bool(where, field, value) {
-  if (value != null && typeof value !== 'boolean') errors.push(`${where} : "${field}" doit être true ou false.`);
+function bool(where, field, value, fallback = false) {
+  if (value == null) return fallback;
+  if (typeof value !== 'boolean') errors.push(`${where} : "${field}" doit être true ou false.`);
   return value === true;
+}
+
+function oneOf(where, field, value, allowed, fallback) {
+  if (value == null || value === '') return fallback;
+  if (!allowed.includes(value)) {
+    errors.push(`${where} : "${field}" doit valoir ${allowed.join(' ou ')}, reçu ${JSON.stringify(value)}.`);
+    return fallback;
+  }
+  return value;
 }
 
 const syncedAt = new Date().toISOString();
@@ -93,6 +108,7 @@ input.events.forEach((e, i) => {
     all_day,
     location: text(where, 'location', e?.location),
     link: link(where, e?.link),
+    origin: oneOf(where, 'origin', e?.origin, ['google', 'local'], 'google'),
     synced_at: syncedAt,
   };
   if (row.ends_at && row.starts_at && row.ends_at < row.starts_at) errors.push(`${where} : "end" est avant "start".`);
@@ -108,7 +124,8 @@ input.mails.forEach((m, i) => {
     sender: text(where, 'from', m?.from),
     subject: text(where, 'subject', m?.subject),
     received_at: date(where, 'received_at', m?.received_at),
-    important: bool(where, 'important', m?.important),
+    source: oneOf(where, 'source', m?.source, ['gmail', 'edhec'], 'gmail'),
+    unread: bool(where, 'unread', m?.unread, true),
     link: link(where, m?.link),
     synced_at: syncedAt,
   };
@@ -117,9 +134,15 @@ input.mails.forEach((m, i) => {
 
 if (errors.length) fail(`Fichier invalide (${errors.length} erreur(s)) :\n- ${errors.slice(0, 20).join('\n- ')}`);
 
+// Les 50 mails les plus récents (les sans-date en dernier).
+const MAIL_LIMIT = 50;
+const recent = [...mails.values()].sort((a, b) => (b.received_at ?? '').localeCompare(a.received_at ?? ''));
+if (recent.length > MAIL_LIMIT) console.log(`mails : ${recent.length} reçus, seuls les ${MAIL_LIMIT} plus récents sont gardés.`);
+
+// `purge` : filtre des lignes que ce script a le droit de supprimer.
 const tables = [
-  { name: 'calendar_events', rows: [...events.values()] },
-  { name: 'mail_items', rows: [...mails.values()] },
+  { name: 'calendar_events', rows: [...events.values()], purge: (q) => q.eq('origin', 'google') },
+  { name: 'mail_items', rows: recent.slice(0, MAIL_LIMIT), purge: (q) => q },
 ];
 for (const t of tables) console.log(`${t.name} : ${t.rows.length} ligne(s) dans le fichier.`);
 
@@ -137,17 +160,19 @@ function dbFail(error) {
   fail(
     error.code === 'PGRST205'
       ? 'Table absente : exécuter supabase/agenda.sql dans le SQL Editor de Supabase.'
-      : `Supabase : ${error.message}`
+      : ['PGRST204', '42703'].includes(error.code)
+        ? `Colonne absente : exécuter supabase/dashboard-edit.sql dans le SQL Editor de Supabase (${error.message}).`
+        : `Supabase : ${error.message}`
   );
 }
 
-for (const { name, rows } of tables) {
+for (const { name, rows, purge } of tables) {
   for (let i = 0; i < rows.length; i += 200) {
     const { error } = await db.from(name).upsert(rows.slice(i, i + 200), { onConflict: 'id' });
     if (error) dbFail(error);
   }
-  // Instantané : on retire ce qui n'est plus dans le fichier (cache, rien d'autre).
-  const { data: existing, error } = await db.from(name).select('id');
+  // Instantané : on retire ce qui n'est plus dans le fichier (cache), dans le périmètre de `purge`.
+  const { data: existing, error } = await purge(db.from(name).select('id'));
   if (error) dbFail(error);
   const keep = new Set(rows.map((r) => r.id));
   const stale = existing.map((r) => r.id).filter((id) => !keep.has(id));
