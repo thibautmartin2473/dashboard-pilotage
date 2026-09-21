@@ -30,11 +30,12 @@ export function proxy(request) {
 }
 
 export const config = {
+  // privacy.html et terms.html : pages légales publiques exigées par Google pour l'écran de consentement OAuth.
   // api/public et api/brain-notes (POST) sont appelés cross-origin depuis des
   // Artifacts Claude publics (Tour de Contrôle, Spircle Control), qui ne
   // peuvent pas fournir de Basic Auth — doivent rester exclus, sinon le
   // fetch() de l'artifact reçoit un 401 (bug constaté le 2026-09-17).
   // api/mcp : connecteur claude.ai (ne sait pas faire de Basic Auth) ; la route
   // exige son propre secret MCP_SECRET et refuse tout sans lui (lib/mcp.js).
-  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|api/mcp|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|api/mcp|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
 };

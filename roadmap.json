@@ -42,6 +42,38 @@
       "status": "done"
     },
     {
+      "label": "Accueil éditable : briques d’interface partagées et rafraîchissement auto",
+      "status": "done"
+    },
+    {
+      "label": "Accueil éditable : agenda visuel sur 8 jours, événements modifiables",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil éditable : idées et suggestions modifiables",
+      "status": "done"
+    },
+    {
+      "label": "Accueil éditable : actions à faire par section, avec compteurs",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil éditable : 50 derniers mails, filtres Tous / Gmail / EDHEC",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil éditable : apps, projets et jalons modifiables",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil éditable : organiser la page (masquer, réordonner les panneaux)",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil éditable : priorité des tâches, filtre de mails mémorisé",
+      "status": "blocked"
+    },
+    {
       "label": "Connecteur MCP des saves : script SQL et import enrichis, livrés",
       "status": "done"
     },
