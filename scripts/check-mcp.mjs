@@ -4,8 +4,18 @@
 // Ne prouve PAS : les vraies requêtes SQL (supabase/instagram_v2.sql), le vrai claude.ai.
 import assert from 'node:assert/strict';
 import { handleMcpRequest, isAuthorized, ToolInputError } from '../lib/mcp.js';
+import { register } from 'node:module';
 import { saveTools, searchSaves } from '../lib/saves.js';
 import { norm, planSearch } from '../lib/saves-rank.js';
+
+// proxy.js importe « next/server » : Node hors Next veut l'extension, un crochet de résolution la fournit (test du vrai proxy).
+register('data:text/javascript,' + encodeURIComponent("export const resolve = (s, c, next) => next(s === 'next/server' ? 'next/server.js' : s, c);"));
+const { config: proxyConfig, proxy } = await import('../proxy.js');
+
+// Journal capturé dès le départ : les échecs simulés ci-dessous journalisent (et on vérifie ce qui y figure).
+const logged = [];
+const realError = console.error;
+console.error = (...a) => logged.push(a.join(' '));
 
 const NOW = new Date('2026-09-21T12:00:00Z');
 const SECRET = 'test-secret-0123456789-abcdefghij';
@@ -141,7 +151,12 @@ assert.deepEqual(codes(await run({ query: 'manger', arrondissement: 11 })).sort(
 assert.match(await saveTools(() => fakeDb(), () => NOW)[0].run({ query: 'xyzzy' }), /^Aucune save trouvée/);
 await assert.rejects(saveTools(() => fakeDb(), () => NOW)[0].run({ query: '' }), /trop vague/);
 await assert.rejects(searchSaves(fakeDb({ fail: { code: '42703', message: 'column x does not exist' } }), planSearch({ query: 'bar' }, NOW)), /instagram_v2\.sql/);
-await assert.rejects(searchSaves(fakeDb({ fail: { code: 'XX000', message: 'boom' } }), planSearch({ query: 'bar' }, NOW)), /Supabase : boom/);
+// Erreur inconnue de Supabase : message générique (rien du détail), détail dans le journal serveur.
+await assert.rejects(searchSaves(fakeDb({ fail: { code: 'XX000', message: 'boom colonne_secrete' } }), planSearch({ query: 'bar' }, NOW)), (e) => {
+  assert.doesNotMatch(e.message, /boom|colonne_secrete/);
+  return true;
+});
+assert.ok(logged.some((l) => l.includes('XX000') && l.includes('boom colonne_secrete')));
 
 // --- Authentification (échec fermé) --------------------------------------------------------
 const req = (body, { path, bearer, method = 'POST', headers = {} } = {}) => {
@@ -157,10 +172,6 @@ const call = async (body, auth, ...rest) => {
   return handleMcpRequest(request, { segments, secret, tools });
 };
 const rpc = (method, params, id = 1) => ({ jsonrpc: '2.0', id, method, params });
-const logged = [];
-const realError = console.error;
-console.error = (...a) => logged.push(a.join(' '));
-
 const ping = rpc('ping');
 assert.equal((await call(ping, {})).status, 401); // sans secret
 assert.equal((await call(ping, { path: 'mauvais-secret-mauvais-secret' })).status, 401);
@@ -169,6 +180,16 @@ assert.equal((await call(ping, { path: `${SECRET}/extra` })).status, 401); // un
 assert.equal((await call(ping, { path: SECRET }, undefined)).status, 401); // variable non définie
 assert.equal((await call(ping, { path: '' }, '')).status, 401); // variable vide : '' ne doit pas « matcher »
 assert.equal((await call(ping, { path: 'court' }, 'court')).status, 401); // secret trop court
+const secret31 = 'a'.repeat(31);
+const secret32 = 'a'.repeat(32);
+assert.equal((await call(ping, { path: secret31 }, secret31)).status, 401); // 31 caractères : refusé, même identique
+assert.equal((await call(ping, { bearer: secret31 }, secret31)).status, 401);
+assert.equal((await call(ping, { path: secret32 }, secret32)).status, 200); // 32 : accepté
+const spaces = ' '.repeat(24);
+assert.equal((await call(ping, { bearer: spaces }, spaces)).status, 401); // 24 espaces : refusé
+assert.equal((await call(ping, { bearer: ' '.repeat(40) }, ' '.repeat(40))).status, 401); // espaces, même longs : refusés
+assert.equal((await call(ping, { path: 'é'.repeat(40) }, 'é'.repeat(40))).status, 401); // hors [A-Za-z0-9_-]
+assert.equal((await call(ping, { bearer: 'a b'.repeat(15) }, 'a b'.repeat(15))).status, 401);
 assert.equal((await call(ping, { path: SECRET })).status, 200);
 assert.equal((await call(ping, { bearer: SECRET })).status, 200);
 assert.equal((await call(ping, { path: SECRET })).headers.get('cache-control'), 'no-store');
@@ -239,7 +260,39 @@ const broken = saveTools(() => fakeDb({ fail: { code: '42703', message: 'x' } })
 const [failReq, failSeg] = req(rpc('tools/call', { name: 'search_saves', arguments: { query: 'bar' } }), auth);
 out = await (await handleMcpRequest(failReq, { segments: failSeg, secret: SECRET, tools: broken })).json();
 assert.equal(out.result.isError, true);
-assert.match(out.result.content[0].text, /Erreur serveur : Schéma des saves obsolète/);
+assert.match(out.result.content[0].text, /^Schéma des saves obsolète : exécuter supabase\/instagram_v2\.sql/);
+assert.ok(!out.result.content[0].text.includes('"x"'));
+
+// Panne inattendue : réponse générique, jamais error.message (ni celui de Supabase ni un autre).
+const boom = saveTools(() => fakeDb({ fail: { code: 'XX000', message: 'detail interne sensible' } }), () => NOW);
+const [boomReq, boomSeg] = req(rpc('tools/call', { name: 'search_saves', arguments: { query: 'bar' } }), auth);
+out = await (await handleMcpRequest(boomReq, { segments: boomSeg, secret: SECRET, tools: boom })).json();
+assert.equal(out.result.isError, true);
+assert.match(out.result.content[0].text, /^Erreur serveur : la requête a échoué/);
+assert.ok(!JSON.stringify(out).includes('sensible'));
+const throwing = saveTools(() => { throw new Error('NEXT_PUBLIC_SUPABASE_URL manquante'); }, () => NOW);
+const [thrReq, thrSeg] = req(rpc('tools/call', { name: 'get_save', arguments: { url: 'ABCDEFGH1' } }), auth);
+out = await (await handleMcpRequest(thrReq, { segments: thrSeg, secret: SECRET, tools: throwing })).json();
+assert.match(out.result.content[0].text, /^Erreur serveur : la requête a échoué/);
+assert.ok(logged.some((l) => l.includes('detail interne sensible')) && logged.some((l) => l.includes('NEXT_PUBLIC_SUPABASE_URL manquante')));
+
+// --- Basic Auth : /api/mcp passe sans, mais /api/mcp-foo (et tout autre chemin proche) reste protégé ---
+process.env.DASHBOARD_USER = 'thibaut';
+process.env.DASHBOARD_PASS = 'mot-de-passe-test';
+const viaProxy = (pathname, authorization) =>
+  proxy({ nextUrl: { pathname }, headers: new Headers(authorization ? { authorization } : {}) });
+const passes = (r) => r.headers.get('x-middleware-next') === '1';
+for (const ok of ['/api/mcp', '/api/mcp/', '/api/mcp/abc']) assert.equal(passes(viaProxy(ok)), true, ok);
+for (const protectedPath of ['/api/mcp-foo', '/api/mcpx', '/api/mcp2/abc', '/api/mcp.json', '/api/milestones', '/', '/brain']) {
+  const r = viaProxy(protectedPath);
+  assert.equal(r.status, 401, protectedPath);
+  assert.match(r.headers.get('www-authenticate'), /^Basic/);
+}
+assert.equal(passes(viaProxy('/api/mcp-foo', 'Basic ' + Buffer.from('thibaut:mot-de-passe-test').toString('base64'))), true); // avec identifiants : ok
+assert.equal(viaProxy('/api/mcp-foo', 'Basic ' + Buffer.from('thibaut:faux').toString('base64')).status, 401);
+assert.ok(!proxyConfig.matcher[0].includes('api/mcp'), 'le matcher ne doit plus exclure api/mcp par préfixe');
+delete process.env.DASHBOARD_USER;
+delete process.env.DASHBOARD_PASS;
 
 // Lecture seule : seule la table instagram_saves a été touchée (et aucune méthode d'écriture n'existe sur la base factice).
 const spy = fakeDb();

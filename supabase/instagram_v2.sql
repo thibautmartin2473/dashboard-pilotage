@@ -52,7 +52,9 @@ alter table instagram_saves
 -- Colonne recalculée par un déclencheur (unaccent n'est pas « immutable » : une colonne générée est impossible).
 -- Poids : A = compte, thème, usage, sujets, lieu, résumé, question, recommandations ; B = légende, réserves ; C = transcription.
 create or replace function instagram_saves_search_update() returns trigger
-language plpgsql as $$
+language plpgsql
+set search_path = pg_catalog, public
+as $
 begin
   new.search :=
     setweight(to_tsvector('public.french_unaccent'::regconfig, concat_ws(' ',

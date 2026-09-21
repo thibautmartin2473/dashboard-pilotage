@@ -86,6 +86,10 @@
       "status": "done"
     },
     {
+      "label": "Connecteur MCP des saves : durcissements issus de la revue de sécurité",
+      "status": "done"
+    },
+    {
       "label": "Connecteur MCP des saves : mise en service (SQL, secret, claude.ai)",
       "status": "blocked"
     }

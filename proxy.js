@@ -4,6 +4,11 @@ import { NextResponse } from 'next/server';
 // ne sont pas définis, le site reste ouvert (utile en dev local) — en
 // production, toujours définir ces deux variables sur Vercel.
 export function proxy(request) {
+  // Connecteur MCP : sorti du Basic Auth (claude.ai ne sait pas s'y authentifier), mais la route exige
+  // son propre secret MCP_SECRET (lib/mcp.js). Test exact (pas un préfixe) : /api/mcp-foo reste protégé.
+  const p = request.nextUrl.pathname;
+  if (p === '/api/mcp' || p.startsWith('/api/mcp/')) return NextResponse.next();
+
   const user = process.env.DASHBOARD_USER;
   const pass = process.env.DASHBOARD_PASS;
 
@@ -35,7 +40,5 @@ export const config = {
   // Artifacts Claude publics (Tour de Contrôle, Spircle Control), qui ne
   // peuvent pas fournir de Basic Auth — doivent rester exclus, sinon le
   // fetch() de l'artifact reçoit un 401 (bug constaté le 2026-09-17).
-  // api/mcp : connecteur claude.ai (ne sait pas faire de Basic Auth) ; la route
-  // exige son propre secret MCP_SECRET et refuse tout sans lui (lib/mcp.js).
-  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|api/mcp|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
+  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
 };
