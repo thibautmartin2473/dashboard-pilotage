@@ -23,13 +23,16 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   pouvant pas l'appeler (règle de la plateforme), Claude en copie l'instantané dans
   la base de l'artifact Tour de Contrôle au wrap-up (`../../Tools/artifact-sync/`).
 - **Rafraîchissement** : cron Vercel quotidien `/api/cron/refresh`.
-- **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public et
-  brain-notes. RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
+- **Connecteur MCP des saves Instagram** : `/api/mcp/<MCP_SECRET>` (voir la section
+  dédiée plus bas), lecture seule, pour interroger les saves depuis n'importe quelle
+  surface Claude (téléphone compris).
+- **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public,
+  brain-notes et mcp (celle-ci exige son propre secret `MCP_SECRET`, échec fermé). RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
   par Thibaut le 2026-09-20) : la clé anon ne peut que lire, les écritures
   passent par le client admin. Limite : `brain_notes` reste lisible avec la clé
   anon (la page `/brain` la lit avec).
 - **Données personnelles** : `tasks` (`supabase/tasks.sql`), `instagram_saves` et
-  `suggestions` (`supabase/instagram.sql`), `calendar_events` et `mail_items`
+  `suggestions` (`supabase/instagram.sql`, colonnes et recherche : `instagram_v2.sql`), `calendar_events` et `mail_items`
   (`supabase/agenda.sql`) ont RLS **sans aucune policy anon** : lues
   et écrites côté serveur seulement (`lib/home-data.js`, `app/actions.js`, clé
   service_role), derrière le Basic Auth, jamais dans `/api/public/overview`.
@@ -40,6 +43,14 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 2. En session, Claude lit `instagram_saves` (récentes) et les projets, et insère dans `suggestions` des lignes `{ project_slug, text, source_save_id, status: 'new' }` via `getSupabaseAdmin()`.
 3. L'accueil les affiche : « Ajouter à la prochaine session » crée une tâche `next_session`, « Ignorer » passe la suggestion à `dismissed`.
 4. Aucun appel à Instagram ni à un modèle depuis le site : rien de plus à configurer.
+
+## Connecteur MCP des saves Instagram (lecture seule, toutes surfaces Claude)
+
+1. Les notes Obsidian restent la source de vérité ; `scripts/import-instagram.mjs` en copie les champs utiles (thème, usage, lieu, résumé, « à retenir », transcription) dans `instagram_saves` (`supabase/instagram_v2.sql` : colonnes, `search` tsvector français sans accents rempli par déclencheur, index GIN).
+2. `app/api/mcp/[[...secret]]/route.js` (adaptateur) + `lib/mcp.js` (protocole MCP « Streamable HTTP », JSON-RPC en POST, auth, limites) + `lib/saves.js` (requêtes) + `lib/saves-rank.js` (classement). Outils : `search_saves` et `get_save`, annotés `readOnlyHint`. Aucune écriture, aucune autre table.
+3. Classement = port de `Vault/.instagram-saves-engine/recall.py` : critères structurés remplis (arrondissement, cuisine) > thème « lieu » > pertinence texte > récence ; « Marais » = 3e et 4e ; « bar » = cuisine « bar & cocktails » ; avertissement explicite quand aucune save ne cumule tous les critères. Si une règle change côté Python (cuisine, quartier), la recopier dans `lib/saves-rank.js`.
+4. Sécurité : `api/mcp` est exclu du Basic Auth de `proxy.js` (claude.ai ne sait pas s'y authentifier), mais toute requête exige `MCP_SECRET` (≥ 24 caractères) dans le chemin ou en `Authorization: Bearer`, comparé à temps constant ; variable absente ou trop courte = 401 partout. Limite connue : le chemin figure dans les journaux de requêtes de Vercel (le code ne le journalise jamais) ; en cas de fuite, changer `MCP_SECRET` et redéclarer le connecteur. Le texte des saves est du contenu tiers : les sorties le rappellent au modèle.
+5. Test : `node scripts/check-mcp.mjs` (base factice, sans réseau). Mise en service par Thibaut : exécuter `instagram_v2.sql`, définir `MCP_SECRET` sur Vercel, fusionner la PR, relancer l'import, puis ajouter le connecteur dans claude.ai (Paramètres > Connecteurs > Ajouter un connecteur personnalisé) avec l'URL `https://dashboard-pilotage-omega.vercel.app/api/mcp/<MCP_SECRET>`.
 
 ## Agenda et notifications de l'accueil (instantané poussé par Claude)
 

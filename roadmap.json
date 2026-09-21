@@ -40,6 +40,18 @@
     {
       "label": "Accueil : panneaux agenda (conflits) et notifications, instantané daté",
       "status": "done"
+    },
+    {
+      "label": "Connecteur MCP des saves : script SQL et import enrichis, livrés",
+      "status": "done"
+    },
+    {
+      "label": "Connecteur MCP des saves : serveur MCP en lecture seule, recherche classée",
+      "status": "done"
+    },
+    {
+      "label": "Connecteur MCP des saves : mise en service (SQL, secret, claude.ai)",
+      "status": "blocked"
     }
   ]
 }
