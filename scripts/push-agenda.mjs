@@ -1,0 +1,159 @@
+// Pousse un instantané de l'agenda et des notifications dans les tables de cache
+// calendar_events et mail_items (Supabase). À lancer depuis la racine du repo :
+//
+//   node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]
+//
+// Le site ne peut pas lire Google : Claude récupère les données en session, écrit
+// ce fichier, puis lance ce script. Format (dates ISO 8601 avec fuseau) :
+//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link" }],
+//     "mails":  [{ "id", "from", "subject", "received_at", "important", "link" }] }
+// Un événement « toute la journée » accepte aussi une date seule (AAAA-MM-JJ).
+//
+// Ce sont des caches d'un instantané : upsert des lignes reçues, puis suppression
+// des lignes de ces deux tables absentes du fichier (seule suppression du script).
+// --dry-run valide le fichier et n'écrit rien (n'exige pas Supabase).
+
+import { readFileSync } from 'node:fs';
+import { createClient } from '@supabase/supabase-js';
+
+const args = process.argv.slice(2);
+const dry = args.includes('--dry-run');
+const file = args.find((a) => !a.startsWith('--'));
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
+if (!file) fail('Usage : node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]');
+
+let input;
+try {
+  input = JSON.parse(readFileSync(file, 'utf-8'));
+} catch (err) {
+  fail(`Fichier illisible ou JSON invalide (${file}) : ${err.message}`);
+}
+if (!Array.isArray(input?.events) || !Array.isArray(input?.mails)) {
+  fail('Format invalide : "events" et "mails" doivent être deux tableaux (même vides).');
+}
+
+const TZ_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/;
+const errors = [];
+
+// Renvoie l'ISO UTC, ou null (et une erreur) si la date est absente/invalide.
+function date(where, field, value, { required = false, dayOk = false } = {}) {
+  if (value == null || value === '') {
+    if (required) errors.push(`${where} : "${field}" est requis.`);
+    return null;
+  }
+  // Date seule d'un événement « toute la journée » : midi UTC = même jour à Paris.
+  if (dayOk && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) value += 'T12:00:00Z';
+  const d = typeof value === 'string' && TZ_DATE.test(value) ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) {
+    errors.push(`${where} : "${field}" doit être une date ISO 8601 avec fuseau (ex. 2026-09-21T14:30:00+02:00), reçu ${JSON.stringify(value)}.`);
+    return null;
+  }
+  return d.toISOString();
+}
+
+function text(where, field, value, { required = false } = {}) {
+  if (value == null || value === '') {
+    if (required) errors.push(`${where} : "${field}" est requis.`);
+    return null;
+  }
+  if (typeof value !== 'string') {
+    errors.push(`${where} : "${field}" doit être un texte.`);
+    return null;
+  }
+  return value;
+}
+
+function link(where, value) {
+  const v = text(where, 'link', value);
+  if (v && !/^https?:\/\//i.test(v)) errors.push(`${where} : "link" doit commencer par http(s)://.`);
+  return v;
+}
+
+function bool(where, field, value) {
+  if (value != null && typeof value !== 'boolean') errors.push(`${where} : "${field}" doit être true ou false.`);
+  return value === true;
+}
+
+const syncedAt = new Date().toISOString();
+// Map par id : deux entrées identiques ne doivent pas se heurter dans un même upsert.
+const events = new Map();
+input.events.forEach((e, i) => {
+  const where = `events[${i}]`;
+  const all_day = bool(where, 'all_day', e?.all_day);
+  const id = text(where, 'id', e?.id, { required: true });
+  const row = {
+    id,
+    title: text(where, 'title', e?.title, { required: true }),
+    starts_at: date(where, 'start', e?.start, { required: true, dayOk: all_day }),
+    ends_at: date(where, 'end', e?.end, { dayOk: all_day }),
+    all_day,
+    location: text(where, 'location', e?.location),
+    link: link(where, e?.link),
+    synced_at: syncedAt,
+  };
+  if (row.ends_at && row.starts_at && row.ends_at < row.starts_at) errors.push(`${where} : "end" est avant "start".`);
+  if (id) events.set(id, row);
+});
+
+const mails = new Map();
+input.mails.forEach((m, i) => {
+  const where = `mails[${i}]`;
+  const id = text(where, 'id', m?.id, { required: true });
+  const row = {
+    id,
+    sender: text(where, 'from', m?.from),
+    subject: text(where, 'subject', m?.subject),
+    received_at: date(where, 'received_at', m?.received_at),
+    important: bool(where, 'important', m?.important),
+    link: link(where, m?.link),
+    synced_at: syncedAt,
+  };
+  if (id) mails.set(id, row);
+});
+
+if (errors.length) fail(`Fichier invalide (${errors.length} erreur(s)) :\n- ${errors.slice(0, 20).join('\n- ')}`);
+
+const tables = [
+  { name: 'calendar_events', rows: [...events.values()] },
+  { name: 'mail_items', rows: [...mails.values()] },
+];
+for (const t of tables) console.log(`${t.name} : ${t.rows.length} ligne(s) dans le fichier.`);
+
+if (dry) {
+  console.log('[dry-run] fichier valide, rien écrit.');
+  process.exit(0);
+}
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !key) fail('NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requis (--env-file=.env.local).');
+const db = createClient(url, key, { auth: { persistSession: false } });
+
+function dbFail(error) {
+  fail(
+    error.code === 'PGRST205'
+      ? 'Table absente : exécuter supabase/agenda.sql dans le SQL Editor de Supabase.'
+      : `Supabase : ${error.message}`
+  );
+}
+
+for (const { name, rows } of tables) {
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await db.from(name).upsert(rows.slice(i, i + 200), { onConflict: 'id' });
+    if (error) dbFail(error);
+  }
+  // Instantané : on retire ce qui n'est plus dans le fichier (cache, rien d'autre).
+  const { data: existing, error } = await db.from(name).select('id');
+  if (error) dbFail(error);
+  const keep = new Set(rows.map((r) => r.id));
+  const stale = existing.map((r) => r.id).filter((id) => !keep.has(id));
+  for (let i = 0; i < stale.length; i += 100) {
+    const { error: delError } = await db.from(name).delete().in('id', stale.slice(i, i + 100));
+    if (delError) dbFail(delError);
+  }
+  console.log(`${name} : ${rows.length} upsertée(s), ${stale.length} supprimée(s).`);
+}
