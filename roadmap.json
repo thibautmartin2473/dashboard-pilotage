@@ -72,6 +72,14 @@
     {
       "label": "Accueil éditable : priorité des tâches, filtre de mails mémorisé",
       "status": "blocked"
+    },
+    {
+      "label": "Accueil : zone Commande en langage naturel (aperçu puis confirmation)",
+      "status": "done"
+    },
+    {
+      "label": "Accueil : notifications issues des mails (table à créer)",
+      "status": "blocked"
     }
   ]
 }

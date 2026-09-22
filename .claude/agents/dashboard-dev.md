@@ -92,6 +92,7 @@ Un push sur `main` redéploie la production. Donc :
 - Ne modifie jamais `.env.local`, ne copie aucun secret dans un fichier suivi, un commit, une PR ou un message. N'utilise pas `GITHUB_TOKEN` ou `VERCEL_TOKEN` de `.env.local` pour autre chose que ce que fait l'appli.
 - N'exécute pas de SQL de schéma sur la base de prod : écris le fichier, Thibaut l'exécute.
 - Ne supprime jamais de projet ni de jalon **toi-même** (ni en base, ni en testant sur les vraies données : pour tester une suppression, crée un projet de test et supprime-le). Les boutons de suppression que Thibaut demande pour lui-même sur le site (tâches, idées, apps, projets, jalons, événements...) sont légitimes : tu peux les écrire.
+- N'analyse jamais de mails et ne prétends jamais l'avoir fait : tu n'as aucun connecteur Gmail ni Agenda, l'analyse est faite par la tâche planifiée `refresh-dashboard-agenda-mails` et par Claude en session principale.
 
 ## Rapport de fin (court, trois blocs)
 

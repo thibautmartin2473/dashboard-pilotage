@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Thème « Cockpit » : le tableau de bord est sombre par défaut, sur PC comme sur
+   mobile. Le variant `dark:` est donc toujours actif — les composants gardent
+   leurs paires `bg-white dark:bg-zinc-950` telles quelles et c'est la branche
+   sombre qui s'applique. Un relooking se fait ici : la rampe zinc ci-dessous
+   EST la palette du cockpit, personne ne la redéfinit ailleurs. */
+@custom-variant dark (&:where(*));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Surfaces et texte : zinc-950 = fond de page, zinc-900 = surface d'un
+     panneau, zinc-800/700 = bordures, zinc-400 = texte secondaire,
+     zinc-100 = texte fort (et fond des boutons actifs). */
+  --color-black: #0d1017;
+  --color-zinc-950: #0d1017;
+  --color-zinc-900: #151a23;
+  --color-zinc-800: #232a36;
+  --color-zinc-700: #2b3648;
+  --color-zinc-600: #3a4557;
+  --color-zinc-500: #99a3b7;
+  --color-zinc-400: #9aa4b8;
+  --color-zinc-300: #c3cbda;
+  --color-zinc-200: #d7dde8;
+  --color-zinc-100: #e6eaf2;
+  --color-zinc-50: #151a23;
+
+  /* Accent et états. Les composants s'en servent via les rampes red/amber/green
+     (leurs variantes -400 pour le texte, -950 pour les fonds). */
+  --color-accent: #4d7cfe;
+  --color-accent-soft: #18203a;
+  --color-red-300: #f2645a;
+  --color-red-400: #f2645a;
+  --color-red-600: #f2645a;
+  --color-red-800: #4a2620;
+  --color-red-950: #2a1512;
+  --color-red-50: #2a1512;
+  --color-amber-300: #4a3a18;
+  --color-amber-400: #e0a33e;
+  --color-amber-800: #4a3a18;
+  --color-amber-950: #2a2110;
+  --color-amber-50: #2a2110;
+  --color-green-400: #35c793;
+  --color-green-600: #35c793;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #0d1017;
+  --foreground: #e6eaf2;
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+/* Les nombres du cockpit s'alignent en colonne (tuiles, heures, compteurs). */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
