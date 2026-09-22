@@ -74,6 +74,9 @@ assert.deepEqual(ok('tâche : ranger le bureau').map((a) => [a.title, a.due_date
 assert.deepEqual(ok('à faire : envoyer le rapport demain').map((a) => [a.title, a.due_date]), [['Envoyer le rapport', '2026-09-22']]);
 assert.deepEqual(ok("rappelle-moi de payer le loyer le 25").map((a) => [a.title, a.due_date]), [['Payer le loyer', '2026-09-25']]);
 assert.deepEqual(ok("rappelle-moi d'appeler Paul").map((a) => [a.title, a.due_date]), [['Appeler Paul', null]]);
+// Jour intercalé avant la liaison : « d' » ne doit pas rester collé au titre.
+assert.deepEqual(ok("rappelle moi jeudi d'acheter du lait").map((a) => [a.title, a.due_date]), [['Acheter du lait', '2026-09-24']]);
+assert.deepEqual(ok('rappelle-moi vendredi de payer le loyer').map((a) => [a.title, a.due_date]), [['Payer le loyer', '2026-09-25']]);
 assert.deepEqual(ok('tâche : rendre le rapport lundi prochain').map((a) => a.due_date), ['2026-09-28']);
 assert.deepEqual(ok('ajoute une tâche : relire le contrat avant le 30 septembre').map((a) => [a.title, a.due_date]), [['Relire le contrat', '2026-09-30']]);
 assert.deepEqual(ok('idée : refaire la page /brain en Kanban'), [
