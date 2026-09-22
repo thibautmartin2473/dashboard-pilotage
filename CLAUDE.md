@@ -12,7 +12,7 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 - **UI** : accueil (`/`) = synthèse du jour puis, dans l'ordre par défaut, agenda visuel (J à J+7),
   idées et suggestions, actions à faire, mails, apps (tuiles `app_links`) ; détail projet
   (`/projects/[slug]`) avec jalons éditables, carte des interactions (`/map`), boîte à idées
-  (`/brain`). Manifest : installable sur mobile.
+  (`/brain` : Zone Commande + notes). Manifest : installable sur mobile.
 - **Suivi des sessions Claude** : hook de fin de session
   (`scripts/claude-hook-session-end.mjs`, à copier dans chaque repo suivi) →
   `POST /api/hooks/session-end`. Actif dans EDHEC AI, Stage et 3 sous-projets
@@ -63,7 +63,7 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 ## Comment ajouter du contenu sans code
 
 1. **Boutons** : chaque panneau de l'accueil a son formulaire (ajouter une tâche, un événement, une idée, une app, un projet, un jalon) et des boutons ✎ modifier, ↑ ↓ ordre, ✕ supprimer (confirmation en ligne).
-2. **Zone Commande** (en haut de l'accueil) : écrire une phrase, « Interpréter », vérifier l'aperçu (chaque ligne se retire avec ✕), « Confirmer ». Rien n'est écrit avant la confirmation. L'interprétation est locale, déterministe (`lib/command.js`, testée par `scripts/check-command.mjs`) : ni modèle, ni clé, ni réseau.
+2. **Zone Commande** (en haut de l'accueil, et sur `/brain` depuis le 2026-09-22 : même composant `CommandBox`, mêmes phrases) : écrire une phrase, « Interpréter », vérifier l'aperçu (chaque ligne se retire avec ✕), « Confirmer ». Rien n'est écrit avant la confirmation. L'interprétation est locale, déterministe (`lib/command.js`, testée par `scripts/check-command.mjs`) : ni modèle, ni clé, ni réseau.
 3. Formulations comprises : **événement** « ajoute (moi) une session de travail Claude de 14 à 16h mercredi et vendredi » (plage `de 9h30 à 11h`, `de 23h à 1h` finit le lendemain, `à 14h` = 1 h, `à 14h pendant 2h` ; plusieurs jours `lundi, mardi et jeudi`, `demain`, `après-demain`, `aujourd'hui`, `lundi prochain`, `le 24 septembre`, `le 24/09` ; sans jour : la prochaine fois qu'il est cette heure) ; **tâche** « tâche : appeler la banque pour vendredi », « à faire : … », « rappelle-moi de … » (échéance facultative : `pour vendredi`, `demain`, `le 25`) ; **idée** « idée : … ». Un jour de semaine = sa prochaine occurrence (aujourd'hui si l'heure n'est pas passée), « prochain » = la semaine suivante. Le reste : « Je n'ai pas compris » avec trois exemples.
 4. Les événements créés ainsi sont locaux (`origin = 'local'`) : visibles sur le tableau de bord, pas dans Google Agenda.
 
