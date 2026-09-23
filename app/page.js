@@ -6,11 +6,10 @@ import CommandBox from '@/components/CommandBox';
 import IdeasPanel from '@/components/IdeasPanel';
 import LayoutEditor from '@/components/LayoutEditor';
 import MailsPanel from '@/components/MailsPanel';
-import { SuggestionsPanel } from '@/components/HomeTasks';
 import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
 import {
-  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, resolveLayout, splitTasks, summarize, todayEvents, todayLine, todayParis,
+  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, resolveLayout, splitTasks, summarize, todayEvents, todayLine, todayParis,
 } from '@/lib/home';
 import { supabaseConfigured } from '@/lib/supabase';
 
@@ -43,7 +42,7 @@ function Kpi({ label, value, sub, accent = false, alert = false, testId }) {
 }
 
 export default async function HomePage() {
-  const [projects, { tasks, suggestions, ideas, events, mails, apps, settings, notifications }] = await Promise.all([
+  const [projects, { tasks, ideas, events, mails, apps, settings, notifications }] = await Promise.all([
     getAllProjects(),
     loadHomePanels(),
   ]);
@@ -73,11 +72,19 @@ export default async function HomePage() {
   const filter = setting('mail_filter');
   const mailFilter = MAIL_SOURCES.includes(filter) ? filter : 'all';
 
+  // Cibles possibles d'une idée : tâches non faites et événements pas encore finis.
+  const targets = [
+    ...(tasks.data ?? []).map((t) => ({ value: `task:${t.id}`, label: `Tâche : ${t.title}` })),
+    ...(events.data ?? [])
+      .filter((e) => new Date(e.ends_at ?? e.starts_at) >= now)
+      .map((e) => ({ value: `event:${e.id}`, label: `Agenda : ${e.title} (${describeWhen(e)})` })),
+  ];
+  const linkedIdeas = ideas.data ?? [];
+
   const panels = {
-    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} />,
-    ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} />,
-    suggestions: <SuggestionsPanel suggestions={suggestions.data} state={suggestions} projects={slim} />,
-    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} notifications={notifications} />,
+    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} />,
+    ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} targets={targets} />,
+    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} notifications={notifications} ideas={linkedIdeas} />,
     mails: <MailsPanel state={mails} savedFilter={mailFilter} settings={settings} now={now.getTime()} />,
     apps: <AppsPanel apps={apps.data} state={apps} projects={slim} />,
   };

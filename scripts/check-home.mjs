@@ -216,10 +216,10 @@ assert.equal(slugify('Café Été 2026 !'), 'cafe-ete-2026');
 assert.equal(slugify('!!!'), '');
 assert.deepEqual(resolveLayout(undefined), { order: HOME_PANEL_IDS, hidden: [] });
 assert.deepEqual(resolveLayout({ order: ['mails', 'zzz', 'agenda', 'mails'], hidden: ['ideas', 'nope', 'ideas'] }), {
-  order: ['mails', 'agenda', 'ideas', 'suggestions', 'actions', 'apps'],
+  order: ['mails', 'agenda', 'ideas', 'actions', 'apps'],
   hidden: ['ideas'],
 });
-assert.deepEqual(HOME_PANEL_IDS, ['agenda', 'ideas', 'suggestions', 'actions', 'mails', 'apps']); // ordre imposé par défaut
+assert.deepEqual(HOME_PANEL_IDS, ['agenda', 'ideas', 'actions', 'mails', 'apps']); // ordre imposé par défaut
 
 // Dates relatives et dernière synchro.
 const nowMs = new Date('2026-09-21T12:00:00Z').getTime();

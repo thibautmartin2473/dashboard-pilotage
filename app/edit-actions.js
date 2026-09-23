@@ -78,7 +78,7 @@ export async function moveTaskPriority(id, direction) {
   });
 }
 
-// ---- Idées (brain_notes) : lues avec la clé anon, écrites ici avec la clé admin ----
+// ---- Idées (brain_notes, idées et ex-suggestions) : lues et écrites côté serveur, clé admin ----
 
 export async function addIdea(content) {
   return run(async (db) => {
@@ -101,36 +101,41 @@ export async function doneIdea(id) {
   });
 }
 
+// Affecter une idée : target = '' (aucune), 'task:<uuid>' ou 'event:<id>'. Une seule cible à la fois.
+export async function linkIdea(id, target) {
+  return run(async (db) => {
+    uuid(id);
+    const [kind, ...rest] = String(target ?? '').split(':');
+    const ref = rest.join(':'); // un id d'événement peut contenir « : »
+    const row = { task_id: null, event_id: null };
+    if (kind === 'task') {
+      uuid(ref);
+      row.task_id = ref;
+    } else if (kind === 'event') row.event_id = text(ref, 'Événement', 300);
+    else must(kind === '', 'Cible invalide');
+    await touch(db.from('brain_notes').update(row).eq('id', id));
+  });
+}
+
+// Ex-« Ajouter à la prochaine session » des suggestions : crée une tâche
+// « prochaine session » à partir de l'idée, puis y affecte l'idée.
+export async function ideaToTask(id) {
+  return run(async (db) => {
+    uuid(id);
+    // task_id lu ici : colonne absente (SQL pas exécuté) = erreur avant de créer la tâche.
+    const [note] = await rows(db.from('brain_notes').select('content, project_slug, task_id').eq('id', id).eq('status', 'new'));
+    must(note, 'Idée introuvable ou déjà traitée');
+    const title = note.content.trim().slice(0, 200);
+    const task = { title, bucket: 'next_session', project_slug: note.project_slug, source: 'idea', ...(await nextPosition(db, 'tasks')) };
+    const [created] = await rows(db.from('tasks').insert(task).select('id'));
+    await touch(db.from('brain_notes').update({ task_id: created.id, event_id: null }).eq('id', id));
+  });
+}
+
 export async function deleteIdea(id) {
   return run(async (db) => {
     uuid(id);
     await touch(db.from('brain_notes').delete().eq('id', id));
-  });
-}
-
-// ---- Suggestions : panneau générique (rien n'est généré ni interprété) ----
-
-export async function addSuggestion({ text: value, project_slug }) {
-  return run(async (db) => {
-    const { error } = await db
-      .from('suggestions')
-      .insert({ text: text(value, 'Texte', 500), project_slug: project_slug || null, status: 'new' });
-    if (error) throw error;
-  });
-}
-
-// Modifier le texte et/ou affecter à un projet (project_slug vide = sans projet).
-export async function updateSuggestion({ id, text: value, project_slug }) {
-  return run(async (db) => {
-    uuid(id);
-    await touch(db.from('suggestions').update({ text: text(value, 'Texte', 500), project_slug: project_slug || null }).eq('id', id));
-  });
-}
-
-export async function deleteSuggestion(id) {
-  return run(async (db) => {
-    uuid(id);
-    await touch(db.from('suggestions').delete().eq('id', id));
   });
 }
 
