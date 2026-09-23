@@ -10,7 +10,7 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 (`dashboard-pilotage-omega.vercel.app`), données dans Supabase. Ce qui existe :
 
 - **UI** : accueil (`/`) = synthèse du jour puis, dans l'ordre par défaut, agenda visuel (J à J+7),
-  idées et suggestions, actions à faire, mails, apps (tuiles `app_links`) ; détail projet
+  idées, tâches (avec les propositions issues des mails), mails, apps (tuiles `app_links`) ; détail projet
   (`/projects/[slug]`) avec jalons éditables, carte des interactions (`/map`), boîte à idées
   (`/brain` : Zone Commande + notes). Manifest : installable sur mobile.
 - **Suivi des sessions Claude** : hook de fin de session
@@ -29,19 +29,19 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 - **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public et
   brain-notes. RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
   par Thibaut le 2026-09-20) : la clé anon ne peut que lire, les écritures
-  passent par le client admin. Limite : `brain_notes` reste lisible avec la clé
-  anon (la page `/brain` la lit avec).
+  passent par le client admin. `brain_notes` est lue côté serveur (`lib/brain.js`) ;
+  `supabase/ideas.sql` retire sa lecture anon.
 - **Données personnelles** : `tasks` (`supabase/tasks.sql`), `instagram_saves` et
   `suggestions` (`supabase/instagram.sql`), `calendar_events` et `mail_items`
   (`supabase/agenda.sql`), `app_links` et `dashboard_settings` (`supabase/dashboard-edit.sql`), `notifications` (`supabase/notifications.sql`) ont RLS **sans aucune policy anon** : lues
   et écrites côté serveur seulement (`lib/home-data.js`, `app/actions.js`, clé
   service_role), derrière le Basic Auth, jamais dans `/api/public/overview`.
 
-## Suggestions de next steps (boucle Claude, sans modèle côté site)
+## Idées = next steps (boucle Claude, sans modèle côté site)
 
 1. `node --env-file=.env.local scripts/import-instagram.mjs` copie les notes du skill `instagram-memoire` dans `instagram_saves` (idempotent, `--dry-run`).
-2. En session, Claude lit `instagram_saves` (récentes) et les projets, et insère dans `suggestions` des lignes `{ project_slug, text, source_save_id, status: 'new' }` via `getSupabaseAdmin()`.
-3. L'accueil les affiche : « Ajouter à la prochaine session » crée une tâche `next_session`, « Ignorer » passe la suggestion à `dismissed`.
+2. En session, Claude lit `instagram_saves` (récentes) et les projets, et insère dans **`brain_notes`** des lignes `{ content, project_slug, source_save_id, status: 'new' }` via `getSupabaseAdmin()` (`project_slug` = slug existant de `projects` ou `null`). La table `suggestions` n'est plus lue ni écrite : `supabase/ideas.sql` a copié ses suggestions actives dans `brain_notes` (trace dans `source_suggestion_id`).
+3. L'accueil les affiche dans le panneau Idées, comme toute idée : « En faire une tâche » crée une tâche `next_session` liée à l'idée, « Traitée » la passe à `done`.
 4. Aucun appel à Instagram ni à un modèle depuis le site : rien de plus à configurer.
 
 ## Agenda et notifications de l'accueil (instantané poussé par Claude)
@@ -55,10 +55,11 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 
 1. Tout ce que l'accueil affiche se crée, se modifie et se supprime depuis le site (Server Actions de `app/edit-actions.js` et `app/actions.js`, clé service_role, derrière le Basic Auth ; suppression avec confirmation en ligne). Les briques d'interface sont toutes dans `components/ui.js` : un relooking se fait là.
 2. L'agenda vient de `calendar_events` : `origin` = `google` (instantané poussé par Claude) ou `local` (créé sur le site). Les mails de `mail_items` sont un instantané en lecture seule ; le filtre Tous / Gmail / EDHEC est mémorisé dans `dashboard_settings` (clé `mail_filter`).
-3. Tâches : sections en retard / aujourd'hui / prochaine session / sans échéance, ordre par `tasks.position` (monter / descendre). Les événements du jour comptent dans « Aujourd'hui ».
+3. Tâches (« à faire » = tâche partout) : sections en retard / aujourd'hui / prochaine session / sans échéance, ordre par `tasks.position` (monter / descendre). Les événements du jour comptent dans « Aujourd'hui ».
 4. Apps (`app_links`), projets et jalons (création, renommage, statut, ordre, suppression) : supprimer un projet supprime d'abord ses lignes enfants (`lib/db-ops.js`).
-5. « Organiser la page » (masquer, réafficher, réordonner les panneaux) s'enregistre dans `dashboard_settings` (clé `home_layout`).
-6. `components/AutoRefresh.js` relit le serveur au retour sur l'onglet et toutes les 60 s (`router.refresh()`), pour garder téléphone et PC synchrones ; ces tables n'ont pas de realtime. SQL à exécuter : `supabase/dashboard-edit.sql`.
+5. Idées : « Affecter à… » lie une idée à une tâche non faite ou à un événement à venir (`brain_notes.task_id` / `event_id`, l'un ou l'autre, `supabase/ideas.sql`) ; l'idée s'affiche sous la tâche et dans le détail de l'événement.
+6. « Organiser la page » (masquer, réafficher, réordonner les panneaux) s'enregistre dans `dashboard_settings` (clé `home_layout`).
+7. `components/AutoRefresh.js` relit le serveur au retour sur l'onglet et toutes les 60 s (`router.refresh()`), pour garder téléphone et PC synchrones ; ces tables n'ont pas de realtime. SQL à exécuter : `supabase/dashboard-edit.sql`.
 
 ## Comment ajouter du contenu sans code
 
@@ -69,7 +70,7 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 
 ## Notifications issues des mails (`supabase/notifications.sql`)
 
-1. L'analyse des mails est faite par Claude (la tâche planifiée `refresh-dashboard-agenda-mails`, ou une session), jamais par le site : il propose des notifications, Thibaut les accepte ou les ignore dans « Actions à faire ».
+1. L'analyse des mails est faite par Claude (la tâche planifiée `refresh-dashboard-agenda-mails`, ou une session), jamais par le site : il propose des notifications, Thibaut les accepte ou les ignore dans le panneau « Tâches » (section « À valider, depuis les mails »).
 2. `node --env-file=.env.local scripts/push-notifications.mjs <fichier.json> [--dry-run]` ; format `{"notifications":[{"kind","title","detail","mail_id","mail_link","starts_at","ends_at","due_date","dedupe_key"}]}`, 30 au plus. `kind` = `event` (`starts_at` requis), `deadline` (`due_date` requis), `todo` ou `info` ; dates ISO 8601 avec fuseau, `due_date` AAAA-MM-JJ.
 3. Écriture par insertion qui ignore les doublons sur `dedupe_key` (à dériver du fil et de l'objet, ex. `<mail_id>:deadline`) : une ligne existante n'est jamais modifiée, donc une notification acceptée ou ignorée ne revient pas ; rien n'est supprimé. « Supprimer » sur le site efface aussi la mémoire du doublon.
 4. Jamais le contenu d'un mail : seulement `title` et `detail` courts dérivés, l'identifiant du fil (`mail_id`) et le lien (`mail_link`). Table personnelle : RLS sans policy anon, lecture et écriture côté serveur.

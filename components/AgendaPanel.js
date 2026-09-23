@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
 import { deleteEvent, saveEvent } from '@/app/edit-actions';
@@ -84,7 +85,7 @@ function EventForm({ initial, today, onDone }) {
   );
 }
 
-function EventDetail({ event, today, onClose }) {
+function EventDetail({ event, today, onClose, ideas }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const google = (event.origin ?? 'google') === 'google';
@@ -96,6 +97,7 @@ function EventDetail({ event, today, onClose }) {
           <p className="break-words font-medium">{event.title}</p>
           <p className={mutedClass}>{describeWhen(event)}</p>
           {event.location && <p className={`break-words ${mutedClass}`}>{event.location}</p>}
+          <LinkedIdeas ideas={ideas} eventId={event.id} />
           {event.conflict && <p className="text-xs font-medium text-red-600 dark:text-red-400">Conflit avec un autre événement</p>}
           {event.link && (
             <a href={event.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
@@ -130,7 +132,7 @@ function EventDetail({ event, today, onClose }) {
 // Semaine glissante J à J+7 (calculée par buildWeek, heure de Paris) : une colonne
 // par jour, un bloc par événement à son créneau. Sur téléphone, seule la grille
 // défile horizontalement ; la colonne des heures reste fixe.
-export default function AgendaPanel({ week, state, now }) {
+export default function AgendaPanel({ week, state, now, ideas }) {
   const [selectedId, setSelectedId] = useState(null);
   const [adding, setAdding] = useState(false);
   const rows = state.data ?? [];
@@ -211,6 +213,7 @@ export default function AgendaPanel({ week, state, now }) {
                   data-conflict={b.conflict}
                 >
                   {b.conflict && '⚠ '}
+                  {ideas?.some((n) => n.event_id === b.id) && '💡 '}
                   {b.title}
                 </button>
               ))}
@@ -245,7 +248,7 @@ export default function AgendaPanel({ week, state, now }) {
         </p>
       )}
       {grid}
-      {selected && <EventDetail key={selected.id} event={selected} today={today} onClose={() => setSelectedId(null)} />}
+      {selected && <EventDetail key={selected.id} event={selected} today={today} onClose={() => setSelectedId(null)} ideas={ideas} />}
       {!state.error && (
         <SyncFooter
           rows={rows.filter((e) => (e.origin ?? 'google') === 'google')}

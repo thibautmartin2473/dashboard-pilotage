@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, mutedClass, useAction } from './ui';
 import { acceptNotification, deleteNotification, dismissNotification } from '@/app/command-actions';
 import { describeWhen, isoToParisLocal } from '@/lib/home';
@@ -9,7 +8,7 @@ import { describeWhen, isoToParisLocal } from '@/lib/home';
 const KINDS = {
   event: ['Événement', 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'],
   deadline: ['Échéance', 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
-  todo: ['À faire', 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'],
+  todo: ['Tâche', 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300'],
   info: ['Info', 'bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200'],
 };
 
@@ -117,23 +116,28 @@ function NotificationRow({ n }) {
   );
 }
 
-// Propositions de Claude issues des mails (statut « new »). `state` = { data } ou { error, message } :
-// table absente ou panne s'affichent à la place de la liste, jamais comme « aucune notification ».
+// Propositions de Claude issues des mails (statut « new »), affichées comme une section de la liste
+// des tâches. `state` = { data } ou { error, message } : table absente ou panne s'affichent à la place
+// de la liste, jamais comme « rien à valider ». Rien en attente : pas de section.
 export default function NotificationsPanel({ state }) {
   const list = state.data ?? [];
+  if (!state.error && list.length === 0) return null;
   return (
-    <div className="mt-3" data-testid="notifications">
-      <Panel title="Notifications" count={state.data ? list.length : null} state={state} file="notifications.sql">
-        {list.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucune notification.</p>
-        ) : (
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
-            {list.map((n) => (
-              <NotificationRow key={n.id} n={n} />
-            ))}
-          </ul>
-        )}
-      </Panel>
-    </div>
+    <section className="mt-3" data-testid="notifications">
+      <h3 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        À valider, depuis les mails{state.data ? ` (${list.length})` : ''}
+      </h3>
+      {state.error ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {state.error === 'missing' ? 'Table manquante : exécuter supabase/notifications.sql' : `Erreur : ${state.message}`}
+        </p>
+      ) : (
+        <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
+          {list.map((n) => (
+            <NotificationRow key={n.id} n={n} />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

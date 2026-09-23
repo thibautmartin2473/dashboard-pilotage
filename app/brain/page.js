@@ -2,6 +2,9 @@ import { getBrainNotes } from '@/lib/brain';
 import BrainNotesClient from '@/components/BrainNotesClient';
 import CommandBox from '@/components/CommandBox';
 
+// Idées lues à chaque requête avec la clé service_role : jamais figées dans le HTML du build.
+export const dynamic = 'force-dynamic';
+
 export default async function BrainPage() {
   const notes = await getBrainNotes();
 

@@ -80,6 +80,14 @@
     {
       "label": "Accueil : notifications issues des mails (table à créer)",
       "status": "blocked"
+    },
+    {
+      "label": "Accueil : idées et next steps fusionnés, affectables à une tâche ou un événement",
+      "status": "blocked"
+    },
+    {
+      "label": "Accueil : « à faire » = tâche, propositions des mails dans la liste des tâches",
+      "status": "done"
     }
   ]
 }

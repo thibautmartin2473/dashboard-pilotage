@@ -52,30 +52,3 @@ export async function completeTask(id) {
     await touch(db.from('tasks').update({ done_at: new Date().toISOString() }).eq('id', id).is('done_at', null));
   });
 }
-
-// On « réserve » la suggestion (new -> accepted) avant de créer la tâche : un
-// double clic ne crée qu'une tâche ; si la création échoue, on rend la suggestion.
-export async function acceptSuggestion(id) {
-  return run(async (db) => {
-    must(UUID.test(id), 'Identifiant invalide');
-    const [s] = await touch(
-      db.from('suggestions').update({ status: 'accepted' }).eq('id', id).eq('status', 'new'),
-      'Suggestion déjà traitée',
-      'text, project_slug'
-    );
-    const { error } = await db
-      .from('tasks')
-      .insert({ title: s.text, bucket: 'next_session', project_slug: s.project_slug, source: 'suggestion', ...(await nextPosition(db, 'tasks')) });
-    if (error) {
-      await db.from('suggestions').update({ status: 'new' }).eq('id', id);
-      throw error;
-    }
-  });
-}
-
-export async function dismissSuggestion(id) {
-  return run(async (db) => {
-    must(UUID.test(id), 'Identifiant invalide');
-    await touch(db.from('suggestions').update({ status: 'dismissed' }).eq('id', id).eq('status', 'new'), 'Suggestion déjà traitée');
-  });
-}

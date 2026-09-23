@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LinkedIdeas } from './IdeasPanel';
 import NotificationsPanel from './NotificationsPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, mutedClass, useAction } from './ui';
@@ -106,7 +107,7 @@ function TaskEditForm({ task, projects, onDone }) {
   );
 }
 
-function TaskRow({ task, first, last, today, projects }) {
+function TaskRow({ task, first, last, today, projects, ideas }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const overdue = isOverdue(task, today);
@@ -137,6 +138,7 @@ function TaskRow({ task, first, last, today, projects }) {
                 </span>
               )}
             </p>
+            <LinkedIdeas ideas={ideas} taskId={task.id} />
           </>
         )}
         <ErrorLine error={error} />
@@ -159,15 +161,15 @@ function TaskRow({ task, first, last, today, projects }) {
   );
 }
 
-// Actions à faire : compteurs (notifications), puis les tâches par section. Les événements du jour
+// Tâches : compteurs, formulaire, propositions issues des mails (à accepter ou ignorer), puis les tâches par section. Les événements du jour
 // s'ajoutent à la section « Aujourd'hui » (lecture seule, ils se modifient dans l'agenda) : on n'écrit
 // « Rien ici » que si le jour n'a ni tâche ni événement.
-export default function ActionsPanel({ sections, todayEvents, projects, state, today, notifications }) {
+export default function ActionsPanel({ sections, todayEvents, projects, state, today, notifications, ideas }) {
   const events = todayEvents ?? [];
   const count = (s) => (s === 'today' ? sections?.today.length + events.length : sections?.[s].length);
 
   return (
-    <Panel title="Actions à faire" state={state} file="tasks.sql">
+    <Panel title="Tâches" state={state} file="tasks.sql">
       <p className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm" data-testid="task-counters">
         {SECTIONS.map((s) => (
           <span key={s} className={s === 'overdue' && count(s) ? 'font-medium text-red-600 dark:text-red-400' : ''}>
@@ -175,8 +177,8 @@ export default function ActionsPanel({ sections, todayEvents, projects, state, t
           </span>
         ))}
       </p>
-      <NotificationsPanel state={notifications} />
       <AddTask projects={projects} />
+      <NotificationsPanel state={notifications} />
       {SECTIONS.map((s) => {
         const list = sections?.[s] ?? [];
         const empty = list.length === 0 && (s === 'today' ? todayEmptyMessage(0, todayEvents) : 'Aucune tâche.');
@@ -191,6 +193,7 @@ export default function ActionsPanel({ sections, todayEvents, projects, state, t
                   <li key={e.id} className="py-1.5 text-sm">
                     <span className="break-words">{e.title}</span>
                     <span className={`block ${mutedClass}`}>Agenda · {describeWhen(e)}</span>
+                    <LinkedIdeas ideas={ideas} eventId={e.id} />
                   </li>
                 ))}
               </ul>
@@ -198,7 +201,7 @@ export default function ActionsPanel({ sections, todayEvents, projects, state, t
             {list.length > 0 && (
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
                 {list.map((t, i) => (
-                  <TaskRow key={t.id} task={t} first={i === 0} last={i === list.length - 1} today={today} projects={projects} />
+                  <TaskRow key={t.id} task={t} first={i === 0} last={i === list.length - 1} today={today} projects={projects} ideas={ideas} />
                 ))}
               </ul>
             )}
