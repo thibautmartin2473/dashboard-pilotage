@@ -16,23 +16,23 @@
   /* Surfaces et texte : zinc-950 = fond de page, zinc-900 = surface d'un
      panneau, zinc-800/700 = bordures, zinc-400 = texte secondaire,
      zinc-100 = texte fort (et fond des boutons actifs). */
-  --color-black: #0d1017;
-  --color-zinc-950: #0d1017;
-  --color-zinc-900: #151a23;
-  --color-zinc-800: #232a36;
-  --color-zinc-700: #2b3648;
-  --color-zinc-600: #3a4557;
+  --color-black: #161b25;
+  --color-zinc-950: #161b25;
+  --color-zinc-900: #1f2531;
+  --color-zinc-800: #2d3442;
+  --color-zinc-700: #374154;
+  --color-zinc-600: #485468;
   --color-zinc-500: #99a3b7;
   --color-zinc-400: #9aa4b8;
   --color-zinc-300: #c3cbda;
   --color-zinc-200: #d7dde8;
   --color-zinc-100: #e6eaf2;
-  --color-zinc-50: #151a23;
+  --color-zinc-50: #1f2531;
 
   /* Accent et états. Les composants s'en servent via les rampes red/amber/green
      (leurs variantes -400 pour le texte, -950 pour les fonds). */
   --color-accent: #4d7cfe;
-  --color-accent-soft: #18203a;
+  --color-accent-soft: #232c4c;
   --color-red-300: #f2645a;
   --color-red-400: #f2645a;
   --color-red-600: #f2645a;
@@ -49,7 +49,7 @@
 }
 
 :root {
-  --background: #0d1017;
+  --background: #161b25;
   --foreground: #e6eaf2;
   color-scheme: dark;
 }

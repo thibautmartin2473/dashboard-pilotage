@@ -23,7 +23,7 @@ export const metadata = {
 // défilement) doivent suivre, sinon ils repassent en blanc sur fond sombre.
 export const viewport = {
   colorScheme: "dark",
-  themeColor: "#0d1017",
+  themeColor: "#161b25",
 };
 
 export default function RootLayout({ children }) {
