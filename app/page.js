@@ -83,7 +83,7 @@ export default async function HomePage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
       <AutoRefresh />
       {!supabaseConfigured && (
         <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
@@ -141,11 +141,11 @@ export default async function HomePage() {
         <LayoutEditor layout={layout} settings={settings} />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
         {layout.order
           .filter((id) => !layout.hidden.includes(id))
           .map((id) => (
-            <div key={id} className={`min-w-0 ${HOME_PANELS[id].wide ? 'md:col-span-2' : ''}`}>
+            <div key={id} className={`min-w-0 ${HOME_PANELS[id].wide ? 'md:col-span-full' : ''}`}>
               {panels[id]}
             </div>
           ))}

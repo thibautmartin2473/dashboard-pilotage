@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-10">
         <Link href="/" className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
