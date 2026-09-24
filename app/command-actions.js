@@ -58,7 +58,9 @@ export async function applyCommand(actions) {
       if (a?.kind === 'event') {
         events.push({ id: `local-${crypto.randomUUID()}`, ...eventRow({ title: a.title, start: a.start, end: a.end }), origin: 'local', synced_at: isoNow() });
       } else if (a?.kind === 'task') {
-        tasks.push({ title: text(a.title, 'Titre', 200), bucket: 'inbox', due_date: dueDate(a.due_date), source: 'command' });
+        const task = { title: text(a.title, 'Titre', 200), bucket: 'inbox', due_date: dueDate(a.due_date), source: 'command' };
+        if (a.event_id) task.event_id = text(String(a.event_id), 'Événement', 300);
+        tasks.push(task);
       } else if (a?.kind === 'idea') {
         const idea = { content: text(a.content, 'Idée', 2000) };
         must(!a.task_id || !a.event_id, 'Une idée ne peut avoir qu\'une seule cible');

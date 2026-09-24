@@ -68,7 +68,10 @@ assert.deepEqual(day('ajoute un point lundi à 10h', new Date('2026-09-20T23:30:
 
 // Tâches et idées.
 assert.deepEqual(ok('tâche : appeler la banque pour vendredi'), [
-  { kind: 'task', title: 'Appeler la banque', due_date: '2026-09-25', label: 'Créer la tâche « Appeler la banque » · pour ven. 25 sept.' },
+  {
+    kind: 'task', title: 'Appeler la banque', due_date: '2026-09-25', event_id: null,
+    label: 'Créer la tâche « Appeler la banque » · pour ven. 25 sept.',
+  },
 ]);
 assert.deepEqual(ok('tâche : ranger le bureau').map((a) => [a.title, a.due_date]), [['Ranger le bureau', null]]);
 assert.deepEqual(ok('à faire : envoyer le rapport demain').map((a) => [a.title, a.due_date]), [['Envoyer le rapport', '2026-09-22']]);
@@ -127,6 +130,22 @@ assert.deepEqual([a.event_id, a.task_id], [null, null]);
 // Pas de clause de liaison : comportement inchangé (pas de note dans le label).
 a = ok('idée : rien à voir ici')[0];
 assert.equal(a.label, "Ajouter l'idée « Rien à voir ici »");
+
+// Tâches : même liaison automatique que les idées, mais uniquement vers une plage (event_id) —
+// une tâche ne peut pas se placer « dans » une autre tâche.
+a = linked('tâche : envoyer un message à Corinne pendant la prochaine session fit');
+assert.deepEqual([a.title, a.due_date, a.event_id], ['Envoyer un message à Corinne', null, 'e1']);
+assert.match(a.label, /placée dans Agenda : Fit/);
+
+a = linked('tâche : relire le brief pour vendredi pendant le cas boost');
+assert.deepEqual([a.due_date, a.event_id], ['2026-09-25', 'e2']);
+
+a = linked('tâche : truc sans rapport pendant la prochaine session zzz');
+assert.equal(a.event_id, null);
+assert.match(a.label, /aucune plage ne correspond à « zzz »/);
+
+a = ok('tâche : rien à voir ici')[0];
+assert.equal(a.label, 'Créer la tâche « Rien à voir ici » · sans échéance');
 
 // Tout le reste : message explicite, trois exemples, rien d'interprété.
 assert.equal(EXAMPLES.length, 3);

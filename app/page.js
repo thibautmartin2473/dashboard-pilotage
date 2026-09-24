@@ -9,7 +9,8 @@ import MailsPanel from '@/components/MailsPanel';
 import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
 import {
-  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, resolveLayout, splitTasks, summarize, todayEvents, todayLine, todayParis,
+  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, eventIdsOnDay, resolveLayout, splitTasks, summarize,
+  todayEvents, todayLine, todayParis,
 } from '@/lib/home';
 import { supabaseConfigured } from '@/lib/supabase';
 
@@ -50,7 +51,7 @@ export default async function HomePage() {
   const today = todayParis(now);
   const week = events.data ? buildWeek(events.data, now) : null;
   const todayList = todayEvents(week);
-  const sections = tasks.data && splitTasks(tasks.data, today);
+  const sections = tasks.data && splitTasks(tasks.data, today, eventIdsOnDay(events.data ?? [], today));
   const summary = summarize({
     tasks: tasks.data ?? null,
     projects: projects.map((p) => ({ name: p.name, lastActivity: lastActivityAt(p) })),
