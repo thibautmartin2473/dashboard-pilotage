@@ -188,6 +188,34 @@ export async function saveEvent({ id, ...form }) {
   });
 }
 
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
+// Glisser-déposer / poignées / flèches de l'agenda. Un événement Google déplacé est marqué
+// pending_move (supabase/agenda-moves.sql) : scripts/push-agenda.mjs ne l'écrase plus, Claude le
+// renvoie vers Google puis l'acquitte. Une seule écriture : colonne absente = rien n'est déplacé.
+export async function moveEvent({ id, starts_at, ends_at }) {
+  return run(async (db) => {
+    must(typeof id === 'string' && id.length > 0 && id.length <= 300, 'Identifiant invalide');
+    must(ISO.test(starts_at ?? '') && ISO.test(ends_at ?? ''), 'Dates invalides (ISO 8601 avec fuseau)');
+    starts_at = new Date(starts_at).toISOString();
+    ends_at = new Date(ends_at).toISOString();
+    must(ends_at > starts_at, 'La fin doit être après le début');
+    const [event] = await rows(db.from('calendar_events').select('origin, all_day').eq('id', id));
+    must(event, 'Événement introuvable');
+    must(!event.all_day, 'Un événement « toute la journée » ne se déplace pas');
+    const patch = { starts_at, ends_at };
+    if ((event.origin ?? 'google') === 'google') patch.pending_move = true;
+    try {
+      await touch(db.from('calendar_events').update(patch).eq('id', id));
+    } catch (err) {
+      if (isMissingColumn(err)) {
+        throw new Error('Colonne calendar_events.pending_move absente : exécuter supabase/agenda-moves.sql dans Supabase.');
+      }
+      throw err;
+    }
+  });
+}
+
 export async function deleteEvent(id) {
   return run(async (db) => {
     must(typeof id === 'string' && id.length > 0, 'Identifiant invalide');

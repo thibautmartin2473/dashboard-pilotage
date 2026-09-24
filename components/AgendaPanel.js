@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
 import { completeTask } from '@/app/actions';
-import { deleteEvent, saveEvent } from '@/app/edit-actions';
-import { describeWhen, eventColor, eventForm, timeParis } from '@/lib/home';
+import { deleteEvent, moveEvent, saveEvent } from '@/app/edit-actions';
+import { buildWeek, describeWhen, eventColor, eventForm, shiftEvent, snapMinutes, timeParis } from '@/lib/home';
 
 const HOUR_PX = 44; // hauteur d'une heure dans la grille
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
+const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
 
 // Code couleur de l'agenda (voir lib/home.js, eventColor) : rouge Tomate = cours EDHEC, bleu
 // Myrtille = autres événements, orange Mandarine = tâches/blocs de travail.
@@ -124,7 +125,27 @@ function PlacedTask({ task }) {
   );
 }
 
-function EventDetail({ event, today, onClose, ideas, tasks }) {
+// Flèches ▲▼ du détail (téléphone, clavier) : début ou fin −/+ 15 min, même calcul que les poignées.
+function Nudge({ label, event, mode, onMove, disabled }) {
+  const arrow = (minutes, sign, word) => (
+    <IconButton
+      label={`${label} 15 min plus ${word}`}
+      disabled={disabled}
+      onClick={() => onMove(event, shiftEvent(event, { mode, minutes }))}
+    >
+      {sign}
+    </IconButton>
+  );
+  return (
+    <span className="flex items-center gap-1">
+      {label}
+      {arrow(-15, '▲', 'tôt')}
+      {arrow(15, '▼', 'tard')}
+    </span>
+  );
+}
+
+function EventDetail({ event, today, onClose, ideas, tasks, onMove, moving }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const google = (event.origin ?? 'google') === 'google';
@@ -151,9 +172,15 @@ function EventDetail({ event, today, onClose, ideas, tasks }) {
               Ouvrir dans Google Agenda
             </a>
           )}
-          {google && (
+          {google && event.pending_move && (
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-300" data-testid="pending-move">
+              ↻ à renvoyer vers Google (déplacé ici, la synchro ne l&apos;écrase pas)
+            </p>
+          )}
+          {google && !event.pending_move && (
             <p className={mutedClass}>
-              Événement Google : la prochaine synchro peut annuler ta modification ou le rétablir après suppression.
+              Événement Google : un déplacement est renvoyé vers Google ; « Modifier » ou une suppression peut être
+              annulé par la prochaine synchro.
             </p>
           )}
         </div>
@@ -165,6 +192,12 @@ function EventDetail({ event, today, onClose, ideas, tasks }) {
         <EventForm initial={{ id: event.id, ...eventForm(event) }} today={today} onDone={() => setEditing(false)} />
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-2">
+          {!event.all_day && (
+            <span className="flex flex-wrap items-center gap-2 text-xs" data-testid="nudge">
+              <Nudge label="Début" event={event} mode="start" onMove={onMove} disabled={moving} />
+              <Nudge label="Fin" event={event} mode="end" onMove={onMove} disabled={moving} />
+            </span>
+          )}
           <Button disabled={pending} onClick={() => setEditing(true)}>
             Modifier
           </Button>
@@ -179,10 +212,71 @@ function EventDetail({ event, today, onClose, ideas, tasks }) {
 // Semaine glissante J à J+7 (calculée par buildWeek, heure de Paris) : une colonne
 // par jour, un bloc par événement à son créneau. Sur téléphone, seule la grille
 // défile horizontalement ; la colonne des heures reste fixe.
-export default function AgendaPanel({ week, state, now, ideas, tasks }) {
+export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks }) {
   const [selectedId, setSelectedId] = useState(null);
   const [adding, setAdding] = useState(false);
+  const moving = useAction();
+  const justDragged = useRef(false);
   const rows = state.data ?? [];
+
+  // Heures affichées avant la réponse du serveur (aperçu du glisser, mise à jour optimiste) :
+  // { id: { starts_at, ends_at } }, valables pour cette version des données serveur seulement
+  // (le rafraîchissement qui suit moveEvent les remplace).
+  const [draft, setDraft] = useState({ base: null, map: {} });
+  const overrides = draft.base === serverWeek ? draft.map : {};
+  const setOverride = (id, times) =>
+    setDraft((d) => {
+      const map = { ...(d.base === serverWeek ? d.map : {}) };
+      if (times) map[id] = times;
+      else delete map[id];
+      return { base: serverWeek, map };
+    });
+  const week =
+    serverWeek && Object.keys(overrides).length
+      ? buildWeek(rows.map((e) => (overrides[e.id] ? { ...e, ...overrides[e.id] } : e)), new Date(now))
+      : serverWeek;
+
+  const commit = (event, times) => {
+    setOverride(event.id, { ...times, pending_move: (event.origin ?? 'google') === 'google' });
+    moving.run(async () => {
+      const result = await moveEvent({ id: event.id, ...times });
+      if (result.error) setOverride(event.id, null);
+      return result;
+    });
+  };
+
+  // Glisser un bloc (mode 'move') ou une poignée ('start' / 'end') : écoute sur window pour
+  // survivre au changement de colonne du bloc pendant l'aperçu. Pas de 15 min (snapMinutes).
+  const startDrag = (ev, block, dayIndex, mode) => {
+    if (ev.button !== 0 || moving.pending) return;
+    ev.stopPropagation();
+    const colW = ev.currentTarget.closest('[data-testid^="day-"]').offsetWidth;
+    const origin = { x: ev.clientX, y: ev.clientY };
+    let step = null; // { minutes, days } une fois le seuil de DRAG_PX franchi
+    const move = (e) => {
+      const dx = e.clientX - origin.x;
+      const dy = e.clientY - origin.y;
+      if (!step && Math.hypot(dx, dy) < DRAG_PX) return;
+      const last = week.days.length - 1;
+      const days = mode === 'move' ? Math.min(Math.max(Math.round(dx / colW), -dayIndex), last - dayIndex) : 0;
+      step = { minutes: snapMinutes(dy, HOUR_PX), days };
+      setOverride(block.id, shiftEvent(block, { mode, ...step }));
+    };
+    const end = (e) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      if (!step) return; // simple clic : onClick ouvre le détail
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false));
+      if (e.type === 'pointercancel' || (!step.minutes && !step.days)) setOverride(block.id, null);
+      else commit(block, shiftEvent(block, { mode, ...step }));
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
+
   const today = week?.days[0].day;
   const selected = week && selectedId ? findEvent(week, selectedId) : null;
 
@@ -194,6 +288,7 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
     const gutter = 'sticky left-0 z-20 bg-white dark:bg-zinc-950';
     const cell = 'border-l border-zinc-200 dark:border-zinc-800';
     const open = (e) => {
+      if (justDragged.current) return;
       setAdding(false);
       setSelectedId(e.id);
     };
@@ -231,7 +326,7 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
               </span>
             ))}
           </div>
-          {week.days.map((d) => (
+          {week.days.map((d, dayIndex) => (
             <div key={d.day} className={`${cell} relative`} style={{ height }} data-testid={`day-${d.day}`}>
               {Array.from({ length: hours }, (_, i) => (
                 <div key={i} className="absolute inset-x-0 border-t border-zinc-100 dark:border-zinc-900" style={{ top: i * HOUR_PX }} />
@@ -247,20 +342,42 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
               {d.blocks.map((b) => {
                 const linked = linkedOf(b.id, ideas, tasks);
                 const shown = linked.tasks.slice(0, 3);
+                // Poignées sur le vrai début / la vraie fin seulement (pas sur la suite d'un événement de nuit).
+                const ownStart = b.startMin > 0 || timeParis(b.starts_at) === '00h00';
+                const ownEnd = b.endMin < 1440;
+                const handle = 'absolute inset-x-0 h-2 cursor-ns-resize';
                 return (
                   <button
                     key={b.id}
                     type="button"
                     onClick={() => open(b)}
+                    onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'move')}
                     title={`${b.title} (${timeParis(b.starts_at)})`}
-                    className={`group absolute overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
+                    className={`group absolute cursor-grab touch-none select-none overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
                       b.conflict ? 'border-red-500 bg-red-100 dark:bg-red-950' : CATEGORY_CLASS[eventColor(b)]
                     } ${selectedId === b.id ? 'ring-2 ring-zinc-900 dark:ring-zinc-100' : ''}`}
                     style={{ top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%` }}
                     data-testid="event-block"
                     data-conflict={b.conflict}
                   >
+                    {ownStart && (
+                      <span
+                        className={`${handle} top-0`}
+                        onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'start')}
+                        aria-hidden="true"
+                        data-testid="handle-start"
+                      />
+                    )}
+                    {ownEnd && (
+                      <span
+                        className={`${handle} bottom-0`}
+                        onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'end')}
+                        aria-hidden="true"
+                        data-testid="handle-end"
+                      />
+                    )}
                     <span className="block truncate">
+                      {b.pending_move && '↻ '}
                       {b.conflict && '⚠ '}
                       {linked.ideas.length > 0 && '💡 '}
                       {b.title}
@@ -333,8 +450,18 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
         </p>
       )}
       {grid}
+      <ErrorLine error={moving.error} />
       {selected && (
-        <EventDetail key={selected.id} event={selected} today={today} onClose={() => setSelectedId(null)} ideas={ideas} tasks={tasks} />
+        <EventDetail
+          key={selected.id}
+          event={selected}
+          today={today}
+          onClose={() => setSelectedId(null)}
+          ideas={ideas}
+          tasks={tasks}
+          onMove={commit}
+          moving={moving.pending}
+        />
       )}
       {!state.error && (
         <SyncFooter

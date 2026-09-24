@@ -20,19 +20,92 @@
 // absentes du fichier : tous les mails, mais uniquement les événements d'origine "google"
 // (les événements créés sur le site, origin = 'local', ne sont jamais touchés).
 // --dry-run valide le fichier et n'écrit rien (n'exige pas Supabase).
+//
+// Déplacements faits sur le site (glisser-déposer, poignées, flèches) : un événement Google déplacé
+// porte calendar_events.pending_move = true (supabase/agenda-moves.sql). Tant que c'est le cas, ce
+// script ne l'écrase pas et ne le purge pas, même s'il est dans le fichier ou absent de celui-ci.
+// Cycle, en session Claude :
+//   node --env-file=.env.local scripts/push-agenda.mjs --pending
+//     -> JSON [{ "id", "title", "starts_at", "ends_at" }] sur la sortie standard (ISO UTC) ;
+//   écrire ces heures dans Google Agenda (même id d'événement), puis acquitter :
+//   node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>
+//     -> remet pending_move = false ; la synchro suivante reprend l'événement tel que dans Google.
 
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
 const args = process.argv.slice(2);
 const dry = args.includes('--dry-run');
-const file = args.find((a) => !a.startsWith('--'));
+const ackAt = args.indexOf('--ack');
+const file = args.find((a, i) => !a.startsWith('--') && (ackAt < 0 || i !== ackAt + 1));
 
 function fail(message) {
   console.error(message);
   process.exit(1);
 }
-if (!file) fail('Usage : node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]');
+
+function connect() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) fail('NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requis (--env-file=.env.local).');
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+function dbFail(error) {
+  fail(
+    error.code === 'PGRST205'
+      ? 'Table absente : exécuter supabase/agenda.sql dans le SQL Editor de Supabase.'
+      : ['PGRST204', '42703'].includes(error.code)
+        ? `Colonne absente : exécuter le SQL correspondant de supabase/ (dashboard-edit.sql, agenda-links.sql ou agenda-moves.sql) dans le SQL Editor de Supabase (${error.message}).`
+        : `Supabase : ${error.message}`
+  );
+}
+
+// Événements déplacés sur le site, pas encore renvoyés vers Google. Colonne absente (agenda-moves.sql
+// pas exécuté) : aucun déplacement ne peut être en attente, on le dit sur stderr.
+async function pendingMoves(db) {
+  const { data, error } = await db
+    .from('calendar_events')
+    .select('id, title, starts_at, ends_at')
+    .eq('pending_move', true)
+    .order('starts_at');
+  if (error && ['PGRST204', '42703'].includes(error.code)) {
+    console.error('Colonne pending_move absente (supabase/agenda-moves.sql pas exécuté) : aucun déplacement en attente.');
+    return [];
+  }
+  if (error) dbFail(error);
+  return data;
+}
+
+if (args.includes('--pending')) {
+  console.log(JSON.stringify(await pendingMoves(connect()), null, 2));
+  process.exit(0);
+}
+
+if (ackAt >= 0) {
+  const ids = String(args[ackAt + 1] ?? '').split(',').map((id) => id.trim()).filter(Boolean);
+  if (!ids.length) fail('Usage : node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>');
+  const { data, error } = await connect()
+    .from('calendar_events')
+    .update({ pending_move: false })
+    .in('id', ids)
+    .eq('pending_move', true)
+    .select('id');
+  if (error) dbFail(error);
+  const done = new Set(data.map((r) => r.id));
+  console.log(`${done.size} déplacement(s) acquitté(s).`);
+  const unknown = ids.filter((id) => !done.has(id));
+  if (unknown.length) console.error(`Pas en attente (ou introuvable) : ${unknown.join(', ')}`);
+  process.exit(0);
+}
+
+if (!file) {
+  fail(
+    'Usage : node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]\n' +
+      '        node --env-file=.env.local scripts/push-agenda.mjs --pending\n' +
+      '        node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>'
+  );
+}
 
 let input;
 try {
@@ -155,19 +228,13 @@ if (dry) {
   process.exit(0);
 }
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) fail('NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requis (--env-file=.env.local).');
-const db = createClient(url, key, { auth: { persistSession: false } });
+const db = connect();
 
-function dbFail(error) {
-  fail(
-    error.code === 'PGRST205'
-      ? 'Table absente : exécuter supabase/agenda.sql dans le SQL Editor de Supabase.'
-      : ['PGRST204', '42703'].includes(error.code)
-        ? `Colonne absente : exécuter le SQL correspondant de supabase/ (dashboard-edit.sql ou agenda-links.sql) dans le SQL Editor de Supabase (${error.message}).`
-        : `Supabase : ${error.message}`
-  );
+// Déplacés sur le site et pas encore renvoyés vers Google : ni écrasés, ni purgés.
+const held = new Set((await pendingMoves(db)).map((e) => e.id));
+if (held.size) {
+  tables[0].rows = tables[0].rows.filter((r) => !held.has(r.id));
+  console.log(`calendar_events : ${held.size} déplacement(s) en attente conservé(s) (voir --pending).`);
 }
 
 for (const { name, rows, purge } of tables) {
@@ -178,7 +245,7 @@ for (const { name, rows, purge } of tables) {
   // Instantané : on retire ce qui n'est plus dans le fichier (cache), dans le périmètre de `purge`.
   const { data: existing, error } = await purge(db.from(name).select('id'));
   if (error) dbFail(error);
-  const keep = new Set(rows.map((r) => r.id));
+  const keep = new Set([...rows.map((r) => r.id), ...(name === 'calendar_events' ? held : [])]);
   const stale = existing.map((r) => r.id).filter((id) => !keep.has(id));
   for (let i = 0; i < stale.length; i += 100) {
     const { error: delError } = await db.from(name).delete().in('id', stale.slice(i, i + 100));
