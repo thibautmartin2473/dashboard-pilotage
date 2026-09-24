@@ -90,6 +90,10 @@
       "status": "done"
     },
     {
+      "label": "Accueil : vue globale, panneaux compacts extensibles/repliables, agenda entier",
+      "status": "done"
+    },
+    {
       "label": "Agenda : idées affectées auto, code couleur EDHEC/autres/tâches, infobulle des liens",
       "status": "done"
     },
@@ -99,7 +103,7 @@
     },
     {
       "label": "Agenda : glisser-déposer, poignées 15 min, déplacements renvoyés vers Google",
-      "status": "blocked"
+      "status": "done"
     }
   ]
 }

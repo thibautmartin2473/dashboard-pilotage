@@ -18,9 +18,9 @@ export default function LayoutEditor({ layout, settings }) {
     const next = [...order];
     const i = next.indexOf(id);
     [next[i], next[i + step]] = [next[i + step], next[i]];
-    save({ order: next, hidden });
+    save({ ...layout, order: next });
   };
-  const toggle = (id) => save({ order, hidden: hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id] });
+  const toggle = (id) => save({ ...layout, hidden: hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id] });
 
   const problem =
     settings.error === 'missing'

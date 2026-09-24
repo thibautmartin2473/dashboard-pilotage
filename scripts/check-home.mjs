@@ -277,11 +277,18 @@ assert.equal(formatMailDate(null), '');
 // --- Projets et disposition ---
 assert.equal(slugify('Café Été 2026 !'), 'cafe-ete-2026');
 assert.equal(slugify('!!!'), '');
-assert.deepEqual(resolveLayout(undefined), { order: HOME_PANEL_IDS, hidden: [] });
+assert.deepEqual(resolveLayout(undefined), { order: HOME_PANEL_IDS, hidden: [], sizes: {} });
 assert.deepEqual(resolveLayout({ order: ['mails', 'zzz', 'agenda', 'mails'], hidden: ['ideas', 'nope', 'ideas'] }), {
   order: ['mails', 'agenda', 'ideas', 'actions', 'apps'],
   hidden: ['ideas'],
+  sizes: {}, // ancien format sans `sizes` : tout compact
 });
+// Tailles : agenda jamais réduit, valeurs et panneaux inconnus ignorés.
+assert.deepEqual(
+  resolveLayout({ sizes: { ideas: 'expanded', mails: 'collapsed', agenda: 'collapsed', apps: 'huge', zzz: 'expanded' } }).sizes,
+  { ideas: 'expanded', mails: 'collapsed' },
+);
+assert.deepEqual(resolveLayout({ sizes: 'expanded' }).sizes, {});
 assert.deepEqual(HOME_PANEL_IDS, ['agenda', 'ideas', 'actions', 'mails', 'apps']); // ordre imposé par défaut
 
 // Dates relatives et dernière synchro.
