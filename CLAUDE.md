@@ -10,8 +10,9 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 (`dashboard-pilotage-omega.vercel.app`), données dans Supabase. Ce qui existe :
 
 - **UI** : accueil (`/`) = synthèse du jour puis, dans l'ordre par défaut, agenda visuel (J à J+7),
-  idées, tâches (avec les propositions issues des mails), mails, apps (tuiles `app_links`) ; détail projet
-  (`/projects/[slug]`) avec jalons éditables, carte des interactions (`/map`), boîte à idées
+  idées, tâches (avec les propositions issues des mails), mails, « Mes apps » (grille de carrés
+  fusionnant `app_links` et projets, édition derrière un bouton « Modifier ») ; détail projet
+  (`/projects/[slug]`) avec jalons éditables, boîte à idées
   (`/brain` : Zone Commande + notes). Manifest : installable sur mobile.
 - **Suivi des sessions Claude** : hook de fin de session
   (`scripts/claude-hook-session-end.mjs`, à copier dans chaque repo suivi) →
