@@ -96,6 +96,10 @@
     {
       "label": "Agenda : la to-do s'insère dans les plages, conflits seulement plage/plage ou tâche/tâche",
       "status": "done"
+    },
+    {
+      "label": "Agenda : glisser-déposer, poignées 15 min, déplacements renvoyés vers Google",
+      "status": "blocked"
     }
   ]
 }
