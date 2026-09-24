@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
+import { completeTask } from '@/app/actions';
 import { deleteEvent, saveEvent } from '@/app/edit-actions';
 import { describeWhen, eventColor, eventForm, timeParis } from '@/lib/home';
 
@@ -105,6 +106,24 @@ function EventForm({ initial, today, onDone }) {
   );
 }
 
+// Case à cocher « fait » sur une tâche placée dans la plage (comme ActionsPanel, completeTask).
+function PlacedTask({ task }) {
+  const { pending, run } = useAction();
+  return (
+    <li className={`flex items-center gap-1.5 ${pending ? 'opacity-50' : ''}`}>
+      <input
+        type="checkbox"
+        checked={pending}
+        disabled={pending}
+        onChange={() => run(() => completeTask(task.id))}
+        aria-label={`Terminer : ${task.title}`}
+        className="h-4 w-4 shrink-0"
+      />
+      <span className="break-words">{task.title}</span>
+    </li>
+  );
+}
+
 function EventDetail({ event, today, onClose, ideas, tasks }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
@@ -120,11 +139,9 @@ function EventDetail({ event, today, onClose, ideas, tasks }) {
           {event.location && <p className={`break-words ${mutedClass}`}>{event.location}</p>}
           <LinkedIdeas ideas={ideas} eventId={event.id} />
           {linked.tasks.length > 0 && (
-            <ul className={`mt-0.5 space-y-0.5 ${mutedClass}`}>
+            <ul className="mt-1 space-y-1 text-sm">
               {linked.tasks.map((t) => (
-                <li key={t.id} className="break-words">
-                  ✓ {t.title}
-                </li>
+                <PlacedTask key={t.id} task={t} />
               ))}
             </ul>
           )}
@@ -229,7 +246,7 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
               )}
               {d.blocks.map((b) => {
                 const linked = linkedOf(b.id, ideas, tasks);
-                const hasLinks = linked.ideas.length > 0 || linked.tasks.length > 0;
+                const shown = linked.tasks.slice(0, 3);
                 return (
                   <button
                     key={b.id}
@@ -243,21 +260,30 @@ export default function AgendaPanel({ week, state, now, ideas, tasks }) {
                     data-testid="event-block"
                     data-conflict={b.conflict}
                   >
-                    {b.conflict && '⚠ '}
-                    {hasLinks && '💡 '}
-                    {b.title}
-                    {hasLinks && (
+                    <span className="block truncate">
+                      {b.conflict && '⚠ '}
+                      {linked.ideas.length > 0 && '💡 '}
+                      {b.title}
+                    </span>
+                    {shown.length > 0 && (
+                      <span className="mt-0.5 block space-y-px" data-testid="block-tasks">
+                        {shown.map((t) => (
+                          <span key={t.id} className="block truncate opacity-90">
+                            ✓ {t.title}
+                          </span>
+                        ))}
+                        {linked.tasks.length > shown.length && (
+                          <span className="block opacity-70">+{linked.tasks.length - shown.length}</span>
+                        )}
+                      </span>
+                    )}
+                    {linked.ideas.length > 0 && (
                       <div
                         role="tooltip"
                         className="invisible absolute left-0 top-full z-30 mt-1 w-56 max-w-[80vw] rounded border border-zinc-700 bg-zinc-900 p-2 text-left text-xs leading-snug text-zinc-100 opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
                       >
-                        {linked.tasks.map((t) => (
-                          <p key={`t-${t.id}`} className="break-words">
-                            ✓ {t.title}
-                          </p>
-                        ))}
                         {linked.ideas.map((n) => (
-                          <p key={`i-${n.id}`} className="break-words">
+                          <p key={n.id} className="break-words">
                             💡 {n.content}
                           </p>
                         ))}

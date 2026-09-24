@@ -1,9 +1,9 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  HOME_PANEL_IDS, buildWeek, describeWhen, eventColor, eventForm, eventRow, formatMailDate, isMissingColumn, isMissingTable,
-  isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout, slugify,
-  splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
+  HOME_PANEL_IDS, buildWeek, describeWhen, eventColor, eventForm, eventIdsOnDay, eventRow, formatMailDate, isMissingColumn,
+  isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout,
+  slugify, splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
 
@@ -44,6 +44,27 @@ assert.deepEqual(ids(p.today), ['h', 'g', 'c', 'b']); // position 0 (plus ancien
 assert.deepEqual(ids(p.next_session), ['e']);
 assert.deepEqual(ids(p.inbox), ['a', 'i']);
 assert.deepEqual(ids(splitTasks([t({ id: 'x', bucket: 'today' }), t({ id: 'y', bucket: 'today', position: undefined })], today).today), ['x', 'y']); // colonne absente = 0
+
+// Une tâche placée dans une plage du jour (tasks.event_id) compte dans « Aujourd'hui », même sans
+// échéance ni bucket 'today' ; sans todayEventIds (comportement par défaut), elle reste ailleurs.
+const placed = t({ id: 'z', bucket: 'next_session', event_id: 'ev1' });
+assert.deepEqual(ids(splitTasks([placed], today).next_session), ['z']);
+assert.deepEqual(ids(splitTasks([placed], today, new Set(['ev1'])).today), ['z']);
+assert.deepEqual(ids(splitTasks([placed], today, new Set(['autre'])).next_session), ['z']);
+
+// --- eventIdsOnDay : identifiants des événements dont le jour couvre `day` ---
+assert.deepEqual(
+  [...eventIdsOnDay(
+    [
+      { id: 'a', starts_at: '2026-09-21T09:00:00Z', ends_at: '2026-09-21T11:00:00Z' },
+      { id: 'b', starts_at: '2026-09-20T22:00:00+02:00', ends_at: '2026-09-21T01:00:00+02:00' }, // finit le 21 à Paris
+      { id: 'c', starts_at: '2026-09-22T09:00:00Z' }, // un autre jour
+      { id: 'd', starts_at: '2026-09-21T09:00:00Z', all_day: true }, // toute la journée : hors champ
+    ],
+    '2026-09-21'
+  )].sort(),
+  ['a', 'b']
+);
 
 // Échange de priorité : positions distinctes -> on échange les deux voisines.
 const list = [{ id: 'a', position: 1 }, { id: 'b', position: 2 }, { id: 'c', position: 5 }];
@@ -126,6 +147,41 @@ wk = buildWeek([ev('a', at('17:00'), at('18:30')), ev('b', at('18:00'), at('19:0
 assert.equal(wk.conflicts, 1);
 assert.deepEqual(blocks(wk).map((b) => b.conflict), [true, true, false]);
 assert.deepEqual(blocks(wk).map((b) => [b.col, b.cols]), [[0, 2], [1, 2], [0, 1]]);
+
+// Un conflit n'oppose que deux plages (cours/événements) ou deux tâches Google placées dans
+// l'agenda (color_id Mandarine « 6 ») : une tâche posée sur une plage est volontaire, pas un
+// conflit. Cas réels : « Networking » et « Case Coach n°1 » (orange) chevauchent « Leadership »
+// (rouge), le 25/09.
+wk = buildWeek(
+  [
+    ev('leadership', '2026-09-25T09:00:00+02:00', '2026-09-25T12:00:00+02:00', { color_id: '11' }), // rouge Tomate
+    ev('networking', '2026-09-25T11:00:00+02:00', '2026-09-25T12:00:00+02:00', { color_id: '6' }), // orange Mandarine
+    ev('casecoach1', '2026-09-25T09:00:00+02:00', '2026-09-25T11:00:00+02:00', { color_id: '6' }), // orange Mandarine
+  ],
+  new Date('2026-09-25T06:00:00Z')
+);
+assert.equal(wk.conflicts, 0);
+assert.deepEqual(blocks(wk, 0).map((b) => b.conflict), [false, false, false]);
+
+// Deux plages (rouge/bleu) qui se chevauchent restent un conflit.
+wk = buildWeek(
+  [
+    ev('coursA', at('09:00', '25'), at('11:00', '25'), { color_id: '11' }),
+    ev('coursB', at('10:00', '25'), at('12:00', '25'), { color_id: '9' }),
+  ],
+  new Date('2026-09-25T06:00:00Z')
+);
+assert.equal(wk.conflicts, 1);
+
+// Deux tâches (orange) qui se chevauchent restent un conflit.
+wk = buildWeek(
+  [
+    ev('tacheA', at('09:00', '25'), at('11:00', '25'), { color_id: '6' }),
+    ev('tacheB', at('10:00', '25'), at('12:00', '25'), { color_id: '6' }),
+  ],
+  new Date('2026-09-25T06:00:00Z')
+);
+assert.equal(wk.conflicts, 1);
 
 // Événement qui traverse minuit : un bloc sur chaque jour, borné à la journée ; plage étendue à 0h-24h.
 wk = buildWeek([

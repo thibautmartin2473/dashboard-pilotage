@@ -91,7 +91,11 @@
     },
     {
       "label": "Agenda : idées affectées auto, code couleur EDHEC/autres/tâches, infobulle des liens",
-      "status": "blocked"
+      "status": "done"
+    },
+    {
+      "label": "Agenda : la to-do s'insère dans les plages, conflits seulement plage/plage ou tâche/tâche",
+      "status": "done"
     }
   ]
 }

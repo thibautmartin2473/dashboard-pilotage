@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { applyPositions, deleteProject, moveRow, must, nextPosition, rows, touch } from '@/lib/db-ops';
 import { MILESTONE_STATUSES } from '@/lib/constants';
 import {
-  BUCKETS, MAIL_SOURCES, eventRow, isMissingColumn, isMissingTable, reorderUpdates, resolveLayout,
+  BUCKETS, MAIL_SOURCES, eventIdsOnDay, eventRow, isMissingColumn, isMissingTable, reorderUpdates, resolveLayout,
   slugify, splitTasks, todayParis,
 } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
@@ -81,8 +81,16 @@ export async function moveTaskPriority(id, direction) {
   return run(async (db) => {
     uuid(id);
     dir(direction);
-    const open = await rows(db.from('tasks').select('*').is('done_at', null));
-    const list = Object.values(splitTasks(open, todayParis())).find((section) => section.some((t) => t.id === id));
+    const today = todayParis();
+    const [open, events] = await Promise.all([
+      rows(db.from('tasks').select('*').is('done_at', null)),
+      rows(db.from('calendar_events').select('id, starts_at, ends_at, all_day')),
+    ]);
+    // Même classement que l'accueil (splitTasks) : une tâche placée dans une plage du jour est
+    // « Aujourd'hui » là aussi, sinon Monter/Descendre chercherait dans la mauvaise section.
+    const list = Object.values(splitTasks(open, today, eventIdsOnDay(events, today))).find((section) =>
+      section.some((t) => t.id === id)
+    );
     must(list, 'Tâche introuvable ou déjà faite');
     await applyPositions(db, 'tasks', reorderUpdates(list, id, direction));
   });

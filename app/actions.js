@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { nextPosition } from '@/lib/db-ops';
+import { nextPosition, rows } from '@/lib/db-ops';
 import { BUCKETS, isMissingTable } from '@/lib/home';
+import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
 // Server Actions de l'accueil. Elles passent par la page `/`, donc derrière le
 // Basic Auth de proxy.js. Retour : { ok: true } ou { error } (jamais d'échec silencieux).
@@ -32,16 +33,26 @@ async function run(fn) {
   }
 }
 
+// « ajouter une tâche : ... pendant la prochaine session fit » : place la tâche toute seule dans la
+// plage correspondante (lib/command.js, même logique que la Zone Commande pour les idées).
 export async function addTask({ title, bucket, due_date, project_slug }) {
   return run(async (db) => {
-    title = String(title ?? '').trim();
+    const { content, keyword } = extractIdeaLink(title);
+    title = content.trim();
     must(title.length > 0 && title.length <= 200, 'Titre requis (200 caractères max)');
     must(BUCKETS.includes(bucket), 'Liste invalide');
     due_date = due_date || null;
     must(due_date === null || /^\d{4}-\d{2}-\d{2}$/.test(due_date), 'Date invalide');
-    const { error } = await db
-      .from('tasks')
-      .insert({ title, bucket, due_date, project_slug: project_slug || null, source: 'manual', ...(await nextPosition(db, 'tasks')) });
+    const row = { title, bucket, due_date, project_slug: project_slug || null, source: 'manual', ...(await nextPosition(db, 'tasks')) };
+    if (keyword) {
+      const [events, existing] = await Promise.all([
+        rows(db.from('calendar_events').select('id, title, starts_at, ends_at')),
+        rows(db.from('tasks').select('id, title, due_date, done_at').is('done_at', null)),
+      ]);
+      const target = matchIdeaTarget(keyword, { events, tasks: existing, now: new Date() });
+      if (target?.event_id) row.event_id = target.event_id;
+    }
+    const { error } = await db.from('tasks').insert(row);
     if (error) throw error;
   });
 }

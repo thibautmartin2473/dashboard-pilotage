@@ -147,20 +147,27 @@ function TaskRow({ task, first, last, today, projects, ideas, eventTargets }) {
               </p>
             )}
             {showEventLink && (
-              <Select
-                value={task.event_id ? `event:${task.event_id}` : ''}
-                disabled={pending}
-                onChange={(e) => run(() => linkTaskToEvent(task.id, e.target.value.replace(/^event:/, '')))}
-                aria-label={`Rattacher à un événement : ${task.title}`}
-                className="mt-1 max-w-full py-1 sm:max-w-64"
-              >
-                <option value="">Pendant… (aucun événement)</option>
-                {eventTargets.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                {!task.event_id && (
+                  <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                    À placer
+                  </span>
+                )}
+                <Select
+                  value={task.event_id ? `event:${task.event_id}` : ''}
+                  disabled={pending}
+                  onChange={(e) => run(() => linkTaskToEvent(task.id, e.target.value.replace(/^event:/, '')))}
+                  aria-label={`Rattacher à un événement : ${task.title}`}
+                  className="max-w-full py-1 sm:max-w-64"
+                >
+                  <option value="">Pendant… (aucun événement)</option>
+                  {eventTargets.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             )}
           </>
         )}
