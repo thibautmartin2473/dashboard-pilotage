@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   HOME_PANEL_IDS, buildWeek, describeWhen, eventColor, eventForm, eventIdsOnDay, eventRow, formatMailDate, isMissingColumn,
   isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout,
-  slugify, splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
+  shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
 
@@ -292,5 +292,23 @@ assert.equal(timeAgo('2026-09-21T09:00:00Z', nowMs), 'il y a 3 h');
 assert.equal(timeAgo('2026-09-18T12:00:00Z', nowMs), 'il y a 3 j');
 assert.equal(lastSync([]), null);
 assert.equal(lastSync([{ synced_at: '2026-09-21T10:00:00.5+00:00' }, { synced_at: '2026-09-21T11:00:00+00:00' }]), '2026-09-21T11:00:00.000Z');
+
+// --- Glisser-déposer / poignées : pas de 15 min, heure de Paris, durée min 15 min ---
+assert.equal(snapMinutes(0, 44), 0);
+assert.equal(snapMinutes(10, 44), 15); // 13,6 min -> 15
+assert.equal(snapMinutes(5, 44), 0); // 6,8 min -> 0
+assert.equal(snapMinutes(-33, 44), -45);
+const plage = { starts_at: '2026-09-21T12:00:00Z', ends_at: '2026-09-21T13:00:00Z' }; // 14h-15h Paris
+assert.deepEqual(shiftEvent(plage, { minutes: 30 }), { starts_at: '2026-09-21T12:30:00.000Z', ends_at: '2026-09-21T13:30:00.000Z' });
+assert.deepEqual(shiftEvent(plage, { minutes: -15, days: 2 }), { starts_at: '2026-09-23T11:45:00.000Z', ends_at: '2026-09-23T12:45:00.000Z' });
+assert.equal(shiftEvent(plage, { minutes: -24 * 60 }).starts_at, '2026-09-20T22:00:00.000Z'); // borné à 0h Paris
+assert.equal(shiftEvent(plage, { minutes: 24 * 60 }).starts_at, '2026-09-21T21:45:00.000Z'); // borné à 23h45 Paris
+assert.deepEqual(shiftEvent(plage, { mode: 'end', minutes: 45 }), { starts_at: '2026-09-21T12:00:00.000Z', ends_at: '2026-09-21T13:45:00.000Z' });
+assert.equal(shiftEvent(plage, { mode: 'end', minutes: -120 }).ends_at, '2026-09-21T12:15:00.000Z'); // 15 min au moins
+assert.equal(shiftEvent(plage, { mode: 'start', minutes: -15 }).starts_at, '2026-09-21T11:45:00.000Z');
+assert.equal(shiftEvent(plage, { mode: 'start', minutes: 120 }).starts_at, '2026-09-21T12:45:00.000Z');
+assert.equal(shiftEvent({ starts_at: plage.starts_at, ends_at: null }, { mode: 'end', minutes: 15 }).ends_at, '2026-09-21T12:45:00.000Z'); // sans fin : 30 min
+// Changement d'heure (25 oct. 2026) : on garde l'heure murale, 14h reste 14h.
+assert.equal(shiftEvent({ starts_at: '2026-10-24T12:00:00Z', ends_at: '2026-10-24T13:00:00Z' }, { days: 1 }).starts_at, '2026-10-25T13:00:00.000Z');
 
 console.log('check-home : OK');
