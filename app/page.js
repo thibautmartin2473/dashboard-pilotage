@@ -6,6 +6,7 @@ import CommandBox from '@/components/CommandBox';
 import IdeasPanel from '@/components/IdeasPanel';
 import LayoutEditor from '@/components/LayoutEditor';
 import MailsPanel from '@/components/MailsPanel';
+import { HomeSlot } from '@/components/ui';
 import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
 import {
@@ -162,14 +163,22 @@ export default async function HomePage() {
         <LayoutEditor layout={layout} settings={settings} />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+      {/* Vue globale : l'agenda (large) occupe toute la ligne en entier ; les autres
+          panneaux sont compacts en grille, chacun étendu ou replié à la demande. */}
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
         {layout.order
           .filter((id) => !layout.hidden.includes(id))
-          .map((id) => (
-            <div key={id} className={`min-w-0 ${HOME_PANELS[id].wide ? 'md:col-span-full' : ''}`}>
-              {panels[id]}
-            </div>
-          ))}
+          .map((id) =>
+            HOME_PANELS[id].wide ? (
+              <div key={id} className="min-w-0 md:col-span-full">
+                {panels[id]}
+              </div>
+            ) : (
+              <HomeSlot key={id} id={id} layout={layout}>
+                {panels[id]}
+              </HomeSlot>
+            ),
+          )}
       </div>
     </div>
   );

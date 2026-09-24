@@ -3,7 +3,8 @@
 // Briques d'interface partagées : tout le site les utilise, un relooking se fait
 // ici et nulle part ailleurs. Fonctionnel seulement (pas de style soigné).
 
-import { useState, useTransition } from 'react';
+import { createContext, useContext, useOptimistic, useState, useTransition } from 'react';
+import { saveLayout } from '@/app/edit-actions';
 import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
 
@@ -123,5 +124,88 @@ export function SyncFooter({ rows, href, label, now }) {
         {label}
       </a>
     </p>
+  );
+}
+
+// Case d'un panneau dans la grille de l'accueil : fournit à <Panel> sa taille
+// (compact par défaut, `expanded` = contenu entier sur toute la largeur, `collapsed` = en-tête seul),
+// enregistrée dans home_layout.sizes (dashboard_settings) pour rester la même sur téléphone et PC.
+const SlotContext = createContext(null);
+
+export function HomeSlot({ id, layout, children }) {
+  const { pending, error, run } = useAction();
+  const [size, setOptimistic] = useOptimistic(layout.sizes[id] ?? 'compact');
+  const setSize = (next) =>
+    run(async () => {
+      setOptimistic(next);
+      const sizes = { ...layout.sizes, [id]: next };
+      if (next === 'compact') delete sizes[id];
+      // ponytail: écrit la disposition complète lue au rendu ; deux clics sur deux panneaux avant le
+      // rafraîchissement peuvent s'écraser. Passer à une fusion côté serveur si ça gêne.
+      return saveLayout({ ...layout, sizes });
+    });
+  return (
+    <div className={`min-w-0 ${size === 'expanded' ? 'md:col-span-full' : ''}`}>
+      <SlotContext value={{ size, setSize, pending }}>{children}</SlotContext>
+      <ErrorLine error={error} />
+    </div>
+  );
+}
+
+// Cadre de tous les panneaux. `state` = résultat { error, message } d'une lecture en
+// échec : on l'affiche à la place du contenu, jamais une liste vide. Dans une <HomeSlot>,
+// l'en-tête porte les boutons Étendre/Réduire et Replier/Déplier.
+export function Panel({ title, count, state, file, className = '', children }) {
+  const slot = useContext(SlotContext);
+  const size = slot?.size;
+  const toggle = (target) => slot.setSize(size === target ? 'compact' : target);
+  const small = 'min-w-7 px-1.5 py-0 text-xs leading-6';
+  return (
+    <section className={`overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 ${className}`}>
+      <h2 className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-100">
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        {count != null && !state?.error && (
+          <span className="tabular rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 font-mono text-[11px] font-normal text-zinc-400">
+            {count}
+          </span>
+        )}
+        {slot && (
+          <>
+            <IconButton
+              label={`${size === 'expanded' ? 'Réduire' : 'Étendre'} : ${title}`}
+              className={small}
+              disabled={slot.pending}
+              onClick={() => toggle('expanded')}
+            >
+              {size === 'expanded' ? '⤡' : '⤢'}
+            </IconButton>
+            <IconButton
+              label={`${size === 'collapsed' ? 'Déplier' : 'Replier'} : ${title}`}
+              aria-expanded={size !== 'collapsed'}
+              className={small}
+              disabled={slot.pending}
+              onClick={() => toggle('collapsed')}
+            >
+              {size === 'collapsed' ? '▸' : '▾'}
+            </IconButton>
+          </>
+        )}
+      </h2>
+      {size !== 'collapsed' && (
+        <div className={`p-4 ${size === 'compact' ? 'max-h-80 overflow-y-auto' : ''}`}>
+          {state?.error === 'missing' ? (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              Table manquante : exécuter <code>supabase/{file}</code>
+            </p>
+          ) : state?.error ? (
+            <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
+              Erreur : {state.message}
+            </p>
+          ) : (
+            children
+          )}
+        </div>
+      )}
+    </section>
   );
 }
