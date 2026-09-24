@@ -8,7 +8,9 @@ import { interpret } from '@/lib/command';
 
 // Zone Commande : une phrase en français -> aperçu des actions (interprétation locale, sans réseau ni
 // modèle : lib/command.js) -> « Confirmer » applique tout. Rien n'est écrit avant la confirmation.
-export default function CommandBox() {
+// `data` (facultatif) : { events, tasks } pour lier automatiquement une idée « pendant la
+// prochaine session X » (lib/command.js) ; sans data, l'idée est créée sans lien.
+export default function CommandBox({ data }) {
   const [text, setText] = useState('');
   const [result, setResult] = useState(null);
   const [done, setDone] = useState(null);
@@ -17,7 +19,7 @@ export default function CommandBox() {
   const preview = (e) => {
     e.preventDefault();
     setDone(null);
-    setResult(interpret(text, new Date()));
+    setResult(interpret(text, new Date(), data));
   };
   const confirm = () =>
     run(async () => {

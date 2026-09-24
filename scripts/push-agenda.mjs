@@ -5,10 +5,13 @@
 //
 // Le site ne peut pas lire Google : Claude récupère les données en session, écrit
 // ce fichier, puis lance ce script. Format (dates ISO 8601 avec fuseau) :
-//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link", "origin" }],
+//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link", "origin", "colorId" }],
 //     "mails":  [{ "id", "from", "subject", "received_at", "source", "unread", "link" }] }
 // Un événement « toute la journée » accepte aussi une date seule (AAAA-MM-JJ).
 // "origin" (facultatif) : "google" par défaut ; "local" = créé sur le site, jamais purgé.
+// "colorId" (facultatif) : colorId Google Agenda de l'événement, pour le code couleur de l'accueil
+// (11 Tomate = cours EDHEC, 9 Myrtille = autres événements, 6 Mandarine = tâches/blocs de travail).
+// Colonne calendar_events.color_id : supabase/agenda-links.sql.
 // Mails : "source" = "gmail" (défaut) ou "edhec" ; "unread" = true par défaut. Règle EDHEC : un mail
 // est "edhec" s'il porte le libellé Gmail EDHEC ou si l'expéditeur ou un destinataire est en
 // edhec.com ; sinon "gmail". Seuls les 50 mails les plus récents sont gardés.
@@ -109,6 +112,7 @@ input.events.forEach((e, i) => {
     location: text(where, 'location', e?.location),
     link: link(where, e?.link),
     origin: oneOf(where, 'origin', e?.origin, ['google', 'local'], 'google'),
+    color_id: text(where, 'colorId', e?.colorId),
     synced_at: syncedAt,
   };
   if (row.ends_at && row.starts_at && row.ends_at < row.starts_at) errors.push(`${where} : "end" est avant "start".`);
@@ -161,7 +165,7 @@ function dbFail(error) {
     error.code === 'PGRST205'
       ? 'Table absente : exécuter supabase/agenda.sql dans le SQL Editor de Supabase.'
       : ['PGRST204', '42703'].includes(error.code)
-        ? `Colonne absente : exécuter supabase/dashboard-edit.sql dans le SQL Editor de Supabase (${error.message}).`
+        ? `Colonne absente : exécuter le SQL correspondant de supabase/ (dashboard-edit.sql ou agenda-links.sql) dans le SQL Editor de Supabase (${error.message}).`
         : `Supabase : ${error.message}`
   );
 }

@@ -88,6 +88,10 @@
     {
       "label": "Accueil : « à faire » = tâche, propositions des mails dans la liste des tâches",
       "status": "done"
+    },
+    {
+      "label": "Agenda : idées affectées auto, code couleur EDHEC/autres/tâches, infobulle des liens",
+      "status": "blocked"
     }
   ]
 }

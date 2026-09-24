@@ -5,8 +5,8 @@ import { EXAMPLES, interpret } from '../lib/command.js';
 import { parisToIso } from '../lib/home.js';
 
 const now = new Date('2026-09-21T13:00:00Z');
-const ok = (text, at = now) => {
-  const r = interpret(text, at);
+const ok = (text, at = now, data = undefined) => {
+  const r = interpret(text, at, data);
   assert.ok(r.ok, `${text} -> ${r.message}`);
   return r.actions;
 };
@@ -80,9 +80,53 @@ assert.deepEqual(ok('rappelle-moi vendredi de payer le loyer').map((a) => [a.tit
 assert.deepEqual(ok('tâche : rendre le rapport lundi prochain').map((a) => a.due_date), ['2026-09-28']);
 assert.deepEqual(ok('ajoute une tâche : relire le contrat avant le 30 septembre').map((a) => [a.title, a.due_date]), [['Relire le contrat', '2026-09-30']]);
 assert.deepEqual(ok('idée : refaire la page /brain en Kanban'), [
-  { kind: 'idea', content: 'Refaire la page /brain en Kanban', label: "Ajouter l'idée « Refaire la page /brain en Kanban »" },
+  {
+    kind: 'idea', content: 'Refaire la page /brain en Kanban', task_id: null, event_id: null,
+    label: "Ajouter l'idée « Refaire la page /brain en Kanban »",
+  },
 ]);
 assert.equal(ok('ajoute une idée : Tester Spircle avec Gmail')[0].content, 'Tester Spircle avec Gmail');
+
+// Idées : cible automatique (« pendant la prochaine session X »).
+const linkData = {
+  events: [
+    { id: 'e1', title: 'Fit · questions classiques + pitch', starts_at: '2026-09-22T14:00:00Z', ends_at: '2026-09-22T16:00:00Z' },
+    { id: 'e2', title: 'Cas Boost · solo', starts_at: '2026-09-23T10:00:00Z', ends_at: '2026-09-23T12:00:00Z' },
+    { id: 'e0', title: 'Fit passé', starts_at: '2026-09-20T10:00:00Z', ends_at: '2026-09-20T11:00:00Z' }, // déjà fini : ignoré
+  ],
+  tasks: [
+    { id: 't1', title: 'Envoyer un message à Corinne', due_date: null, done_at: null },
+    { id: 't2', title: 'Ancienne tâche Corinne', due_date: null, done_at: '2026-09-01' }, // faite : ignorée
+  ],
+};
+const linked = (text) => ok(text, now, linkData)[0];
+let a = linked('idée : envoyer un message à Corinne pendant la prochaine session fit');
+assert.equal(a.content, 'Envoyer un message à Corinne');
+assert.deepEqual([a.event_id, a.task_id], ['e1', null]);
+assert.match(a.label, /liée à Agenda : Fit/);
+
+a = linked("idée : relire le brief pour la prochaine session fit");
+assert.equal(a.event_id, 'e1');
+a = linked('idée : relire le brief à la prochaine session fit');
+assert.equal(a.event_id, 'e1');
+
+a = linked('idée : relire le contrat pendant le cas boost');
+assert.deepEqual([a.content, a.event_id], ['Relire le contrat', 'e2']);
+
+a = linked('idée : rappeler la banque pendant ma tâche corinne');
+assert.deepEqual([a.event_id, a.task_id], [null, 't1']);
+
+a = linked('idée : truc sans rapport pendant la prochaine session zzz');
+assert.deepEqual([a.event_id, a.task_id], [null, null]);
+assert.match(a.label, /aucune cible ne correspond à « zzz »/);
+
+// Sans data (ex. page /brain) : jamais d'erreur, simplement pas de cible.
+a = ok('idée : x pendant la prochaine session fit')[0];
+assert.deepEqual([a.event_id, a.task_id], [null, null]);
+
+// Pas de clause de liaison : comportement inchangé (pas de note dans le label).
+a = ok('idée : rien à voir ici')[0];
+assert.equal(a.label, "Ajouter l'idée « Rien à voir ici »");
 
 // Tout le reste : message explicite, trois exemples, rien d'interprété.
 assert.equal(EXAMPLES.length, 3);

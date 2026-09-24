@@ -8,6 +8,7 @@ import {
   BUCKETS, MAIL_SOURCES, eventRow, isMissingColumn, isMissingTable, reorderUpdates, resolveLayout,
   slugify, splitTasks, todayParis,
 } from '@/lib/home';
+import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
 // Server Actions d'édition de l'accueil et des pages projet : tout ce que Thibaut
 // ajoute, modifie ou supprime depuis le site. Elles passent par les pages, donc
@@ -66,6 +67,15 @@ export async function deleteTask(id) {
   });
 }
 
+// Rattache une tâche à l'événement pendant lequel elle se fait (ou la détache, eventId = '').
+// Sans clé étrangère (tasks.event_id, supabase/agenda-links.sql) : voir linkIdea ci-dessous.
+export async function linkTaskToEvent(id, eventId) {
+  return run(async (db) => {
+    uuid(id);
+    await touch(db.from('tasks').update({ event_id: eventId ? text(eventId, 'Événement', 300) : null }).eq('id', id));
+  });
+}
+
 // Priorité : échange avec la voisine de la même section (ordre affiché = splitTasks).
 export async function moveTaskPriority(id, direction) {
   return run(async (db) => {
@@ -80,9 +90,24 @@ export async function moveTaskPriority(id, direction) {
 
 // ---- Idées (brain_notes, idées et ex-suggestions) : lues et écrites côté serveur, clé admin ----
 
+// « pendant la prochaine session fit » (etc., lib/command.js) : lie l'idée toute seule au prochain
+// événement ou à la tâche correspondante, comme la zone Commande. Pas de mot-clé : idée simple.
 export async function addIdea(content) {
   return run(async (db) => {
-    const { error } = await db.from('brain_notes').insert({ content: text(content, 'Idée', 2000) });
+    const { content: cut, keyword } = extractIdeaLink(content);
+    const row = { content: text(cut, 'Idée', 2000) };
+    if (keyword) {
+      const [events, tasks] = await Promise.all([
+        rows(db.from('calendar_events').select('id, title, starts_at, ends_at')),
+        rows(db.from('tasks').select('id, title, due_date, done_at').is('done_at', null)),
+      ]);
+      const target = matchIdeaTarget(keyword, { events, tasks, now: new Date() });
+      if (target) {
+        row.task_id = target.task_id;
+        row.event_id = target.event_id;
+      }
+    }
+    const { error } = await db.from('brain_notes').insert(row);
     if (error) throw error;
   });
 }

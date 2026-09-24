@@ -6,7 +6,7 @@ import NotificationsPanel from './NotificationsPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, mutedClass, useAction } from './ui';
 import { addTask, completeTask } from '@/app/actions';
-import { deleteTask, moveTaskPriority, updateTask } from '@/app/edit-actions';
+import { deleteTask, linkTaskToEvent, moveTaskPriority, updateTask } from '@/app/edit-actions';
 import { BUCKETS, BUCKET_LABELS, SECTIONS, SECTION_LABELS, describeWhen, isOverdue, todayEmptyMessage } from '@/lib/home';
 
 const BucketOptions = () =>
@@ -107,10 +107,12 @@ function TaskEditForm({ task, projects, onDone }) {
   );
 }
 
-function TaskRow({ task, first, last, today, projects, ideas }) {
+function TaskRow({ task, first, last, today, projects, ideas, eventTargets }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const overdue = isOverdue(task, today);
+  const eventKnown = task.event_id && eventTargets?.find((t) => t.value === `event:${task.event_id}`);
+  const showEventLink = eventTargets !== undefined && ('event_id' in task) && (eventTargets.length > 0 || task.event_id);
 
   return (
     <li className={`flex items-start gap-2 py-2 ${pending ? 'opacity-50' : ''}`}>
@@ -139,6 +141,27 @@ function TaskRow({ task, first, last, today, projects, ideas }) {
               )}
             </p>
             <LinkedIdeas ideas={ideas} taskId={task.id} />
+            {task.event_id && (
+              <p className={`break-words ${mutedClass}`}>
+                → {eventKnown ? eventKnown.label : 'Événement passé ou retiré'}
+              </p>
+            )}
+            {showEventLink && (
+              <Select
+                value={task.event_id ? `event:${task.event_id}` : ''}
+                disabled={pending}
+                onChange={(e) => run(() => linkTaskToEvent(task.id, e.target.value.replace(/^event:/, '')))}
+                aria-label={`Rattacher à un événement : ${task.title}`}
+                className="mt-1 max-w-full py-1 sm:max-w-64"
+              >
+                <option value="">Pendant… (aucun événement)</option>
+                {eventTargets.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+            )}
           </>
         )}
         <ErrorLine error={error} />
@@ -164,7 +187,7 @@ function TaskRow({ task, first, last, today, projects, ideas }) {
 // Tâches : compteurs, formulaire, propositions issues des mails (à accepter ou ignorer), puis les tâches par section. Les événements du jour
 // s'ajoutent à la section « Aujourd'hui » (lecture seule, ils se modifient dans l'agenda) : on n'écrit
 // « Rien ici » que si le jour n'a ni tâche ni événement.
-export default function ActionsPanel({ sections, todayEvents, projects, state, today, notifications, ideas }) {
+export default function ActionsPanel({ sections, todayEvents, projects, state, today, notifications, ideas, eventTargets }) {
   const events = todayEvents ?? [];
   const count = (s) => (s === 'today' ? sections?.today.length + events.length : sections?.[s].length);
 
@@ -201,7 +224,16 @@ export default function ActionsPanel({ sections, todayEvents, projects, state, t
             {list.length > 0 && (
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
                 {list.map((t, i) => (
-                  <TaskRow key={t.id} task={t} first={i === 0} last={i === list.length - 1} today={today} projects={projects} ideas={ideas} />
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    first={i === 0}
+                    last={i === list.length - 1}
+                    today={today}
+                    projects={projects}
+                    ideas={ideas}
+                    eventTargets={eventTargets}
+                  />
                 ))}
               </ul>
             )}

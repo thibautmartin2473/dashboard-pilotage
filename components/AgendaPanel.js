@@ -5,16 +5,36 @@ import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
 import { deleteEvent, saveEvent } from '@/app/edit-actions';
-import { describeWhen, eventForm, timeParis } from '@/lib/home';
+import { describeWhen, eventColor, eventForm, timeParis } from '@/lib/home';
 
 const HOUR_PX = 44; // hauteur d'une heure dans la grille
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
 
+// Code couleur de l'agenda (voir lib/home.js, eventColor) : rouge Tomate = cours EDHEC, bleu
+// Myrtille = autres événements, orange Mandarine = tâches/blocs de travail.
+const CATEGORY_CLASS = {
+  edhec: 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950',
+  task: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950',
+  other: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950',
+};
+const LEGEND = [
+  { key: 'edhec', dot: 'bg-red-400', label: 'Cours EDHEC' },
+  { key: 'other', dot: 'bg-blue-400', label: 'Autres événements' },
+  { key: 'task', dot: 'bg-amber-400', label: 'Tâches / travail' },
+];
+
 const findEvent = (week, id) => {
   for (const d of week.days) for (const e of [...d.allDay, ...d.blocks]) if (e.id === id) return e;
   return null;
 };
+
+// Idées (status new) et tâches non faites rattachées à un événement (brain_notes.event_id,
+// tasks.event_id) : survolé sur le bloc, listé dans le détail.
+const linkedOf = (eventId, ideas, tasks) => ({
+  ideas: (ideas ?? []).filter((n) => n.event_id === eventId),
+  tasks: (tasks ?? []).filter((t) => t.event_id === eventId),
+});
 
 function EventForm({ initial, today, onDone }) {
   const { pending, error, run } = useAction();
@@ -85,10 +105,11 @@ function EventForm({ initial, today, onDone }) {
   );
 }
 
-function EventDetail({ event, today, onClose, ideas }) {
+function EventDetail({ event, today, onClose, ideas, tasks }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const google = (event.origin ?? 'google') === 'google';
+  const linked = linkedOf(event.id, ideas, tasks);
 
   return (
     <div className="mt-3 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800" data-testid="event-detail">
@@ -98,6 +119,15 @@ function EventDetail({ event, today, onClose, ideas }) {
           <p className={mutedClass}>{describeWhen(event)}</p>
           {event.location && <p className={`break-words ${mutedClass}`}>{event.location}</p>}
           <LinkedIdeas ideas={ideas} eventId={event.id} />
+          {linked.tasks.length > 0 && (
+            <ul className={`mt-0.5 space-y-0.5 ${mutedClass}`}>
+              {linked.tasks.map((t) => (
+                <li key={t.id} className="break-words">
+                  ✓ {t.title}
+                </li>
+              ))}
+            </ul>
+          )}
           {event.conflict && <p className="text-xs font-medium text-red-600 dark:text-red-400">Conflit avec un autre événement</p>}
           {event.link && (
             <a href={event.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
@@ -132,7 +162,7 @@ function EventDetail({ event, today, onClose, ideas }) {
 // Semaine glissante J à J+7 (calculée par buildWeek, heure de Paris) : une colonne
 // par jour, un bloc par événement à son créneau. Sur téléphone, seule la grille
 // défile horizontalement ; la colonne des heures reste fixe.
-export default function AgendaPanel({ week, state, now, ideas }) {
+export default function AgendaPanel({ week, state, now, ideas, tasks }) {
   const [selectedId, setSelectedId] = useState(null);
   const [adding, setAdding] = useState(false);
   const rows = state.data ?? [];
@@ -197,26 +227,45 @@ export default function AgendaPanel({ week, state, now, ideas }) {
                   data-testid="now-line"
                 />
               )}
-              {d.blocks.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => open(b)}
-                  title={`${b.title} (${timeParis(b.starts_at)})`}
-                  className={`absolute overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
-                    b.conflict
-                      ? 'border-red-500 bg-red-100 dark:bg-red-950'
-                      : 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950'
-                  } ${selectedId === b.id ? 'ring-2 ring-zinc-900 dark:ring-zinc-100' : ''}`}
-                  style={{ top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%` }}
-                  data-testid="event-block"
-                  data-conflict={b.conflict}
-                >
-                  {b.conflict && '⚠ '}
-                  {ideas?.some((n) => n.event_id === b.id) && '💡 '}
-                  {b.title}
-                </button>
-              ))}
+              {d.blocks.map((b) => {
+                const linked = linkedOf(b.id, ideas, tasks);
+                const hasLinks = linked.ideas.length > 0 || linked.tasks.length > 0;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => open(b)}
+                    title={`${b.title} (${timeParis(b.starts_at)})`}
+                    className={`group absolute overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
+                      b.conflict ? 'border-red-500 bg-red-100 dark:bg-red-950' : CATEGORY_CLASS[eventColor(b)]
+                    } ${selectedId === b.id ? 'ring-2 ring-zinc-900 dark:ring-zinc-100' : ''}`}
+                    style={{ top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%` }}
+                    data-testid="event-block"
+                    data-conflict={b.conflict}
+                  >
+                    {b.conflict && '⚠ '}
+                    {hasLinks && '💡 '}
+                    {b.title}
+                    {hasLinks && (
+                      <div
+                        role="tooltip"
+                        className="invisible absolute left-0 top-full z-30 mt-1 w-56 max-w-[80vw] rounded border border-zinc-700 bg-zinc-900 p-2 text-left text-xs leading-snug text-zinc-100 opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                      >
+                        {linked.tasks.map((t) => (
+                          <p key={`t-${t.id}`} className="break-words">
+                            ✓ {t.title}
+                          </p>
+                        ))}
+                        {linked.ideas.map((n) => (
+                          <p key={`i-${n.id}`} className="break-words">
+                            💡 {n.content}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -241,6 +290,16 @@ export default function AgendaPanel({ week, state, now, ideas }) {
           <span className="text-sm font-medium text-red-600 dark:text-red-400">{week.conflicts} conflit(s)</span>
         )}
       </div>
+      {week && (
+        <div className="mb-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-400" data-testid="agenda-legend">
+          {LEGEND.map((l) => (
+            <span key={l.key} className="flex items-center gap-1">
+              <span className={`h-2.5 w-2.5 rounded-full ${l.dot}`} aria-hidden="true" />
+              {l.label}
+            </span>
+          ))}
+        </div>
+      )}
       {adding && <EventForm today={today} onDone={() => setAdding(false)} />}
       {noEvents && (
         <p className="my-2 text-sm text-zinc-500 dark:text-zinc-400">
@@ -248,7 +307,9 @@ export default function AgendaPanel({ week, state, now, ideas }) {
         </p>
       )}
       {grid}
-      {selected && <EventDetail key={selected.id} event={selected} today={today} onClose={() => setSelectedId(null)} ideas={ideas} />}
+      {selected && (
+        <EventDetail key={selected.id} event={selected} today={today} onClose={() => setSelectedId(null)} ideas={ideas} tasks={tasks} />
+      )}
       {!state.error && (
         <SyncFooter
           rows={rows.filter((e) => (e.origin ?? 'google') === 'google')}
