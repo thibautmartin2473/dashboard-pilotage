@@ -80,11 +80,24 @@ export default async function HomePage() {
       .map((e) => ({ value: `event:${e.id}`, label: `Agenda : ${e.title} (${describeWhen(e)})` })),
   ];
   const linkedIdeas = ideas.data ?? [];
+  const activeTasks = tasks.data ?? [];
+  const eventTargets = targets.filter((t) => t.value.startsWith('event:'));
 
   const panels = {
-    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} />,
+    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} tasks={activeTasks} />,
     ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} targets={targets} />,
-    actions: <ActionsPanel sections={sections} todayEvents={todayList} projects={slim} state={tasks} today={today} notifications={notifications} ideas={linkedIdeas} />,
+    actions: (
+      <ActionsPanel
+        sections={sections}
+        todayEvents={todayList}
+        projects={slim}
+        state={tasks}
+        today={today}
+        notifications={notifications}
+        ideas={linkedIdeas}
+        eventTargets={eventTargets}
+      />
+    ),
     mails: <MailsPanel state={mails} savedFilter={mailFilter} settings={settings} now={now.getTime()} />,
     apps: <AppsPanel apps={apps.data} state={apps} projects={slim} />,
   };
@@ -141,7 +154,7 @@ export default async function HomePage() {
       </p>
 
       <div className="mt-4">
-        <CommandBox />
+        <CommandBox data={{ events: events.data ?? [], tasks: activeTasks }} />
       </div>
 
       <div className="mt-3">

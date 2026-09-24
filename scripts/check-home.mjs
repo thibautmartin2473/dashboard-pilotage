@@ -1,9 +1,9 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  HOME_PANEL_IDS, buildWeek, describeWhen, eventForm, eventRow, formatMailDate, isMissingColumn, isMissingTable, isOverdue,
-  isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout, slugify, splitTasks,
-  summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
+  HOME_PANEL_IDS, buildWeek, describeWhen, eventColor, eventForm, eventRow, formatMailDate, isMissingColumn, isMissingTable,
+  isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout, slugify,
+  splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
 
@@ -18,6 +18,13 @@ assert.equal(todayParis(new Date('2026-09-20T23:30:00Z')), '2026-09-21');
 assert.equal(isOverdue(t({ due_date: '2026-09-20' }), today), true);
 assert.equal(isOverdue(t({ due_date: '2026-09-21' }), today), false);
 assert.equal(isOverdue(t({ due_date: '2026-09-20', done_at: 'x' }), today), false);
+
+// --- Code couleur de l'agenda (Tomate/Myrtille/Mandarine, colorId Google) ---
+assert.equal(eventColor({ color_id: '11' }), 'edhec');
+assert.equal(eventColor({ color_id: '6' }), 'task');
+assert.equal(eventColor({ color_id: '9' }), 'other');
+assert.equal(eventColor({ color_id: null }), 'other'); // colonne pas encore synchronisée
+assert.equal(eventColor({}), 'other'); // colonne pas encore créée (SQL pas exécuté)
 
 // --- Tâches : quatre sections, tri par position puis date de création ---
 const tasks = [

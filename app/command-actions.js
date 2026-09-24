@@ -60,7 +60,15 @@ export async function applyCommand(actions) {
       } else if (a?.kind === 'task') {
         tasks.push({ title: text(a.title, 'Titre', 200), bucket: 'inbox', due_date: dueDate(a.due_date), source: 'command' });
       } else if (a?.kind === 'idea') {
-        ideas.push({ content: text(a.content, 'Idée', 2000) });
+        const idea = { content: text(a.content, 'Idée', 2000) };
+        must(!a.task_id || !a.event_id, 'Une idée ne peut avoir qu\'une seule cible');
+        if (a.task_id) {
+          must(UUID.test(a.task_id), 'Identifiant de tâche invalide');
+          idea.task_id = a.task_id;
+        } else if (a.event_id) {
+          idea.event_id = text(String(a.event_id), 'Événement', 300);
+        }
+        ideas.push(idea);
       } else {
         throw new Error('Action inconnue');
       }
