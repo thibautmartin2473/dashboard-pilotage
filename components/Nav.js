@@ -27,12 +27,6 @@ export default function Nav() {
             Accueil
           </Link>
           <Link
-            href="/map"
-            className="rounded-lg px-2.5 py-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-          >
-            Carte
-          </Link>
-          <Link
             href="/brain"
             className="rounded-lg px-2.5 py-1.5 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
           >

@@ -104,6 +104,10 @@
     {
       "label": "Agenda : glisser-déposer, poignées 15 min, déplacements renvoyés vers Google",
       "status": "done"
+    },
+    {
+      "label": "Accueil : apps et projets fusionnés en carrés cliquables, onglet Carte supprimé",
+      "status": "done"
     }
   ]
 }
