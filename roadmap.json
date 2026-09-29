@@ -108,6 +108,10 @@
     {
       "label": "Accueil : apps et projets fusionnés en carrés cliquables, onglet Carte supprimé",
       "status": "done"
+    },
+    {
+      "label": "Agenda : catégories nommables et recolorables, créables et supprimables",
+      "status": "done"
     }
   ]
 }
