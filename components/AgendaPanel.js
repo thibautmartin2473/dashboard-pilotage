@@ -1,32 +1,18 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import CategoryEditor, { CategoryPicker } from './CategoryEditor';
 import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
-import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, SyncFooter, mutedClass, useAction } from './ui';
+import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
 import { completeTask } from '@/app/actions';
 import { deleteEvent, moveEvent, saveEvent } from '@/app/edit-actions';
-import { buildWeek, CATEGORIES, describeWhen, eventColor, eventForm, shiftEvent, snapMinutes, timeParis } from '@/lib/home';
-
-const CATEGORY_LABEL = { edhec: 'Cours EDHEC', other: 'Autre événement', task: 'Tâche / travail' };
+import { OTHER_KEY, buildWeek, describeWhen, eventForm, shiftEvent, snapMinutes, timeParis } from '@/lib/home';
 
 const HOUR_PX = 44; // hauteur d'une heure dans la grille
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
 const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
-
-// Code couleur de l'agenda (voir lib/home.js, eventColor) : rouge Tomate = cours EDHEC, bleu
-// Myrtille = autres événements, orange Mandarine = tâches/blocs de travail.
-const CATEGORY_CLASS = {
-  edhec: 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950',
-  task: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950',
-  other: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950',
-};
-const LEGEND = [
-  { key: 'edhec', dot: 'bg-red-400', label: 'Cours EDHEC' },
-  { key: 'other', dot: 'bg-blue-400', label: 'Autres événements' },
-  { key: 'task', dot: 'bg-amber-400', label: 'Tâches / travail' },
-];
 
 const findEvent = (week, id) => {
   for (const d of week.days) for (const e of [...d.allDay, ...d.blocks]) if (e.id === id) return e;
@@ -40,10 +26,10 @@ const linkedOf = (eventId, ideas, tasks) => ({
   tasks: (tasks ?? []).filter((t) => t.event_id === eventId),
 });
 
-function EventForm({ initial, today, onDone }) {
+function EventForm({ initial, today, categories, onDone }) {
   const { pending, error, run } = useAction();
   const [form, setForm] = useState(
-    initial ?? { title: '', all_day: false, location: '', start: `${today}T09:00`, end: `${today}T10:00`, category: 'other' }
+    initial ?? { title: '', all_day: false, location: '', start: `${today}T09:00`, end: `${today}T10:00`, category: OTHER_KEY }
   );
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const toggleAllDay = (all_day) =>
@@ -96,16 +82,10 @@ function EventForm({ initial, today, onDone }) {
         <input type="checkbox" checked={form.all_day} onChange={(e) => toggleAllDay(e.target.checked)} className="h-4 w-4" />
         Toute la journée
       </label>
-      <label className={`flex flex-col ${mutedClass}`}>
+      <div className={mutedClass}>
         Catégorie
-        <Select value={form.category ?? 'other'} onChange={(e) => set({ category: e.target.value })}>
-          {CATEGORIES.map((key) => (
-            <option key={key} value={key}>
-              {CATEGORY_LABEL[key]}
-            </option>
-          ))}
-        </Select>
-      </label>
+        <CategoryPicker value={form.category ?? OTHER_KEY} categories={categories} onChange={(category) => set({ category })} />
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending}>
           {pending ? 'Enregistrement…' : initial ? 'Enregistrer' : 'Ajouter'}
@@ -157,7 +137,7 @@ function Nudge({ label, event, mode, onMove, disabled }) {
   );
 }
 
-function EventDetail({ event, today, onClose, ideas, tasks, onMove, moving }) {
+function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, moving }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const google = (event.origin ?? 'google') === 'google';
@@ -201,7 +181,7 @@ function EventDetail({ event, today, onClose, ideas, tasks, onMove, moving }) {
         </IconButton>
       </div>
       {editing ? (
-        <EventForm initial={{ id: event.id, ...eventForm(event) }} today={today} onDone={() => setEditing(false)} />
+        <EventForm initial={{ id: event.id, ...eventForm(event) }} today={today} categories={categories} onDone={() => setEditing(false)} />
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {!event.all_day && (
@@ -224,7 +204,7 @@ function EventDetail({ event, today, onClose, ideas, tasks, onMove, moving }) {
 // Semaine glissante J à J+7 (calculée par buildWeek, heure de Paris) : une colonne
 // par jour, un bloc par événement à son créneau. Sur téléphone, seule la grille
 // défile horizontalement ; la colonne des heures reste fixe.
-export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks }) {
+export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, categories }) {
   const [selectedId, setSelectedId] = useState(null);
   const [adding, setAdding] = useState(false);
   const moving = useAction();
@@ -245,7 +225,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     });
   const week =
     serverWeek && Object.keys(overrides).length
-      ? buildWeek(rows.map((e) => (overrides[e.id] ? { ...e, ...overrides[e.id] } : e)), new Date(now))
+      ? buildWeek(rows.map((e) => (overrides[e.id] ? { ...e, ...overrides[e.id] } : e)), new Date(now), categories)
       : serverWeek;
 
   const commit = (event, times) => {
@@ -366,9 +346,12 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'move')}
                     title={`${b.title} (${timeParis(b.starts_at)})`}
                     className={`group absolute cursor-grab touch-none select-none overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
-                      b.conflict ? 'border-red-500 bg-red-100 dark:bg-red-950' : CATEGORY_CLASS[eventColor(b)]
+                      b.conflict ? 'border-red-500 bg-red-100 dark:bg-red-950' : ''
                     } ${selectedId === b.id ? 'ring-2 ring-zinc-900 dark:ring-zinc-100' : ''}`}
-                    style={{ top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%` }}
+                    style={{
+                      top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%`,
+                      ...(!b.conflict && { borderColor: b.category.color, backgroundColor: `${b.category.color}26` }),
+                    }}
                     data-testid="event-block"
                     data-conflict={b.conflict}
                   >
@@ -441,21 +424,22 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
         >
           Ajouter un événement
         </Button>
+        <CategoryEditor categories={categories} />
         {week?.conflicts > 0 && (
           <span className="text-sm font-medium text-red-600 dark:text-red-400">{week.conflicts} conflit(s)</span>
         )}
       </div>
       {week && (
         <div className="mb-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-400" data-testid="agenda-legend">
-          {LEGEND.map((l) => (
-            <span key={l.key} className="flex items-center gap-1">
-              <span className={`h-2.5 w-2.5 rounded-full ${l.dot}`} aria-hidden="true" />
-              {l.label}
+          {categories.map((c) => (
+            <span key={c.key} className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} aria-hidden="true" />
+              {c.name}
             </span>
           ))}
         </div>
       )}
-      {adding && <EventForm today={today} onDone={() => setAdding(false)} />}
+      {adding && <EventForm today={today} categories={categories} onDone={() => setAdding(false)} />}
       {noEvents && (
         <p className="my-2 text-sm text-zinc-500 dark:text-zinc-400">
           Aucun événement de {week.days[0].short} à {week.days.at(-1).short}.
@@ -468,6 +452,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
           key={selected.id}
           event={selected}
           today={today}
+          categories={categories}
           onClose={() => setSelectedId(null)}
           ideas={ideas}
           tasks={tasks}

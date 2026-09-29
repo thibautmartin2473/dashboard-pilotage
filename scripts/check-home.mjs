@@ -1,9 +1,10 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  HOME_PANEL_IDS, buildWeek, describeWhen, eventColor, eventForm, eventIdsOnDay, eventRow, formatMailDate, isMissingColumn,
-  isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso, reorderUpdates, resolveLayout,
-  shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis, todayEmptyMessage, todayEvents, todayLine, todayParis,
+  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, buildWeek, categoryOf, describeWhen, eventForm, eventIdsOnDay, eventRow,
+  formatMailDate, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
+  reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
+  todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
 
@@ -19,12 +20,27 @@ assert.equal(isOverdue(t({ due_date: '2026-09-20' }), today), true);
 assert.equal(isOverdue(t({ due_date: '2026-09-21' }), today), false);
 assert.equal(isOverdue(t({ due_date: '2026-09-20', done_at: 'x' }), today), false);
 
-// --- Code couleur de l'agenda (Tomate/Myrtille/Mandarine, colorId Google) ---
-assert.equal(eventColor({ color_id: '11' }), 'edhec');
-assert.equal(eventColor({ color_id: '6' }), 'task');
-assert.equal(eventColor({ color_id: '9' }), 'other');
-assert.equal(eventColor({ color_id: null }), 'other'); // colonne pas encore synchronisée
-assert.equal(eventColor({}), 'other'); // colonne pas encore créée (SQL pas exécuté)
+// --- Catégories d'agenda (dashboard_settings, clé agenda_categories) ---
+assert.equal(categoryOf(DEFAULT_CATEGORIES, '11').name, 'Cours EDHEC');
+assert.equal(categoryOf(DEFAULT_CATEGORIES, '6').kind, 'tache');
+assert.equal(categoryOf(DEFAULT_CATEGORIES, null).key, OTHER_KEY); // colonne pas encore synchronisée
+assert.equal(categoryOf(DEFAULT_CATEGORIES, undefined).key, OTHER_KEY); // colonne pas encore créée (SQL pas exécuté)
+assert.equal(categoryOf(DEFAULT_CATEGORIES, 'zzz').key, OTHER_KEY); // catégorie supprimée : repli
+
+// Réglage absent -> les 3 catégories par défaut ; entrées invalides ignorées ; clés en double :
+// la première gagne ; défauts renommés/recolorés respectés ; défaut manquant rajouté à la fin.
+assert.deepEqual(resolveCategories(undefined), DEFAULT_CATEGORIES);
+assert.deepEqual(resolveCategories([{ key: '11', name: 'Aurion', color: '#000000', kind: 'plage' }]).find((c) => c.key === '11'), {
+  key: '11', name: 'Aurion', color: '#000000', kind: 'plage',
+});
+const custom = resolveCategories([
+  { key: '9', name: 'Autre', color: '#3b82f6', kind: 'plage' },
+  { key: 'c-1', name: 'Perso', color: '#22c55e', kind: 'plage' },
+  { key: 'c-1', name: 'Doublon', color: '#000000', kind: 'plage' }, // même clé : ignorée
+  { key: 'c-2', name: 'Sans couleur valide', color: 'rouge', kind: 'plage' }, // invalide : ignorée
+]);
+assert.deepEqual(custom.map((c) => c.key), ['9', 'c-1', '11', '6']); // 11 et 6 rajoutés (absents du réglage)
+assert.equal(custom.find((c) => c.key === 'c-1').name, 'Perso');
 
 // --- Tâches : quatre sections, tri par position puis date de création ---
 const tasks = [
@@ -183,6 +199,27 @@ wk = buildWeek(
 );
 assert.equal(wk.conflicts, 1);
 
+// Catégorie personnalisée (kind 'tache') posée sur une plage : pas un conflit, comme les tâches
+// Google ; le bloc porte la bonne catégorie (nom/couleur) même pour une clé inconnue (repli OTHER_KEY).
+const withCustom = resolveCategories([
+  { key: '11', name: 'Cours EDHEC', color: '#ef4444', kind: 'plage' },
+  { key: OTHER_KEY, name: 'Autre événement', color: '#3b82f6', kind: 'plage' },
+  { key: '6', name: 'Tâche / travail', color: '#f59e0b', kind: 'tache' },
+  { key: 'c-perso', name: 'Perso', color: '#22c55e', kind: 'tache' },
+]);
+wk = buildWeek(
+  [
+    ev('coursC', at('09:00', '25'), at('12:00', '25'), { color_id: '11' }),
+    ev('perso', at('10:00', '25'), at('11:00', '25'), { color_id: 'c-perso' }),
+    ev('inconnu', at('10:30', '25'), at('11:30', '25'), { color_id: 'supprimee' }),
+  ],
+  new Date('2026-09-25T06:00:00Z'),
+  withCustom
+);
+assert.equal(wk.conflicts, 1); // coursC/inconnu (deux plages) seulement
+assert.equal(blocks(wk, 0).find((b) => b.id === 'perso').category.name, 'Perso');
+assert.equal(blocks(wk, 0).find((b) => b.id === 'inconnu').category.key, OTHER_KEY);
+
 // Événement qui traverse minuit : un bloc sur chaque jour, borné à la journée ; plage étendue à 0h-24h.
 wk = buildWeek([
   ev('nuit', at('23:00'), at('01:00', '22')),
@@ -247,21 +284,27 @@ assert.deepEqual(
 assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', end: '', all_day: false }).ends_at, null);
 const row = eventRow({ title: 'Congé', start: '2026-09-21', end: '2026-09-22', all_day: true, location: 'Lyon' });
 assert.deepEqual([row.starts_at, row.ends_at], ['2026-09-21T12:00:00Z', '2026-09-23T12:00:00Z']);
-assert.deepEqual(eventForm(row), { title: 'Congé', all_day: true, location: 'Lyon', start: '2026-09-21', end: '2026-09-22', category: 'other' });
+assert.deepEqual(eventForm(row), { title: 'Congé', all_day: true, location: 'Lyon', start: '2026-09-21', end: '2026-09-22', category: OTHER_KEY });
 assert.deepEqual(
   eventForm({ title: 'RDV', all_day: false, location: null, starts_at: '2026-09-21T12:30:00.000Z', ends_at: null }),
-  { title: 'RDV', all_day: false, location: '', start: '2026-09-21T14:30', end: '', category: 'other' }
+  { title: 'RDV', all_day: false, location: '', start: '2026-09-21T14:30', end: '', category: OTHER_KEY }
 );
+assert.equal(eventForm({ title: 'x', all_day: false, starts_at: '2026-09-21T12:30:00.000Z', color_id: 'c-perso' }).category, 'c-perso');
 assert.throws(() => eventRow({ title: ' ', start: '2026-09-21T14:30', all_day: false }), /Titre/);
 assert.throws(() => eventRow({ title: 'x', start: '2026-09-21T14:30', end: '2026-09-21T13:00', all_day: false }), /fin est avant/);
 assert.throws(() => eventRow({ title: 'x', start: '2026-09-22', end: '2026-09-21', all_day: true }), /fin est avant/);
 assert.throws(() => eventRow({ title: 'x', start: 'demain', all_day: false }), /Début invalide/);
 
-// Catégorie -> color_id (édition depuis le site) : voir eventColor et CATEGORY_COLOR_ID.
-assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'edhec' }).color_id, '11');
-assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'task' }).color_id, '6');
+// Catégorie -> color_id (édition depuis le site) : la clé choisie EST le color_id, validée contre
+// la liste de catégories fournie (défaut : DEFAULT_CATEGORIES).
+assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: '11' }).color_id, '11');
+assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: '6' }).color_id, '6');
 assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false }).color_id, undefined); // pas touché si non fourni
 assert.throws(() => eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'rouge' }), /Catégorie/);
+assert.equal(
+  eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'c-perso' }, resolveCategories([{ key: 'c-perso', name: 'Perso', color: '#22c55e', kind: 'tache' }])).color_id,
+  'c-perso'
+);
 
 // --- Mails : tri strictement par date décroissante, filtre par source, 50 au plus ---
 const mail = (id, received_at, o = {}) => ({ id, received_at, ...o });

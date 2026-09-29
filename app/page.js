@@ -10,8 +10,8 @@ import { HomeSlot } from '@/components/ui';
 import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
 import {
-  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, eventIdsOnDay, resolveLayout, splitTasks, summarize,
-  todayEvents, todayLine, todayParis,
+  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, eventIdsOnDay, resolveCategories, resolveLayout,
+  splitTasks, summarize, todayEvents, todayLine, todayParis,
 } from '@/lib/home';
 import { supabaseConfigured } from '@/lib/supabase';
 
@@ -50,7 +50,9 @@ export default async function HomePage() {
   ]);
   const now = new Date();
   const today = todayParis(now);
-  const week = events.data ? buildWeek(events.data, now) : null;
+  const setting = (key) => settings.data?.find((row) => row.key === key)?.value;
+  const categories = resolveCategories(setting('agenda_categories'));
+  const week = events.data ? buildWeek(events.data, now, categories) : null;
   const todayList = todayEvents(week);
   const sections = tasks.data && splitTasks(tasks.data, today, eventIdsOnDay(events.data ?? [], today));
   const summary = summarize({
@@ -69,7 +71,6 @@ export default async function HomePage() {
     status: projectStatus(p),
   }));
 
-  const setting = (key) => settings.data?.find((row) => row.key === key)?.value;
   const layout = resolveLayout(setting('home_layout'));
   const filter = setting('mail_filter');
   const mailFilter = MAIL_SOURCES.includes(filter) ? filter : 'all';
@@ -86,7 +87,9 @@ export default async function HomePage() {
   const eventTargets = targets.filter((t) => t.value.startsWith('event:'));
 
   const panels = {
-    agenda: <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} tasks={activeTasks} />,
+    agenda: (
+      <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} tasks={activeTasks} categories={categories} />
+    ),
     ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} targets={targets} />,
     actions: (
       <ActionsPanel

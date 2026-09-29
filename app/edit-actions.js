@@ -5,8 +5,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { applyPositions, deleteProject, moveRow, must, nextPosition, rows, touch } from '@/lib/db-ops';
 import { MILESTONE_STATUSES } from '@/lib/constants';
 import {
-  BUCKETS, MAIL_SOURCES, eventIdsOnDay, eventRow, isMissingColumn, isMissingTable, reorderUpdates, resolveLayout,
-  slugify, splitTasks, todayParis,
+  BUCKETS, CATEGORY_KINDS, DEFAULT_CATEGORIES, MAIL_SOURCES, OTHER_KEY, eventIdsOnDay, eventRow, isMissingColumn,
+  isMissingTable, reorderUpdates, resolveCategories, resolveLayout, slugify, splitTasks, todayParis,
 } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
@@ -174,9 +174,14 @@ export async function deleteIdea(id) {
 
 // ---- Agenda : les événements créés ici sont locaux (origin = 'local'), jamais purgés par la synchro ----
 
+async function loadCategories(db) {
+  const [settingRow] = await rows(db.from('dashboard_settings').select('value').eq('key', 'agenda_categories'));
+  return resolveCategories(settingRow?.value);
+}
+
 export async function saveEvent({ id, ...form }) {
   return run(async (db) => {
-    const row = eventRow(form);
+    const row = eventRow(form, await loadCategories(db));
     if (id) {
       await touch(db.from('calendar_events').update(row).eq('id', id));
       return;
@@ -341,5 +346,47 @@ export async function setMailFilter(value) {
   return run((db) => {
     must(value === 'all' || MAIL_SOURCES.includes(value), 'Filtre invalide');
     return saveSetting(db, 'mail_filter', value);
+  });
+}
+
+// ---- Catégories d'agenda (dashboard_settings, clé « agenda_categories ») ----
+// Les 3 catégories par défaut (color_id Google '11'/'9'/'6') se renomment et se recolorent mais ne
+// se suppriment pas ; leur clé reste la source de vérité pour scripts/push-agenda.mjs.
+const DEFAULT_KEYS = DEFAULT_CATEGORIES.map((c) => c.key);
+
+export async function saveCategory({ key, name, color, kind }) {
+  return run(async (db) => {
+    name = text(name, 'Nom', 60);
+    must(/^#[0-9a-f]{6}$/i.test(color ?? ''), 'Couleur invalide');
+    must(CATEGORY_KINDS.includes(kind), 'Type invalide');
+    const categories = await loadCategories(db);
+    const idx = key ? categories.findIndex((c) => c.key === key) : -1;
+    const next = { key: idx >= 0 ? key : `c-${crypto.randomUUID().slice(0, 8)}`, name, color: color.toLowerCase(), kind };
+    const list = idx >= 0 ? categories.map((c, i) => (i === idx ? next : c)) : [...categories, next];
+    await saveSetting(db, 'agenda_categories', list);
+  });
+}
+
+export async function deleteCategory(key) {
+  return run(async (db) => {
+    key = text(key, 'Catégorie', 100);
+    must(!DEFAULT_KEYS.includes(key), 'Catégorie par défaut : non supprimable');
+    const categories = await loadCategories(db);
+    await saveSetting(db, 'agenda_categories', categories.filter((c) => c.key !== key));
+    const { error } = await db.from('calendar_events').update({ color_id: OTHER_KEY }).eq('color_id', key);
+    if (error) throw error;
+  });
+}
+
+export async function moveCategory(key, direction) {
+  return run(async (db) => {
+    dir(direction);
+    const categories = await loadCategories(db);
+    const i = categories.findIndex((c) => c.key === key);
+    const j = i + (direction === 'up' ? -1 : 1);
+    must(i >= 0 && j >= 0 && j < categories.length, 'Position invalide');
+    const next = [...categories];
+    [next[i], next[j]] = [next[j], next[i]];
+    await saveSetting(db, 'agenda_categories', next);
   });
 }
