@@ -1,9 +1,10 @@
 -- Code couleur de l'agenda + lien tâche <-> événement. Idempotent : à exécuter (et
 -- ré-exécuter sans risque) dans l'éditeur SQL Supabase.
 
--- 1. Couleur Google d'origine (colorId), poussée par scripts/push-agenda.mjs : 11 Tomate = cours
--- EDHEC (Aurion), 9 Myrtille = autres événements, 6 Mandarine = tâches / blocs de travail. Colonne
--- absente ou valeur nulle : le site replie sur la couleur "autres événements" (lib/home.js, eventColor).
+-- 1. Couleur Google d'origine (colorId), poussée par scripts/push-agenda.mjs : 11 Tomate, 9
+-- Myrtille, 6 Mandarine sont les clés des 3 catégories par défaut (nom et couleur éditables sur le
+-- site, dashboard_settings clé agenda_categories, lib/home.js). Colonne absente, valeur nulle ou
+-- catégorie supprimée : le site replie sur la clé '9' (categoryOf, OTHER_KEY).
 alter table calendar_events add column if not exists color_id text;
 
 -- 2. Une tâche peut être rattachée à un événement de l'agenda (« pendant quelle session »),
