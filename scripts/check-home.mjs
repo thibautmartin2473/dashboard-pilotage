@@ -247,15 +247,21 @@ assert.deepEqual(
 assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', end: '', all_day: false }).ends_at, null);
 const row = eventRow({ title: 'Congé', start: '2026-09-21', end: '2026-09-22', all_day: true, location: 'Lyon' });
 assert.deepEqual([row.starts_at, row.ends_at], ['2026-09-21T12:00:00Z', '2026-09-23T12:00:00Z']);
-assert.deepEqual(eventForm(row), { title: 'Congé', all_day: true, location: 'Lyon', start: '2026-09-21', end: '2026-09-22' });
+assert.deepEqual(eventForm(row), { title: 'Congé', all_day: true, location: 'Lyon', start: '2026-09-21', end: '2026-09-22', category: 'other' });
 assert.deepEqual(
   eventForm({ title: 'RDV', all_day: false, location: null, starts_at: '2026-09-21T12:30:00.000Z', ends_at: null }),
-  { title: 'RDV', all_day: false, location: '', start: '2026-09-21T14:30', end: '' }
+  { title: 'RDV', all_day: false, location: '', start: '2026-09-21T14:30', end: '', category: 'other' }
 );
 assert.throws(() => eventRow({ title: ' ', start: '2026-09-21T14:30', all_day: false }), /Titre/);
 assert.throws(() => eventRow({ title: 'x', start: '2026-09-21T14:30', end: '2026-09-21T13:00', all_day: false }), /fin est avant/);
 assert.throws(() => eventRow({ title: 'x', start: '2026-09-22', end: '2026-09-21', all_day: true }), /fin est avant/);
 assert.throws(() => eventRow({ title: 'x', start: 'demain', all_day: false }), /Début invalide/);
+
+// Catégorie -> color_id (édition depuis le site) : voir eventColor et CATEGORY_COLOR_ID.
+assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'edhec' }).color_id, '11');
+assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'task' }).color_id, '6');
+assert.equal(eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false }).color_id, undefined); // pas touché si non fourni
+assert.throws(() => eventRow({ title: 'x', start: '2026-09-21T14:30', all_day: false, category: 'rouge' }), /Catégorie/);
 
 // --- Mails : tri strictement par date décroissante, filtre par source, 50 au plus ---
 const mail = (id, received_at, o = {}) => ({ id, received_at, ...o });

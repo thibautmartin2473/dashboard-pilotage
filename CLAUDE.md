@@ -81,6 +81,9 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
 
 Un push sur `main` redéploie en production : ne jamais pousser sans accord explicite.
 
+**Idées d'amélioration de Thibaut** : les noter dans `BACKLOG.md`, sans coder ni ouvrir de PR
+à chaque idée ; une PR groupée seulement quand il y en a assez ou qu'il le demande.
+
 Contexte ajouté lors de la mise en place de l'architecture CLAUDE.GLOBAL —
 historique complet dans `../../ARCHITECTURE.md`.
 

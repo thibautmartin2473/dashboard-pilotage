@@ -3,10 +3,12 @@
 import { useRef, useState } from 'react';
 import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
-import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedClass, useAction } from './ui';
+import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, SyncFooter, mutedClass, useAction } from './ui';
 import { completeTask } from '@/app/actions';
 import { deleteEvent, moveEvent, saveEvent } from '@/app/edit-actions';
-import { buildWeek, describeWhen, eventColor, eventForm, shiftEvent, snapMinutes, timeParis } from '@/lib/home';
+import { buildWeek, CATEGORIES, describeWhen, eventColor, eventForm, shiftEvent, snapMinutes, timeParis } from '@/lib/home';
+
+const CATEGORY_LABEL = { edhec: 'Cours EDHEC', other: 'Autre événement', task: 'Tâche / travail' };
 
 const HOUR_PX = 44; // hauteur d'une heure dans la grille
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
@@ -41,7 +43,7 @@ const linkedOf = (eventId, ideas, tasks) => ({
 function EventForm({ initial, today, onDone }) {
   const { pending, error, run } = useAction();
   const [form, setForm] = useState(
-    initial ?? { title: '', all_day: false, location: '', start: `${today}T09:00`, end: `${today}T10:00` }
+    initial ?? { title: '', all_day: false, location: '', start: `${today}T09:00`, end: `${today}T10:00`, category: 'other' }
   );
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const toggleAllDay = (all_day) =>
@@ -93,6 +95,16 @@ function EventForm({ initial, today, onDone }) {
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={form.all_day} onChange={(e) => toggleAllDay(e.target.checked)} className="h-4 w-4" />
         Toute la journée
+      </label>
+      <label className={`flex flex-col ${mutedClass}`}>
+        Catégorie
+        <Select value={form.category ?? 'other'} onChange={(e) => set({ category: e.target.value })}>
+          {CATEGORIES.map((key) => (
+            <option key={key} value={key}>
+              {CATEGORY_LABEL[key]}
+            </option>
+          ))}
+        </Select>
       </label>
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending}>

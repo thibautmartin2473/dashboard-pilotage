@@ -81,7 +81,7 @@ Un push sur `main` redéploie la production. Donc :
 ## Économie de tokens
 
 - Appels d'outils indépendants : dans le même tour, en parallèle.
-- Sortie longue (`build`, `git log`, réponse JSON) : filtre (`| tail -30`, `--stat`, `--oneline`) ou compresse avec `mcp__headroom__headroom_compress` au-delà de ~200 lignes.
+- Sortie longue (`build`, `git log`, réponse JSON) : filtre (`| tail -30`, `--stat`, `--oneline`) ou `grep -n`.
 - Pas de relecture d'un fichier que tu viens d'éditer. Pas de refactor, de commentaire ou de fonctionnalité non demandés.
 - Ne relance pas le dev server s'il tourne déjà (`preview_list`).
 - Deux échecs sur la même erreur : arrête, expose ce que tu as constaté et propose l'hypothèse suivante.
