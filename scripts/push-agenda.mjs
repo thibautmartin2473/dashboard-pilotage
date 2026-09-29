@@ -11,7 +11,8 @@
 // "origin" (facultatif) : "google" par défaut ; "local" = créé sur le site, jamais purgé.
 // "colorId" (facultatif) : colorId Google Agenda de l'événement, pour le code couleur de l'accueil
 // (11 Tomate = cours EDHEC, 9 Myrtille = autres événements, 6 Mandarine = tâches/blocs de travail).
-// Colonne calendar_events.color_id : supabase/agenda-links.sql.
+// Colonne calendar_events.color_id : supabase/agenda-links.sql. Un événement rangé sur le site dans une
+// catégorie créée là (clé `c-…`) la garde : le colorId du fichier ne l'écrase pas.
 // Mails : "source" = "gmail" (défaut) ou "edhec" ; "unread" = true par défaut. Règle EDHEC : un mail
 // est "edhec" s'il porte le libellé Gmail EDHEC ou si l'expéditeur ou un destinataire est en
 // edhec.com ; sinon "gmail". Seuls les 50 mails les plus récents sont gardés.
@@ -236,6 +237,14 @@ if (held.size) {
   tables[0].rows = tables[0].rows.filter((r) => !held.has(r.id));
   console.log(`calendar_events : ${held.size} déplacement(s) en attente conservé(s) (voir --pending).`);
 }
+
+// Catégorie créée sur le site (clé `c-…`, voir saveCategory) : Google ne la connaît pas, on la garde.
+// Les clés 11/9/6 restent pilotées par le colorId Google.
+const { data: siteCats, error: catError } = await db.from('calendar_events').select('id, color_id').like('color_id', 'c-%');
+if (catError) dbFail(catError);
+const siteCat = new Map(siteCats.map((r) => [r.id, r.color_id]));
+for (const r of tables[0].rows) if (siteCat.has(r.id)) r.color_id = siteCat.get(r.id);
+if (siteCat.size) console.log(`calendar_events : ${siteCat.size} catégorie(s) du site conservée(s).`);
 
 for (const { name, rows, purge } of tables) {
   for (let i = 0; i < rows.length; i += 200) {
