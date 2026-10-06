@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import CategoryEditor, { CategoryPicker } from './CategoryEditor';
 import { LinkedIdeas } from './IdeasPanel';
 import Panel from './Panel';
@@ -8,7 +8,7 @@ import { Button, ConfirmDelete, ErrorLine, Field, IconButton, SyncFooter, mutedC
 import { completeTask } from '@/app/actions';
 import { deleteEvent, moveEvent, saveEvent } from '@/app/edit-actions';
 import {
-  OTHER_KEY, WEEK_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, clampOffset, describeWhen, doneByDay, eventForm,
+  OTHER_KEY, TIMELINE_DAYS, WEEK_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, clampOffset, describeWhen, doneByDay, eventForm,
   shiftEvent, snapMinutes, timeParis, todayParis,
 } from '@/lib/home';
 
@@ -16,6 +16,20 @@ const HOUR_PX = 44; // hauteur d'une heure dans la grille
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
 const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
+const NO_OVERRIDES = {}; // identité stable : la frise n'est pas recalculée sans aperçu en cours
+// Lignes « Jour » et « Fait » : une ligne de grille a la hauteur de sa case la plus pleine sur toute
+// la frise, donc chaque case montre au plus ROW_CHIPS éléments puis « +N » (liste au survol).
+const ROW_CHIPS = 2;
+
+function MoreChip({ items }) {
+  if (items.length <= ROW_CHIPS) return null;
+  const rest = items.slice(ROW_CHIPS);
+  return (
+    <span title={rest.join('\n')} className={`block px-1 text-xs ${mutedClass}`}>
+      +{rest.length}
+    </span>
+  );
+}
 
 const findEvent = (week, id) => {
   for (const d of week.days) for (const e of [...d.allDay, ...d.blocks]) if (e.id === id) return e;
@@ -205,23 +219,23 @@ function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, 
 }
 
 // Flèches de la frise : un jour ou une semaine en arrière / en avant, et retour à aujourd'hui.
-function WeekNav({ offset, setOffset, first, last }) {
-  const go = (n) => setOffset((o) => clampOffset(o + n));
+// `go(offset)` fait défiler la bande (même chemin que le glisser à la main).
+function WeekNav({ offset, go, step, first, last }) {
   return (
     <div className="mb-2 flex flex-wrap items-center gap-1" data-testid="week-nav">
-      <IconButton label="Semaine précédente" disabled={offset <= WEEK_OFFSET_MIN} onClick={() => go(-WEEK_DAYS + 1)}>
+      <IconButton label="Semaine précédente" disabled={offset <= WEEK_OFFSET_MIN} onClick={() => step(1 - WEEK_DAYS)}>
         «
       </IconButton>
-      <IconButton label="Jour précédent" disabled={offset <= WEEK_OFFSET_MIN} onClick={() => go(-1)}>
+      <IconButton label="Jour précédent" disabled={offset <= WEEK_OFFSET_MIN} onClick={() => step(-1)}>
         ‹
       </IconButton>
-      <Button disabled={offset === 0} onClick={() => setOffset(0)}>
+      <Button disabled={offset === 0} onClick={() => go(0)}>
         Aujourd&apos;hui
       </Button>
-      <IconButton label="Jour suivant" disabled={offset >= WEEK_OFFSET_MAX} onClick={() => go(1)}>
+      <IconButton label="Jour suivant" disabled={offset >= WEEK_OFFSET_MAX} onClick={() => step(1)}>
         ›
       </IconButton>
-      <IconButton label="Semaine suivante" disabled={offset >= WEEK_OFFSET_MAX} onClick={() => go(WEEK_DAYS - 1)}>
+      <IconButton label="Semaine suivante" disabled={offset >= WEEK_OFFSET_MAX} onClick={() => step(WEEK_DAYS - 1)}>
         »
       </IconButton>
       <span className={`ml-1 capitalize ${mutedClass}`} data-testid="week-range">
@@ -231,13 +245,18 @@ function WeekNav({ offset, setOffset, first, last }) {
   );
 }
 
-// Frise glissante de 8 jours (calculée par buildWeek, heure de Paris), J à J+7 par défaut ; les
-// flèches la décalent (offset en jours, mémoire locale de l'onglet). Une colonne par jour, un bloc
-// par événement à son créneau, et une ligne « Fait » (tâches terminées ce jour-là). Sur téléphone,
-// seule la grille défile horizontalement ; la colonne des heures reste fixe.
+// Frise de TIMELINE_DAYS jours (J-35 à J+98, buildWeek, heure de Paris) rendue d'un seul tenant dans
+// une bande qui défile horizontalement : 8 jours visibles sur ordinateur (une colonne = un huitième
+// de la largeur), moins sur téléphone. Elle s'ouvre sur aujourd'hui ; on la fait glisser à la main
+// (souris : appui sur le fond de la grille ; pavé tactile, doigt, Maj + molette : défilement natif)
+// ou aux flèches, avec un aimant sur chaque jour. Un bloc par événement à son créneau, et une
+// ligne « Fait » (tâches terminées ce jour-là). La colonne des heures reste fixe.
 export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, done, categories }) {
   const [selectedId, setSelectedId] = useState(null);
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(0); // premier jour visible, en jours depuis aujourd'hui
+  const [visible, setVisible] = useState(WEEK_DAYS); // nombre de colonnes entières visibles
+  const scrollRef = useRef(null);
+  const [aligned, setAligned] = useState(false); // bande masquée tant qu'elle n'est pas calée sur aujourd'hui
   const [adding, setAdding] = useState(false);
   const moving = useAction();
   const justDragged = useRef(false);
@@ -247,7 +266,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   // { id: { starts_at, ends_at } }, valables pour cette version des données serveur seulement
   // (le rafraîchissement qui suit moveEvent les remplace).
   const [draft, setDraft] = useState({ base: null, map: {} });
-  const overrides = draft.base === serverWeek ? draft.map : {};
+  const overrides = draft.base === serverWeek ? draft.map : NO_OVERRIDES;
   const setOverride = (id, times) =>
     setDraft((d) => {
       const map = { ...(d.base === serverWeek ? d.map : {}) };
@@ -255,11 +274,99 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
       else delete map[id];
       return { base: serverWeek, map };
     });
-  const week =
-    serverWeek && (offset !== 0 || Object.keys(overrides).length)
-      ? buildWeek(rows.map((e) => (overrides[e.id] ? { ...e, ...overrides[e.id] } : e)), new Date(now), categories, offset)
-      : serverWeek;
-  const doneMap = doneByDay(done);
+  // Toute la frise, recalculée seulement quand les données, l'aperçu ou l'heure changent (pas au défilement).
+  const week = useMemo(
+    () =>
+      serverWeek
+        ? buildWeek(
+            (state.data ?? []).map((e) => (overrides[e.id] ? { ...e, ...overrides[e.id] } : e)),
+            new Date(now),
+            categories,
+            WEEK_OFFSET_MIN,
+            TIMELINE_DAYS
+          )
+        : null,
+    [serverWeek, state.data, overrides, now, categories]
+  );
+  const doneMap = useMemo(() => doneByDay(done), [done]);
+
+  // Défilement : largeur d'une colonne de jour, mesurée sur la première.
+  const colWidth = () => scrollRef.current?.querySelector('[data-testid^="day-"]')?.offsetWidth || 1;
+  // Cible d'un défilement animé en cours : deux clics rapides sur une flèche s'additionnent au lieu
+  // de repartir d'une position intermédiaire. Effacée à l'arrivée ou dès un geste à la main.
+  const targetRef = useRef(null);
+  const go = (target, behavior = 'smooth') => {
+    targetRef.current = clampOffset(target);
+    scrollRef.current?.scrollTo({ left: (targetRef.current - WEEK_OFFSET_MIN) * colWidth(), behavior });
+  };
+  const step = (days) =>
+    go((targetRef.current ?? Math.round(scrollRef.current.scrollLeft / colWidth()) + WEEK_OFFSET_MIN) + days);
+  const handTakesOver = () => (targetRef.current = null);
+  const offsetRef = useRef(0); // dernier premier jour visible, relu au redimensionnement
+  const onScroll = () => {
+    const el = scrollRef.current;
+    const w = colWidth();
+    if (targetRef.current !== null && Math.abs(el.scrollLeft - (targetRef.current - WEEK_OFFSET_MIN) * w) < 2) {
+      targetRef.current = null;
+    }
+    offsetRef.current = clampOffset(Math.round(el.scrollLeft / w) + WEEK_OFFSET_MIN);
+    setOffset(offsetRef.current);
+    setVisible(Math.max(1, Math.floor((el.clientWidth - el.querySelector('[data-testid="agenda-gutter"]').offsetWidth) / w + 0.05)));
+  };
+  // Largeur d'un jour = un huitième de la bande hors colonne des heures, jamais moins de DAY_MIN_REM :
+  // mesurée sur la bande (ResizeObserver), puis la bande se recale sur le même premier jour visible
+  // (aujourd'hui à l'ouverture).
+  const [dayPx, setDayPx] = useState(null);
+  const hasGrid = Boolean(week);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const gutterPx = el.querySelector('[data-testid="agenda-gutter"]').offsetWidth;
+      const minPx = (gutterPx / GUTTER_REM) * DAY_MIN_REM;
+      setDayPx(Math.max(minPx, (el.clientWidth - gutterPx) / WEEK_DAYS));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasGrid]);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !dayPx) return;
+    el.scrollLeft = (offsetRef.current - WEEK_OFFSET_MIN) * dayPx;
+    onScroll();
+    setAligned(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seulement quand la largeur d'un jour change
+  }, [dayPx]);
+
+  // Glisser la frise à la souris : appui sur le fond de la grille (pas sur un bloc ni un bouton).
+  // L'aimant est coupé pendant le geste, puis la bande se cale sur le jour le plus proche.
+  const startPan = (ev) => {
+    if (ev.pointerType !== 'mouse' || ev.button !== 0 || ev.target.closest('button, a, input')) return;
+    const el = scrollRef.current;
+    handTakesOver();
+    const x0 = ev.clientX;
+    const left0 = el.scrollLeft;
+    el.style.scrollSnapType = 'none';
+    el.style.cursor = 'grabbing';
+    const move = (e) => {
+      el.scrollLeft = left0 - (e.clientX - x0);
+    };
+    const end = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+      el.style.cursor = '';
+      const target = Math.round(el.scrollLeft / colWidth()) + WEEK_OFFSET_MIN;
+      go(target);
+      setTimeout(() => (el.style.scrollSnapType = ''), 400); // après le calage animé
+    };
+    ev.preventDefault(); // pas de sélection de texte pendant le geste
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  };
 
   const commit = (event, times) => {
     setOverride(event.id, { ...times, pending_move: (event.origin ?? 'google') === 'google' });
@@ -302,9 +409,11 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     window.addEventListener('pointercancel', end);
   };
 
+  // Jours visibles dans la bande (titre de la frise, message « aucun événement »).
+  const shown = week ? week.days.slice(offset - WEEK_OFFSET_MIN, offset - WEEK_OFFSET_MIN + visible) : [];
   // Date proposée à l'ajout : aujourd'hui, ou le premier jour affiché s'il est plus loin.
   const realToday = todayParis(new Date(now));
-  const firstShown = week?.days[0].day;
+  const firstShown = shown[0]?.day;
   const today = firstShown && firstShown > realToday ? firstShown : realToday;
   const selected = week && selectedId ? findEvent(week, selectedId) : null;
 
@@ -313,7 +422,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   if (week) {
     const hours = week.hourEnd - week.hourStart;
     const height = hours * HOUR_PX;
-    const columns = `${GUTTER_REM}rem repeat(${week.days.length}, minmax(${DAY_MIN_REM}rem, 1fr))`;
+    const columns = `${GUTTER_REM}rem repeat(${week.days.length}, ${dayPx ? `${dayPx}px` : `${DAY_MIN_REM}rem`})`;
     const gutter = 'sticky left-0 z-20 bg-white dark:bg-zinc-950';
     const cell = 'border-l border-zinc-200 dark:border-zinc-800';
     const open = (e) => {
@@ -322,13 +431,22 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
       setSelectedId(e.id);
     };
     grid = (
-      <div className="overflow-x-auto" data-testid="agenda-scroll">
-        <div className="grid" style={{ gridTemplateColumns: columns, minWidth: `${GUTTER_REM + week.days.length * DAY_MIN_REM}rem` }}>
-          <div className={gutter} />
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        onPointerDown={startPan}
+        onWheel={handTakesOver}
+        onTouchStart={handTakesOver}
+        className="cursor-grab snap-x snap-mandatory overflow-x-auto"
+        style={{ scrollPaddingLeft: `${GUTTER_REM}rem`, visibility: aligned ? 'visible' : 'hidden' }}
+        data-testid="agenda-scroll"
+      >
+        <div className="grid w-max select-none" style={{ gridTemplateColumns: columns }}>
+          <div className={gutter} data-testid="agenda-gutter" />
           {week.days.map((d) => (
             <div
               key={d.day}
-              className={`${cell} px-1 pb-1 text-xs font-semibold capitalize ${
+              className={`${cell} snap-start px-1 pb-1 text-xs font-semibold capitalize ${
                 d.isToday ? 'text-blue-700 dark:text-blue-300' : d.isPast ? 'text-zinc-400 dark:text-zinc-500' : ''
               }`}
             >
@@ -340,7 +458,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
           <div className={`${gutter} text-[10px] ${mutedClass}`}>Jour</div>
           {week.days.map((d) => (
             <div key={d.day} className={`${cell} min-h-6 space-y-0.5 p-0.5`}>
-              {d.allDay.map((e) => (
+              {d.allDay.slice(0, ROW_CHIPS).map((e) => (
                 <button
                   key={e.id}
                   type="button"
@@ -350,6 +468,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                   {e.title}
                 </button>
               ))}
+              <MoreChip items={d.allDay.map((e) => e.title)} />
             </div>
           ))}
 
@@ -358,7 +477,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
               <div className={`${gutter} text-[10px] ${mutedClass}`}>Fait</div>
               {week.days.map((d) => (
                 <div key={d.day} className={`${cell} min-h-6 space-y-0.5 p-0.5`} data-testid={`done-${d.day}`}>
-                  {(doneMap[d.day] ?? []).map((t) => (
+                  {(doneMap[d.day] ?? []).slice(0, ROW_CHIPS).map((t) => (
                     <span
                       key={t.id}
                       title={`${t.title} (fait à ${timeParis(t.done_at)})`}
@@ -367,6 +486,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                       ✓ {t.title}
                     </span>
                   ))}
+                  <MoreChip items={(doneMap[d.day] ?? []).map((t) => t.title)} />
                 </div>
               ))}
             </>
@@ -472,7 +592,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     );
   }
 
-  const noEvents = week && week.days.every((d) => !d.allDay.length && !d.blocks.length);
+  const noEvents = shown.length > 0 && shown.every((d) => !d.allDay.length && !d.blocks.length);
   return (
     <Panel title="Agenda" state={state} file="agenda.sql">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -486,21 +606,12 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
           Ajouter un événement
         </Button>
         <CategoryEditor categories={categories} />
-        {week?.conflicts > 0 && (
-          <span className="text-sm font-medium text-red-600 dark:text-red-400">{week.conflicts} conflit(s)</span>
+        {/* Même périmètre que la tuile « À trancher » : J à J+7, pas toute la frise. */}
+        {serverWeek?.conflicts > 0 && (
+          <span className="text-sm font-medium text-red-600 dark:text-red-400">{serverWeek.conflicts} conflit(s)</span>
         )}
       </div>
-      {week && (
-        <WeekNav
-          offset={offset}
-          setOffset={(next) => {
-            setSelectedId(null); // le détail (et un formulaire ouvert) ne survit pas au décalage
-            setOffset(next);
-          }}
-          first={week.days[0].short}
-          last={week.days.at(-1).short}
-        />
-      )}
+      {shown.length > 0 && <WeekNav offset={offset} go={go} step={step} first={shown[0].short} last={shown.at(-1).short} />}
       {week && (
         <div className="mb-2 flex flex-wrap gap-3 text-xs text-zinc-500 dark:text-zinc-400" data-testid="agenda-legend">
           {categories.map((c) => (
@@ -514,7 +625,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
       {adding && <EventForm today={today} categories={categories} onDone={() => setAdding(false)} />}
       {noEvents && (
         <p className="my-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Aucun événement de {week.days[0].short} à {week.days.at(-1).short}.
+          Aucun événement de {shown[0].short} à {shown.at(-1).short}.
         </p>
       )}
       {grid}

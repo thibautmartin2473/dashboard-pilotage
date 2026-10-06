@@ -1,7 +1,7 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, categoryOf, clampOffset, doneByDay, describeWhen, eventForm, eventIdsOnDay, eventRow,
+  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, categoryOf, clampOffset, doneByDay, describeWhen, eventForm, eventIdsOnDay, eventRow,
   formatMailDate, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
   reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
   todayEmptyMessage, todayEvents, todayLine, todayParis,
@@ -157,6 +157,12 @@ assert.deepEqual([fw.days[0].day, fw.days[7].day], ['2026-09-28', '2026-10-05'])
 assert.deepEqual(ids(fw.days[1].blocks), ['j8']);
 assert.equal(fw.days[0].isPast, false);
 assert.deepEqual([clampOffset(-999), clampOffset(999), clampOffset(3)], [WEEK_OFFSET_MIN, WEEK_OFFSET_MAX, 3]);
+// Frise complète de l'agenda : TIMELINE_DAYS jours de J-35 à J+98, aujourd'hui à l'index 35.
+fw = buildWeek(fleches, nowAgenda, DEFAULT_CATEGORIES, WEEK_OFFSET_MIN, TIMELINE_DAYS);
+assert.equal(fw.days.length, TIMELINE_DAYS);
+assert.deepEqual([fw.days[0].day, fw.days[-WEEK_OFFSET_MIN].day, fw.days.at(-1).day], ['2026-08-17', '2026-09-21', '2026-12-28']);
+assert.equal(fw.days[-WEEK_OFFSET_MIN].isToday, true);
+assert.deepEqual(ids(fw.days.flatMap((d) => d.blocks)), ['hier', 'j8']);
 
 // Ligne « Fait » : tâches terminées rangées par jour de Paris (00h30 à Paris le 21 = 22h30 UTC le 20).
 const faits = doneByDay([
