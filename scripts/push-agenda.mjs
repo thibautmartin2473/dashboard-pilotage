@@ -18,8 +18,9 @@
 // edhec.com ; sinon "gmail". Seuls les 50 mails les plus récents sont gardés.
 //
 // Ce sont des caches d'un instantané : upsert des lignes reçues, puis suppression des lignes
-// absentes du fichier : tous les mails, mais uniquement les événements d'origine "google"
-// (les événements créés sur le site, origin = 'local', ne sont jamais touchés).
+// absentes du fichier : tous les mails, mais uniquement les événements d'origine "google" pas encore
+// terminés (les événements créés sur le site, origin = 'local', ne sont jamais touchés ; un événement
+// fini reste en base comme historique, consultable avec les flèches de l'agenda).
 // --dry-run valide le fichier et n'écrit rien (n'exige pas Supabase).
 //
 // Déplacements faits sur le site (glisser-déposer, poignées, flèches) : un événement Google déplacé
@@ -217,9 +218,15 @@ const MAIL_LIMIT = 50;
 const recent = [...mails.values()].sort((a, b) => (b.received_at ?? '').localeCompare(a.received_at ?? ''));
 if (recent.length > MAIL_LIMIT) console.log(`mails : ${recent.length} reçus, seuls les ${MAIL_LIMIT} plus récents sont gardés.`);
 
-// `purge` : filtre des lignes que ce script a le droit de supprimer.
+// `purge` : filtre des lignes que ce script a le droit de supprimer. Événements : Google seulement,
+// et pas encore terminés ; un événement fini reste en base comme historique (flèches de l'agenda).
+const nowIso = new Date().toISOString();
 const tables = [
-  { name: 'calendar_events', rows: [...events.values()], purge: (q) => q.eq('origin', 'google') },
+  {
+    name: 'calendar_events',
+    rows: [...events.values()],
+    purge: (q) => q.eq('origin', 'google').or(`ends_at.gte."${nowIso}",and(ends_at.is.null,starts_at.gte."${nowIso}")`),
+  },
   { name: 'mail_items', rows: recent.slice(0, MAIL_LIMIT), purge: (q) => q },
 ];
 for (const t of tables) console.log(`${t.name} : ${t.rows.length} ligne(s) dans le fichier.`);
