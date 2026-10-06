@@ -48,6 +48,18 @@ assert.equal(drill.latest.due_date, '2026-10-02');
 assert.deepEqual([...drill.ids].sort(), ['a1', 'a2', 'a3']);
 assert.deepEqual(groupNotifications([]), { others: [], recaps: [] });
 
+// Deux tâches de même titre mais d'uuid différents : deux groupes ; même uuid, titres différents : un seul
+const UUID2 = '9a8b7c6d-1111-4222-8333-444455556666';
+const two = groupNotifications([
+  n({ id: 't1', title: 'Oublié hier ? Relire', dedupe_key: `recap:2026-10-01:${UUID}:1`, created_at: '2026-10-02T06:00:00Z' }),
+  n({ id: 't2', title: 'Oublié hier ? Relire', dedupe_key: `recap:2026-10-01:${UUID2}:1`, created_at: '2026-10-02T07:00:00Z' }),
+  n({ id: 't3', title: 'Oublié hier ? Relire', dedupe_key: `recap:2026-10-02:${UUID}:1`, created_at: '2026-10-03T06:00:00Z' }),
+  n({ id: 't4', title: 'Oublié hier ? Relire le mémo', dedupe_key: `recap:2026-10-03:${UUID}:1`, created_at: '2026-10-04T06:00:00Z' }), // renommée : même tâche
+  n({ id: 't5', title: 'Oublié hier ? Relire', dedupe_key: 'recap:2026-10-03:googleblock:1', created_at: '2026-10-04T07:00:00Z' }), // sans uuid : par titre
+]);
+assert.equal(two.recaps.length, 3);
+assert.deepEqual(two.recaps.map((g) => [...g.ids].sort().join('+')).sort(), ['t1+t3+t4', 't2', 't5']);
+
 // Plan de nettoyage (today = 2026-10-06)
 const today = '2026-10-06';
 const plan = planCleanup(
@@ -70,5 +82,16 @@ assert.deepEqual(
   ['both:perimee', 'd1:doublon', 'edge4:perimee', 'old:perimee']
 );
 assert.deepEqual(planCleanup([], today), []);
+// Deux tâches de même titre (uuid différents) ne sont pas des doublons
+assert.deepEqual(
+  planCleanup(
+    [
+      n({ id: 'u1', title: 'Oublié hier ? Relire', dedupe_key: `recap:2026-10-05:${UUID}:1`, due_date: '2026-10-08' }),
+      n({ id: 'u2', title: 'Oublié hier ? Relire', dedupe_key: `recap:2026-10-05:${UUID2}:1`, due_date: '2026-10-08' }),
+    ],
+    today
+  ),
+  []
+);
 
 console.log('check-notifications : OK');

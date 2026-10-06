@@ -5,7 +5,7 @@
 //
 // Parmi les notifications « recap: » encore `new` :
 // - celles dont la due_date est passée depuis plus de 3 jours : passées en `dismissed` ;
-// - les doublons d'une même tâche (même titre sans « Oublié hier ? ») : on garde la plus récente,
+// - les doublons d'une même tâche (même uuid de tâche, ou même titre sans « Oublié hier ? » à défaut) : on garde la plus récente,
 //   les autres passent en `dismissed`.
 // Rien n'est supprimé, aucune tâche n'est touchée : « dismissed » garde la dedupe_key, donc la routine
 // ne les recrée pas. Sans option, le script ne fait que lister (dry-run) ; --apply écrit.
@@ -38,12 +38,23 @@ function check(error) {
   }
 }
 
-const { data, error } = await db
-  .from('notifications')
-  .select('id, title, due_date, status, dedupe_key, created_at')
-  .eq('status', 'new')
-  .like('dedupe_key', 'recap:%');
-check(error);
+// Lecture paginée explicite (l'API plafonne à 1000 lignes par requête) : range par 1000 jusqu'à épuisement,
+// dans un ordre stable pour qu'aucune ligne ne saute ni ne se répète d'une page à l'autre.
+const PAGE = 1000;
+const data = [];
+for (let from = 0; ; from += PAGE) {
+  const { data: page, error } = await db
+    .from('notifications')
+    .select('id, title, due_date, status, dedupe_key, created_at')
+    .eq('status', 'new')
+    .like('dedupe_key', 'recap:%')
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, from + PAGE - 1);
+  check(error);
+  data.push(...page);
+  if (page.length < PAGE) break;
+}
 
 const today = todayParis();
 const plan = planCleanup(data, today);
@@ -59,7 +70,11 @@ if (!apply) {
   console.log('Rien écrit (dry-run). Relancer avec --apply pour appliquer.');
 } else if (plan.length) {
   const ids = plan.map((p) => p.id);
-  const res = await db.from('notifications').update({ status: 'dismissed' }).in('id', ids).eq('status', 'new').select('id');
-  check(res.error);
-  console.log(`${res.data.length} notification(s) passée(s) en dismissed.`);
+  let done = 0;
+  for (let i = 0; i < ids.length; i += 100) {
+    const res = await db.from('notifications').update({ status: 'dismissed' }).in('id', ids.slice(i, i + 100)).eq('status', 'new').select('id');
+    check(res.error);
+    done += res.data.length;
+  }
+  console.log(`${done} notification(s) passée(s) en dismissed.`);
 }
