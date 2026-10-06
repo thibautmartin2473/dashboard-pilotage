@@ -1,7 +1,7 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, buildWeek, categoryOf, describeWhen, eventForm, eventIdsOnDay, eventRow,
+  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, categoryOf, clampOffset, doneByDay, describeWhen, eventForm, eventIdsOnDay, eventRow,
   formatMailDate, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
   reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
   todayEmptyMessage, todayEvents, todayLine, todayParis,
@@ -144,6 +144,31 @@ assert.equal(wk.days[0].isToday, true);
 assert.equal(wk.conflicts, 0);
 assert.deepEqual(blocks(wk).map((b) => b.conflict), [false, false, false]);
 assert.deepEqual(wk.next, { title: 'a', time: '17h00' });
+
+// Flèches : offset -11 = du 10 au 17 (hier visible, aujourd'hui exclu) ; offset +7 = du 28 au 5 octobre.
+const fleches = [ev('hier', at('09:00', '10'), at('10:00', '10')), ev('j8', at('09:00', '29'), at('10:00', '29'))];
+let fw = buildWeek(fleches, nowAgenda, DEFAULT_CATEGORIES, -11);
+assert.deepEqual([fw.days[0].day, fw.days[7].day], ['2026-09-10', '2026-09-17']);
+assert.deepEqual(ids(fw.days[0].blocks), ['hier']);
+assert.deepEqual([fw.days[0].isPast, fw.days.some((d) => d.isToday), fw.next], [true, false, null]);
+assert.equal(fw.days[0].nowTop, null);
+fw = buildWeek(fleches, nowAgenda, DEFAULT_CATEGORIES, 7);
+assert.deepEqual([fw.days[0].day, fw.days[7].day], ['2026-09-28', '2026-10-05']);
+assert.deepEqual(ids(fw.days[1].blocks), ['j8']);
+assert.equal(fw.days[0].isPast, false);
+assert.deepEqual([clampOffset(-999), clampOffset(999), clampOffset(3)], [WEEK_OFFSET_MIN, WEEK_OFFSET_MAX, 3]);
+
+// Ligne « Fait » : tâches terminées rangées par jour de Paris (00h30 à Paris le 21 = 22h30 UTC le 20).
+const faits = doneByDay([
+  { id: 'x', done_at: '2026-09-20T22:30:00Z' },
+  { id: 'y', done_at: '2026-09-20T08:00:00Z' },
+  { id: 'z', done_at: '2026-09-20T06:00:00Z' },
+  { id: 'pas-fait', done_at: null },
+]);
+assert.deepEqual(Object.keys(faits).sort(), ['2026-09-20', '2026-09-21']);
+assert.deepEqual(ids(faits['2026-09-20']), ['z', 'y']); // plus ancienne d'abord
+assert.deepEqual(ids(faits['2026-09-21']), ['x']);
+assert.deepEqual(doneByDay(undefined), {});
 
 // Positionnement : plage 7h-22h (900 min). a = 17h00-18h00 -> top 600/900, hauteur 60/900.
 assert.deepEqual([wk.hourStart, wk.hourEnd], [7, 22]);

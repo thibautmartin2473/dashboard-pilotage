@@ -44,7 +44,7 @@ function Kpi({ label, value, sub, accent = false, alert = false, testId }) {
 }
 
 export default async function HomePage() {
-  const [projects, { tasks, ideas, events, mails, apps, settings, notifications }] = await Promise.all([
+  const [projects, { tasks, ideas, events, mails, apps, settings, notifications, done }] = await Promise.all([
     getAllProjects(),
     loadHomePanels(),
   ]);
@@ -88,7 +88,15 @@ export default async function HomePage() {
 
   const panels = {
     agenda: (
-      <AgendaPanel week={week} state={events} now={now.getTime()} ideas={linkedIdeas} tasks={activeTasks} categories={categories} />
+      <AgendaPanel
+        week={week}
+        state={events}
+        now={now.getTime()}
+        ideas={linkedIdeas}
+        tasks={activeTasks}
+        done={done.data ?? []}
+        categories={categories}
+      />
     ),
     ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} targets={targets} />,
     actions: (
