@@ -176,16 +176,16 @@ assert.deepEqual(ids(faits['2026-09-20']), ['z', 'y']); // plus ancienne d'abord
 assert.deepEqual(ids(faits['2026-09-21']), ['x']);
 assert.deepEqual(doneByDay(undefined), {});
 
-// Positionnement : plage 7h-22h (900 min). a = 17h00-18h00 -> top 600/900, hauteur 60/900.
-assert.deepEqual([wk.hourStart, wk.hourEnd], [7, 22]);
+// Positionnement : plage 8h-21h (780 min). a = 17h00-18h00 -> top 540/780, hauteur 60/780.
+assert.deepEqual([wk.hourStart, wk.hourEnd], [8, 21]);
 const a = blocks(wk)[1];
 assert.deepEqual([a.startMin, a.endMin], [1020, 1080]);
-near(a.top, (600 / 900) * 100);
-near(a.height, (60 / 900) * 100);
+near(a.top, (540 / 780) * 100);
+near(a.height, (60 / 780) * 100);
 assert.deepEqual([a.col, a.cols, blocks(wk)[2].col, blocks(wk)[2].cols], [0, 1, 0, 1]); // 18h00-18h00 : pas côte à côte
 
-// Repère de l'heure actuelle : 10h00 -> 180 min après 7h00, sur la colonne du jour seulement.
-near(wk.days[0].nowTop, 20);
+// Repère de l'heure actuelle : 10h00 -> 120 min après 8h00, sur la colonne du jour seulement.
+near(wk.days[0].nowTop, (120 / 780) * 100);
 assert.deepEqual(wk.days.slice(1).map((d) => d.nowTop), Array(7).fill(null));
 assert.equal(buildWeek([], new Date(at('23:30'))).days[0].nowTop, null); // hors plage affichée
 
@@ -282,7 +282,7 @@ wk = buildWeek([
 assert.deepEqual([blocks(wk)[0].startMin, blocks(wk)[0].endMin], [840, 870]);
 assert.deepEqual(wk.days.map((d) => d.allDay.length).slice(0, 4), [1, 1, 0, 0]);
 wk = buildWeek([], nowAgenda);
-assert.deepEqual([wk.days.length, wk.hourStart, wk.hourEnd, wk.conflicts, wk.next], [8, 7, 22, 0, null]);
+assert.deepEqual([wk.days.length, wk.hourStart, wk.hourEnd, wk.conflicts, wk.next], [8, 8, 21, 0, null]);
 
 // Un jour avec un événement et zéro tâche ne doit jamais dire « rien ».
 wk = buildWeek([ev('rdv', at('17:00'), at('18:00'))], nowAgenda);
