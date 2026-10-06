@@ -4,11 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { must, nextPosition, touch } from '@/lib/db-ops';
 import { eventRow, isMissingColumn, isMissingTable, isoToParisLocal } from '@/lib/home';
+import { recapTaskId } from '@/lib/notifications';
 
 // Server Actions de la zone Commande et des notifications de l'accueil. Elles passent par
 // la page `/`, donc derrière le Basic Auth de proxy.js, et écrivent avec la clé service_role.
 // Retour : { ok: true } ou { error } (jamais d'échec silencieux).
 
+const MAX_BULK = 200; // notifications traitées d'un coup (groupe, « Tout ignorer »)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const isoNow = () => new Date().toISOString();
@@ -91,9 +93,13 @@ export async function applyCommand(actions) {
 // On « réserve » la notification (new -> accepted) avant de créer l'élément : un double clic ne crée
 // qu'un élément ; si la création échoue, on la rend. `title`, `start`/`end` (événement, heure de Paris,
 // AAAA-MM-JJTHH:MM) et `due_date` sont facultatifs : ils remplacent la proposition (bouton Modifier).
-export async function acceptNotification({ id, title, start, end, due_date } = {}) {
+// `alsoIds` : les autres notifications du même groupe « Oublié hier ? » (même tâche rappelée plusieurs
+// jours) : elles passent en `accepted` avec celle-ci, sans rien créer de plus.
+export async function acceptNotification({ id, title, start, end, due_date, alsoIds } = {}) {
   return run(async (db) => {
     must(UUID.test(id), 'Identifiant invalide');
+    const others = [...new Set(alsoIds ?? [])].filter((x) => x !== id);
+    must(others.length <= MAX_BULK && others.every((x) => UUID.test(x)), 'Identifiant invalide');
     const [n] = await touch(
       db.from('notifications').update({ status: 'accepted' }).eq('id', id).eq('status', 'new'),
       'Notification déjà traitée',
@@ -114,6 +120,10 @@ export async function acceptNotification({ id, title, start, end, due_date } = {
         const row = { title: name, bucket: 'inbox', due_date: dueDate(due_date === undefined ? n.due_date : due_date), source: 'notification' };
         await insert(db, 'tasks', { ...row, ...position }, 'tâche', []);
       } // info : marquée acceptée, rien à créer
+      if (others.length) {
+        const { error } = await db.from('notifications').update({ status: 'accepted' }).in('id', others).eq('status', 'new');
+        if (error) throw error;
+      }
     } catch (err) {
       const { error } = await db.from('notifications').update({ status: 'new' }).eq('id', id);
       if (error) err.message += ` (la notification n'a pas pu être remise à traiter : ${error.message})`;
@@ -122,11 +132,29 @@ export async function acceptNotification({ id, title, start, end, due_date } = {
   });
 }
 
-export async function dismissNotification(id) {
+// « Ignorer » = « c'était fait » (texte des cartes « Oublié hier ? ») : pour une notification « recap: » dont
+// la clé porte l'uuid d'une tâche, cette tâche encore ouverte est cochée faite. Un id Google (bloc) ou tout
+// autre format ne touche à aucune tâche. `markDone: false` (bouton « Tout ignorer ») écarte sans cocher.
+export async function dismissNotifications(ids, { markDone = true } = {}) {
   return run(async (db) => {
-    must(UUID.test(id), 'Identifiant invalide');
-    await touch(db.from('notifications').update({ status: 'dismissed' }).eq('id', id).eq('status', 'new'), 'Notification déjà traitée');
+    must(Array.isArray(ids) && ids.length > 0 && ids.length <= MAX_BULK && ids.every((x) => UUID.test(x)), 'Identifiant invalide');
+    const list = [...new Set(ids)];
+    const dismissed = await touch(
+      db.from('notifications').update({ status: 'dismissed' }).in('id', list).eq('status', 'new'),
+      'Notification déjà traitée',
+      'id, dedupe_key'
+    );
+    if (!markDone) return;
+    const taskIds = [...new Set(dismissed.map(recapTaskId).filter(Boolean))];
+    if (taskIds.length) {
+      const { error } = await db.from('tasks').update({ done_at: isoNow() }).in('id', taskIds).is('done_at', null);
+      if (error) throw new Error(`Notification ignorée, mais la tâche n'a pas pu être cochée : ${error.message}`);
+    }
   });
+}
+
+export async function dismissNotification(id) {
+  return dismissNotifications([id]);
 }
 
 // Supprime la ligne, donc aussi la mémoire de son dedupe_key : « Ignorer » empêche le retour, pas « Supprimer ».
