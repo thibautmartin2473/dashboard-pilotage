@@ -12,7 +12,7 @@ import {
   shiftEvent, snapMinutes, timeParis, todayParis,
 } from '@/lib/home';
 
-const HOUR_PX = 44; // hauteur d'une heure dans la grille
+const HOUR_PX = 30; // hauteur d'une heure dans la grille (compacte : une journée 8h-21h tient à l'écran)
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
 const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
@@ -518,7 +518,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                 // Poignées sur le vrai début / la vraie fin seulement (pas sur la suite d'un événement de nuit).
                 const ownStart = b.startMin > 0 || timeParis(b.starts_at) === '00h00';
                 const ownEnd = b.endMin < 1440;
-                const handle = 'absolute inset-x-0 h-2 cursor-ns-resize';
+                const handle = 'absolute inset-x-0 h-1.5 cursor-ns-resize';
                 return (
                   <button
                     key={b.id}
@@ -526,7 +526,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     onClick={() => open(b)}
                     onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'move')}
                     title={`${b.title} (${timeParis(b.starts_at)})`}
-                    className={`group absolute cursor-grab touch-none select-none overflow-hidden rounded border px-1 text-left text-xs leading-tight ${
+                    className={`group absolute cursor-grab touch-none select-none overflow-hidden rounded border px-0.5 text-left text-[10px] leading-[1.15] ${
                       b.conflict ? 'border-red-500 bg-red-100 dark:bg-red-950' : ''
                     } ${selectedId === b.id ? 'ring-2 ring-zinc-900 dark:ring-zinc-100' : ''}`}
                     style={{
@@ -552,7 +552,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                         data-testid="handle-end"
                       />
                     )}
-                    <span className="block truncate">
+                    <span className="block break-words">
                       {b.pending_move && '↻ '}
                       {b.conflict && '⚠ '}
                       {linked.ideas.length > 0 && '💡 '}
@@ -561,7 +561,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     {shown.length > 0 && (
                       <span className="mt-0.5 block space-y-px" data-testid="block-tasks">
                         {shown.map((t) => (
-                          <span key={t.id} className="block truncate opacity-90">
+                          <span key={t.id} className="block truncate text-[9px] opacity-90">
                             ✓ {t.title}
                           </span>
                         ))}
