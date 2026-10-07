@@ -4,6 +4,7 @@ import Link from 'next/link';
 // chaque démo lit les vraies données en lecture seule et ne garde ses gestes
 // qu'en mémoire locale de l'onglet. Rien n'est écrit dans Supabase.
 const DEMOS = [
+  { href: '/demo/references', title: 'Moodboard : ce qui est beau', text: '20 références réelles et plébiscitées en 7 familles visuelles : dis ce que tu aimes, avant qu’on propose la charte.' },
   { href: '/demo/logo', title: 'Logo de Cadran', text: 'Cinq logos dessinés à la main (aiguille, cadran solaire, cinq secteurs, monogramme, anneau horaire) : déclinaisons, rendu réel à 16 px, version vivante.' },
   { href: '/demo/identite', title: "L'identité : nom, logo et univers", text: 'Les propositions de nom et de logo du dashboard, avec les logos de Spircle et d’EDHEC AI.' },
   { href: '/demo/chartes', title: 'Les chartes graphiques', text: 'Palettes, typographies et ambiances côte à côte, en clair et en sombre.' },
