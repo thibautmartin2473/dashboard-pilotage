@@ -270,3 +270,414 @@
   --cat-autre: #9a9a9a;
   color-scheme: dark;
 }
+
+/* =====================================================================================================
+   Chartes « Graphite avancées » (v2, 2026-10-07) : graphite-lumiere, graphite-ardoise, graphite-acier,
+   graphite-encre. Les 4 chartes ci-dessus ne bougent pas.
+
+   Système : tout est en OKLCH et se régénère depuis 3 variables d'entrée (critère C7 de la recherche)
+     --nh  teinte des neutres      --ah  teinte de l'accent      --ct  contraste (0.7 à 1.4, 1 par défaut)
+   plus quelques nuances par charte (--nc chroma des neutres, --ac chroma de l'accent, --lb luminosité du
+   fond en sombre, --lbl en clair, --hc / --ht teintes des plages et des tâches).
+   Les règles ci-dessous construisent :
+     - une échelle neutre de 12 étapes --n1..--n12 (1 rail, 2 fond, 3 surface, 4 surface haute, 5 flottant,
+       6 survol, 7 filet, 8 filet de contrôle 3:1, 9 neutre plein, 10 texte discret, 11 texte secondaire,
+       12 texte) ;
+     - une échelle d'accent --a1..--a12 (soft, bordures, anneau, plein, texte) ;
+     - les couleurs sémantiques (succès, alerte, danger) et les trois catégories d'agenda ;
+     - le contrat de jetons de docs/refonte-taches/STUDIO.md (--bg, --surface, --text...) en alias de l'échelle.
+   Contrastes (APCA, WCAG 2) : calculés dans /demo/chartes à partir du CSS réellement rendu.
+   Élévation : en sombre, par la luminosité des surfaces (écart de L de 0,035 à 0,045), jamais par une ombre
+   portée sur un élément qui ne flotte pas ; --shadow (jeton du contrat) n'est donc qu'un filet de lumière en
+   haut, et --shadow-float (ombre à plusieurs couches) est réservé aux couches flottantes.
+   ===================================================================================================== */
+
+/* ---------- Socle commun des 4 chartes : formules ---------- */
+.studio[data-charte^='graphite-'] {
+  --nh: 262;
+  --nc: 0.012;
+  --ah: 268;
+  --ac: 0.115;
+  --ct: 1;
+  --hc: 215;
+  --ht: 58;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+  --k-rule: 1px;
+  font-variant-numeric: tabular-nums;
+  accent-color: var(--accent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--n7) transparent;
+
+  /* Échelle neutre : L vient du mode (--l1..--l12), teinte et chroma des entrées. */
+  --n1: oklch(var(--l1) var(--nc) var(--nh));
+  --n2: oklch(var(--l2) var(--nc) var(--nh));
+  --n3: oklch(var(--l3) var(--nc) var(--nh));
+  --n4: oklch(var(--l4) var(--nc) var(--nh));
+  --n5: oklch(var(--l5) var(--nc) var(--nh));
+  --n6: oklch(var(--l6) var(--nc) var(--nh));
+  --n7: oklch(var(--l7) var(--nc) var(--nh));
+  --n8: oklch(var(--l8) calc(var(--nc) * 1.4) var(--nh));
+  --n9: oklch(var(--l9) calc(var(--nc) * 0.8) var(--nh));
+  --n10: oklch(var(--l10) calc(var(--nc) * 0.6) var(--nh));
+  --n11: oklch(var(--l11) calc(var(--nc) * 0.6) var(--nh));
+  --n12: oklch(var(--l12) calc(var(--nc) * 0.6) var(--nh));
+
+  /* Échelle d'accent : L du mode (--al1..--al12), chroma = facteur x --ac x --acm. */
+  --a1: oklch(var(--al1) calc(var(--ac) * var(--acm) * 0.15) var(--ah));
+  --a2: oklch(var(--al2) calc(var(--ac) * var(--acm) * 0.25) var(--ah));
+  --a3: oklch(var(--al3) calc(var(--ac) * var(--acm) * 0.42) var(--ah));
+  --a4: oklch(var(--al4) calc(var(--ac) * var(--acm) * 0.52) var(--ah));
+  --a5: oklch(var(--al5) calc(var(--ac) * var(--acm) * 0.62) var(--ah));
+  --a6: oklch(var(--al6) calc(var(--ac) * var(--acm) * 0.62) var(--ah));
+  --a7: oklch(var(--al7) calc(var(--ac) * var(--acm) * 0.75) var(--ah));
+  --a8: oklch(var(--al8) calc(var(--ac) * var(--acm) * 0.9) var(--ah));
+  --a9: oklch(var(--al9) calc(var(--ac) * var(--acm)) var(--ah));
+  --a10: oklch(var(--al10) calc(var(--ac) * var(--acm)) var(--ah));
+  --a11: oklch(var(--al11) calc(var(--ac) * var(--acm)) var(--ah));
+  --a12: oklch(var(--al12) calc(var(--ac) * var(--acm) * 0.3) var(--ah));
+
+  /* Sémantique : succès, alerte, danger (un jeton plein, lisible en texte) puis fond et filet dérivés. */
+  --success: oklch(var(--sl-ok) 0.15 152);
+  --warning: oklch(var(--sl-warn) 0.14 92);
+  --danger: oklch(var(--sl-bad) var(--sc-bad) 25);
+  --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+  --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+  --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+  --success-line: color-mix(in oklab, var(--success) 55%, transparent);
+  --warning-line: color-mix(in oklab, var(--warning) 55%, transparent);
+  --danger-line: color-mix(in oklab, var(--danger) 55%, transparent);
+
+  /* Agenda : plage (cours), tâche, autre. Trois luminosités différentes : lisible aussi en niveaux de gris. */
+  --cat-cours: oklch(var(--cl-cours) 0.11 var(--hc));
+  --cat-tache: oklch(var(--cl-tache) 0.14 var(--ht));
+  --cat-autre: oklch(var(--cl-autre) 0.03 var(--nh));
+  --cat-cours-soft: color-mix(in oklab, var(--cat-cours) 18%, transparent);
+  --cat-tache-soft: color-mix(in oklab, var(--cat-tache) 8%, transparent);
+  --cat-autre-soft: color-mix(in oklab, var(--cat-autre) 18%, transparent);
+  --cat-tache-line: color-mix(in oklab, var(--cat-tache) 70%, transparent);
+
+  /* Contrat de jetons (alias de l'échelle). */
+  --surface-0: var(--n1);
+  --bg: var(--n2);
+  --surface: var(--n3);
+  --surface-2: var(--n4);
+  --surface-3: var(--n5);
+  --hover: var(--n6);
+  --border: var(--n7);
+  --border-strong: var(--n8);
+  --text: var(--n12);
+  --text-muted: var(--n11);
+  --text-faint: var(--n10);
+  --accent: var(--a11);
+  --accent-solid: var(--a9);
+  --accent-solid-hover: var(--a10);
+  --accent-soft: var(--a3);
+  --accent-line: var(--a7);
+  --accent-contrast: var(--on-accent);
+  --ring: var(--a8);
+}
+
+/* ---------- Mode sombre : luminosités ---------- */
+.studio[data-charte^='graphite-'][data-mode='dark'] {
+  color-scheme: dark;
+  --lb: 0.262;
+  --acm: 1;
+  --accL: 0.82;
+  --l1: calc(var(--lb) - 0.035);
+  --l2: var(--lb);
+  --l3: calc(var(--lb) + 0.042);
+  --l4: calc(var(--lb) + 0.085);
+  --l5: calc(var(--lb) + 0.13);
+  --l6: calc(var(--lb) + 0.12);
+  --l7: calc(var(--lb) + 0.11);
+  --l8: calc(var(--lb) + 0.375 + (var(--ct) - 1) * 0.05);
+  --l9: 0.66;
+  --l10: calc(0.73 + (var(--ct) - 1) * 0.07);
+  --l11: calc(0.825 + (var(--ct) - 1) * 0.06);
+  --l12: calc(0.955 + (var(--ct) - 1) * 0.02);
+  --al1: calc(var(--lb) + 0.015);
+  --al2: calc(var(--lb) + 0.04);
+  --al3: calc(var(--lb) + 0.075);
+  --al4: calc(var(--lb) + 0.11);
+  --al5: calc(var(--lb) + 0.15);
+  --al6: calc(var(--lb) + 0.2);
+  --al7: calc(var(--lb) + 0.28);
+  --al8: 0.68;
+  --al9: var(--accL);
+  --al10: calc(var(--accL) + 0.05);
+  --al11: var(--accL);
+  --al12: 0.94;
+  --on-accent: oklch(0.17 0.02 var(--ah));
+  --sl-ok: 0.82;
+  --sl-warn: 0.86;
+  --sl-bad: 0.84;
+  --sc-bad: 0.12;
+  --cl-cours: 0.75;
+  --cl-tache: 0.84;
+  --cl-autre: 0.66;
+  --hl: oklch(1 0 0 / 0.07);
+  --shadow: inset 0 1px 0 var(--hl);
+  --shadow-float:
+    0 0 0 1px oklch(0 0 0 / 0.4), inset 0 1px 0 var(--hl), 0 2px 4px oklch(0 0 0 / 0.18),
+    0 8px 16px oklch(0 0 0 / 0.22), 0 24px 48px oklch(0 0 0 / 0.28);
+  --border-overlay: oklch(1 0 0 / 0.16);
+  --glass: color-mix(in oklab, var(--n5) 76%, transparent);
+  --scrim: oklch(0 0 0 / 0.45);
+}
+
+/* ---------- Mode clair : luminosités (pour la lecture des mails, critère C12) ---------- */
+.studio[data-charte^='graphite-'][data-mode='light'] {
+  color-scheme: light;
+  --lbl: 0.965;
+  --acm: 1.2;
+  --accL: 0.48;
+  --l1: calc(var(--lbl) - 0.028);
+  --l2: var(--lbl);
+  --l3: calc(var(--lbl) + 0.03);
+  --l4: calc(var(--lbl) - 0.03);
+  --l5: 1;
+  --l6: calc(var(--lbl) - 0.055);
+  --l7: calc(var(--lbl) - 0.075);
+  --l8: calc(0.6 - (var(--ct) - 1) * 0.05);
+  --l9: 0.56;
+  --l10: calc(0.5 - (var(--ct) - 1) * 0.06);
+  --l11: calc(0.4 - (var(--ct) - 1) * 0.06);
+  --l12: calc(0.2 - (var(--ct) - 1) * 0.04);
+  --al1: 0.985;
+  --al2: 0.965;
+  --al3: 0.94;
+  --al4: 0.92;
+  --al5: 0.895;
+  --al6: 0.85;
+  --al7: 0.78;
+  --al8: 0.65;
+  --al9: var(--accL);
+  --al10: calc(var(--accL) - 0.05);
+  --al11: var(--accL);
+  --al12: 0.3;
+  --on-accent: oklch(0.99 0.005 var(--ah));
+  --sl-ok: 0.46;
+  --sl-warn: 0.5;
+  --sl-bad: 0.5;
+  --sc-bad: 0.19;
+  --cl-cours: 0.42;
+  --cl-tache: 0.52;
+  --cl-autre: 0.62;
+  --hl: oklch(1 0 0 / 0.9);
+  --shadow: 0 1px 0 oklch(0.2 0.02 var(--nh) / 0.05);
+  --shadow-float:
+    0 0 0 1px oklch(0.2 0.02 var(--nh) / 0.1), 0 2px 4px oklch(0.25 0.03 var(--nh) / 0.08),
+    0 8px 24px oklch(0.25 0.03 var(--nh) / 0.14);
+  --border-overlay: oklch(0.2 0.02 var(--nh) / 0.16);
+  --glass: color-mix(in oklab, var(--n5) 82%, transparent);
+  --scrim: oklch(0.2 0.02 var(--nh) / 0.25);
+}
+
+/* =========================================================================
+   Graphite Lumière : une seule source de lumière, en haut.
+   Continuité avec l'existant (teinte 262, un seul bleu, Geist). Toute la profondeur vient d'un filet de
+   lumière sur le bord haut des surfaces et d'un halo statique derrière l'en-tête ; le maintenant de
+   l'agenda est un trait lumineux. Densité moyenne.
+   ========================================================================= */
+.studio[data-charte='graphite-lumiere'] {
+  --nh: 262;
+  --nc: 0.012;
+  --ah: 268;
+  --ac: 0.115;
+  --hc: 215;
+  --ht: 58;
+  --font-display: var(--f-geist), system-ui, sans-serif;
+  --font-body: var(--f-geist), system-ui, sans-serif;
+  --font-mono: var(--f-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --hour-h: 46px;
+  --ctl-h: 30px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.02em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.08em;
+  --k-label-weight: 500;
+  --k-gap: 0.75rem;
+  --k-num-font: var(--f-geist-mono), ui-monospace, monospace;
+}
+.studio[data-charte='graphite-lumiere'][data-mode='dark'] {
+  --lb: 0.262;
+  background-image: radial-gradient(70% 38% at 50% -6%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 72%);
+  background-attachment: local;
+}
+.studio[data-charte='graphite-lumiere'][data-mode='light'] {
+  background-image: radial-gradient(70% 38% at 50% -6%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 72%);
+  background-attachment: local;
+}
+
+/* =========================================================================
+   Graphite Ardoise : la règle graduée, compacte.
+   Neutres vert-de-gris (teinte 215), accent sarcelle, préréglage compact à la Rhea (texte 12 à 13 px, heure
+   de 38 px). Motif : les graduations (axe des heures en règle, compteurs en barres de traits, tâches au
+   contour de craie en pointillés). Seule charte avec un grain, fixe, sous le fond, à 3 % : retirable en
+   mettant --grain à none.
+   ========================================================================= */
+.studio[data-charte='graphite-ardoise'] {
+  --nh: 215;
+  --nc: 0.01;
+  --ah: 182;
+  --ac: 0.1;
+  --hc: 255;
+  --ht: 58;
+  --font-display: var(--f-inter-tight), system-ui, sans-serif;
+  --font-body: var(--f-inter-tight), system-ui, sans-serif;
+  --font-mono: var(--f-jetbrains), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --fs-xs: 10.5px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --hour-h: 38px;
+  --ctl-h: 26px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.015em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.06em;
+  --k-label-weight: 500;
+  --k-gap: 0.6rem;
+  --k-num-font: var(--f-jetbrains), ui-monospace, monospace;
+}
+.studio[data-charte='graphite-ardoise'][data-mode='dark'] {
+  --lb: 0.255;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
+  background-image: var(--grain);
+  background-size: 160px 160px;
+  background-attachment: local;
+}
+.studio[data-charte='graphite-ardoise'][data-mode='light'] {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
+  background-image: var(--grain);
+  background-size: 160px 160px;
+  background-attachment: local;
+}
+
+/* =========================================================================
+   Graphite Acier : le cadran, lisible comme un instrument.
+   Acier plus clair (le fond le plus haut des quatre), accent argent (le plein est presque blanc) et un seul
+   ambre réservé à l'état « Claude attend » ou « à ranger ». Surfaces à dégradé vertical très léger,
+   chiffres en Mona Sans resserrée, aiguille pour le maintenant. Verre seulement sur la palette flottante.
+   ========================================================================= */
+.studio[data-charte='graphite-acier'] {
+  --nh: 250;
+  --nc: 0.006;
+  --ah: 250;
+  --ac: 0.02;
+  --hc: 232;
+  --ht: 58;
+  --font-display: var(--f-mona), system-ui, sans-serif;
+  --font-body: var(--f-mona), system-ui, sans-serif;
+  --font-mono: var(--f-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --hour-h: 44px;
+  --ctl-h: 30px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.015em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.1em;
+  --k-label-weight: 600;
+  --k-gap: 0.75rem;
+  --k-num-font: var(--f-mona), system-ui, sans-serif;
+  font-stretch: 94%;
+}
+.studio[data-charte='graphite-acier'][data-mode='dark'] {
+  --lb: 0.275;
+  --accL: 0.9;
+  --sheen: linear-gradient(180deg, oklch(1 0 0 / 0.035), transparent 300px);
+  background-image: var(--sheen);
+  background-attachment: local;
+}
+.studio[data-charte='graphite-acier'][data-mode='light'] {
+  --accL: 0.3;
+  --sheen: linear-gradient(180deg, oklch(1 0 0 / 0.6), transparent 300px);
+  background-image: var(--sheen);
+  background-attachment: local;
+}
+
+/* =========================================================================
+   Graphite Encre : le trait, le fond le plus profond.
+   Bleu-nuit chargé (chroma 0,028), accent azur, coins de 16 et 10 px emboîtés, Instrument Sans (largeur
+   resserrée sur les titres). Motif : le trait d'encre, un filet d'accent de 28 x 2 px sous les titres de
+   section et un tracé épais pour le maintenant. En clair, c'est de l'encre sur papier bleuté (contraste
+   le plus fort des quatre).
+   ========================================================================= */
+.studio[data-charte='graphite-encre'] {
+  --nh: 258;
+  --nc: 0.028;
+  --ah: 238;
+  --ac: 0.13;
+  --hc: 290;
+  --ht: 58;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 16px;
+  --font-display: var(--f-instrument), system-ui, sans-serif;
+  --font-body: var(--f-instrument), system-ui, sans-serif;
+  --font-mono: var(--f-plex-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 14px;
+  --hour-h: 50px;
+  --ctl-h: 32px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.01em;
+  --k-label-case: none;
+  --k-label-tracking: 0.02em;
+  --k-label-weight: 600;
+  --k-gap: 0.9rem;
+  --k-num-font: var(--f-plex-mono), ui-monospace, monospace;
+}
+.studio[data-charte='graphite-encre'][data-mode='dark'] {
+  --lb: 0.215;
+  background-image: radial-gradient(60% 34% at 12% -8%, color-mix(in oklab, var(--accent) 11%, transparent), transparent 70%);
+  background-attachment: local;
+}
+.studio[data-charte='graphite-encre'][data-mode='light'] {
+  --lbl: 0.97;
+  --ct: 1.15;
+  background-image: radial-gradient(60% 34% at 12% -8%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%);
+  background-attachment: local;
+}
+
+/* ---------- Jetons étendus pour les 4 chartes d'origine ----------
+   /demo/chartes affiche aussi Graphite (existante) et les trois autres : on leur donne des équivalents des
+   jetons ajoutés par les chartes avancées. Aucun jeton du contrat n'est modifié. */
+.studio:not([data-charte^='graphite-']) {
+  --surface-0: var(--bg);
+  --surface-3: var(--surface-2);
+  --hover: var(--surface-2);
+  --accent-solid: var(--accent);
+  --accent-solid-hover: var(--accent);
+  --accent-line: var(--accent);
+  --on-accent: var(--accent-contrast);
+  --border-overlay: var(--border-strong);
+  --glass: var(--surface-2);
+  --shadow-float: var(--shadow);
+  --radius-lg: calc(var(--radius) * 1.4);
+  --fs-xs: 11px;
+  --fs-sm: 12.5px;
+  --fs-md: 13.5px;
+  --hour-h: 44px;
+  --ctl-h: 30px;
+  --success-soft: color-mix(in srgb, var(--success) 15%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 15%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 15%, transparent);
+  --success-line: color-mix(in srgb, var(--success) 55%, transparent);
+  --danger-line: color-mix(in srgb, var(--danger) 55%, transparent);
+  --cat-tache-soft: color-mix(in srgb, var(--cat-tache) 10%, transparent);
+  --cat-tache-line: color-mix(in srgb, var(--cat-tache) 70%, transparent);
+  --cat-autre-soft: color-mix(in srgb, var(--cat-autre) 18%, transparent);
+  --n9: var(--border-strong);
+}

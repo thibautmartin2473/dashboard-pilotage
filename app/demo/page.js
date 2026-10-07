@@ -4,6 +4,11 @@ import Link from 'next/link';
 // chaque démo lit les vraies données en lecture seule et ne garde ses gestes
 // qu'en mémoire locale de l'onglet. Rien n'est écrit dans Supabase.
 const DEMOS = [
+  { href: '/demo/logo', title: 'Logo de Cadran', text: 'Cinq logos dessinés à la main (aiguille, cadran solaire, cinq secteurs, monogramme, anneau horaire) : déclinaisons, rendu réel à 16 px, version vivante.' },
+  { href: '/demo/identite', title: "L'identité : nom, logo et univers", text: 'Les propositions de nom et de logo du dashboard, avec les logos de Spircle et d’EDHEC AI.' },
+  { href: '/demo/chartes', title: 'Les chartes graphiques', text: 'Palettes, typographies et ambiances côte à côte, en clair et en sombre.' },
+  { href: '/demo/composants', title: 'Les composants : boutons et cartes', text: 'Boutons, champs, badges et cartes dans leurs variantes et leurs états.' },
+  { href: '/demo/fonctionnalites', title: 'Les fonctionnalités à venir', text: 'Les idées de fonctionnalités avancées, issues de tes saves Instagram et des forums.' },
   { href: '/demo/studio', title: 'Le Studio : composer son dashboard', text: '4 chartes x 4 navigations x 4 organisations, en clair ou en sombre. Le panneau Composer en bas à droite fait les combinaisons.' },
   { href: '/demo/aujourdhui', title: "Ma journée, l'agenda d'abord", text: 'Les tâches vivent dans les blocs du jour, 3 priorités, le reste replié.' },
   { href: '/demo/tri', title: 'Le grand ménage', text: 'Trier les 60 tâches ouvertes une par une, au clavier, en quelques minutes.' },
