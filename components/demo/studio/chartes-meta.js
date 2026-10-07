@@ -62,4 +62,45 @@ export const CHARTES = [
     police: 'Instrument Sans et IBM Plex Mono',
     densite: 'Aérée (heure de 50 px, texte 14 px)',
   },
+  // Chartes de Cadran d'après le moodboard (2026-10-08), détail dans /demo/chartes-cadran.
+  {
+    id: 'cadran-papier',
+    name: 'Papier et encre',
+    famille: 'cadran',
+    description:
+      'Crème chaud, encre presque noire, sérif éditoriale pour les titres et terre cuite pour tout ce qui est à toi : un carnet bien composé, d’après Claude, Craft et Stripe Press. Clair d’abord.',
+    signature: 'Le journal : chiffres des jours en grande sérif, filet double sous les en-têtes, maintenant tracé d’un trait de plume à pointe en losange.',
+    police: 'Newsreader (titres) et Hanken Grotesk (texte et chiffres)',
+    densite: 'Aérée (heure de 48 px, texte 14 px)',
+  },
+  {
+    id: 'cadran-cuir',
+    name: 'Cuir et bordeaux',
+    famille: 'cadran',
+    description:
+      'Brun très foncé, crème, bordeaux, cuir et olive : un sombre éditorial chaud, jamais gris ni bleu, d’après Stripe Press et Mercury. Sombre d’abord.',
+    signature: 'Le signet bordeaux sur le jour en cours, la surpiqûre pointillée des panneaux et le maintenant en laiton.',
+    police: 'Libre Caslon Text (titres), IBM Plex Sans (texte) et IBM Plex Mono (heures)',
+    densite: 'Moyenne (heure de 46 px, texte 13,5 px)',
+  },
+  {
+    id: 'cadran-voyant',
+    name: 'Noir, blanc et voyant',
+    famille: 'cadran',
+    description:
+      'Blanc pur en clair, noir pur en sombre, une seule couleur de signal (un rouge de voyant) et des chiffres en points, d’après Vercel, Things 3 et Nothing. Clair d’abord.',
+    signature: 'Les chiffres en matrice de points (Doto), les plages en blocs pleins, les tâches en contour, et un seul voyant rouge qui dit maintenant, à ranger ou en retard.',
+    police: 'Geist (texte), Geist Mono (heures) et Doto (chiffres en points)',
+    densite: 'Moyenne, grille nette sans arrondis (heure de 44 px)',
+  },
+  {
+    id: 'cadran-raycast',
+    name: 'Raycast chaud',
+    famille: 'cadran',
+    description:
+      'Noir chaud, surfaces nettes à relief léger et un rouge orangé, d’après Raycast et Mercury : le sombre premium sans une once de bleu. Sombre d’abord.',
+    signature: 'Les touches de clavier en relief, la braise (dégradé orangé et trait à gauche) sur la ligne sélectionnée, et la sérif d’accent pour la phrase du jour.',
+    police: 'Inter (texte), Instrument Serif (accent) et JetBrains Mono (heures)',
+    densite: 'Moyenne (heure de 44 px, texte 13,5 px)',
+  },
 ];

@@ -681,3 +681,303 @@
   --cat-autre-soft: color-mix(in srgb, var(--cat-autre) 18%, transparent);
   --n9: var(--border-strong);
 }
+
+/* =========================================================================
+   Chartes de Cadran, d'après le moodboard (2026-10-08). Quatre chartes NOUVELLES, chacune en clair et en
+   sombre, posées APRES le bloc de repli ci-dessus pour pouvoir le surcharger (--surface-0, --accent-solid,
+   --on-accent, --hover...). Mode principal : papier clair, cuir sombre, voyant clair, raycast sombre.
+   Contrastes calculés (WCAG >= 4.5:1 pour le texte, >= 3:1 pour les traits et bordures de contrôle) ; la page
+   /demo/chartes-cadran les recalcule sur le CSS rendu. Les signatures (filets, glyphes, relief) vivent dans
+   components/demo/chartes-cadran/cadran.css.
+   ========================================================================= */
+
+/* ---------- A. Papier et encre : crème chaud, encre, sérif éditoriale, terre cuite ---------- */
+.studio[data-charte='cadran-papier'] {
+  --font-display: var(--f-newsreader), 'Iowan Old Style', Georgia, serif;
+  --font-body: var(--f-hanken), system-ui, sans-serif;
+  --font-mono: var(--f-hanken), system-ui, sans-serif;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --k-title-weight: 450;
+  --k-title-style: normal;
+  --k-title-tracking: -0.01em;
+  --k-label-case: none;
+  --k-label-tracking: 0.01em;
+  --k-label-weight: 600;
+  --k-rule: 1px;
+  --k-gap: 1.25rem;
+  --k-num-font: var(--f-newsreader), Georgia, serif;
+  --hour-h: 48px;
+  --ctl-h: 32px;
+  --fs-md: 14px;
+  font-variant-numeric: tabular-nums;
+  scrollbar-width: thin;
+}
+.studio[data-charte='cadran-papier'][data-mode='light'] {
+  --bg: #f5f1e8;
+  --surface: #fcfaf5;
+  --surface-2: #ede7da;
+  --border: #e2dacb;
+  --border-strong: #8e8470;
+  --text: #201c17;
+  --text-muted: #5a5245;
+  --text-faint: #6a6150;
+  --accent: #b0432a;
+  --accent-soft: #f3ddd2;
+  --accent-contrast: #fff9f2;
+  --danger: #a3152c;
+  --warning: #855500;
+  --success: #3b6b33;
+  --cat-cours: #243f63;
+  --cat-tache: #b0432a;
+  --cat-autre: #7a6a4f;
+  --surface-0: #efe9dc;
+  --accent-solid: #b0432a;
+  --on-accent: #fff9f2;
+  --shadow: 0 1px 0 rgb(60 40 20 / 0.05), 0 6px 20px rgb(60 40 20 / 0.06);
+  color-scheme: light;
+}
+.studio[data-charte='cadran-papier'][data-mode='dark'] {
+  --bg: #1c1915;
+  --surface: #25211c;
+  --surface-2: #2f2a23;
+  --border: #3a342b;
+  --border-strong: #7c705e;
+  --text: #efe8da;
+  --text-muted: #c2b8a5;
+  --text-faint: #a99f8b;
+  --accent: #e58a62;
+  --accent-soft: #3a271d;
+  --accent-contrast: #1e1109;
+  --danger: #f27c84;
+  --warning: #e3b04b;
+  --success: #9cc58a;
+  --cat-cours: #aec8e8;
+  --cat-tache: #e58a62;
+  --cat-autre: #b8a585;
+  --surface-0: #181511;
+  --accent-solid: #e58a62;
+  --on-accent: #1e1109;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 8px 24px rgb(0 0 0 / 0.3);
+  color-scheme: dark;
+}
+
+/* ---------- B. Cuir et bordeaux : sombre éditorial chaud, bordeaux, cuir, olive, crème ---------- */
+.studio[data-charte='cadran-cuir'] {
+  --font-display: var(--f-caslon), 'Iowan Old Style', Georgia, serif;
+  --font-body: var(--f-plex), system-ui, sans-serif;
+  --font-mono: var(--f-plex-mono), ui-monospace, monospace;
+  --radius: 4px;
+  --radius-sm: 2px;
+  --k-title-weight: 400;
+  --k-title-style: normal;
+  --k-title-tracking: 0.005em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.1em;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 1rem;
+  --k-num-font: var(--f-plex-mono), ui-monospace, monospace;
+  --hour-h: 46px;
+  --ctl-h: 30px;
+  font-variant-numeric: tabular-nums;
+  scrollbar-width: thin;
+}
+.studio[data-charte='cadran-cuir'][data-mode='dark'] {
+  --bg: #1a1210;
+  --surface: #241915;
+  --surface-2: #2e211c;
+  --border: #3b2b24;
+  --border-strong: #85685a;
+  --text: #f1e7d6;
+  --text-muted: #c9b6a6;
+  --text-faint: #b09e8e;
+  --accent: #dd8496;
+  --accent-soft: #3d1c27;
+  --accent-contrast: #2a0d14;
+  --danger: #f0705a;
+  --warning: #e0b050;
+  --success: #8fc08a;
+  --cat-cours: #c0c985;
+  --cat-tache: #d39a5e;
+  --cat-autre: #b79c86;
+  --surface-0: #150e0c;
+  --accent-solid: #8a2d44;
+  --on-accent: #fbf0e2;
+  --laiton: #c9a15b;
+  --shadow: inset 0 0 0 1px rgb(255 235 210 / 0.025);
+  color-scheme: dark;
+}
+.studio[data-charte='cadran-cuir'][data-mode='light'] {
+  --bg: #f3ebdd;
+  --surface: #faf5ea;
+  --surface-2: #e9dfcc;
+  --border: #ddd0ba;
+  --border-strong: #8f7f68;
+  --text: #2a1b16;
+  --text-muted: #5e4d43;
+  --text-faint: #6d5b4e;
+  --accent: #7a2338;
+  --accent-soft: #ebd3d3;
+  --accent-contrast: #fbf0e2;
+  --danger: #b23a12;
+  --warning: #855500;
+  --success: #3e6f45;
+  --cat-cours: #55541c;
+  --cat-tache: #9a5a25;
+  --cat-autre: #6e5a4a;
+  --surface-0: #ece2d0;
+  --accent-solid: #7a2338;
+  --on-accent: #fbf0e2;
+  --laiton: #8a6a28;
+  --shadow: 0 1px 0 rgb(60 30 20 / 0.05);
+  color-scheme: light;
+}
+
+/* ---------- C. Noir, blanc et voyant : contraste franc, un seul rouge de signal, points et grille ---------- */
+.studio[data-charte='cadran-voyant'] {
+  --font-display: var(--f-geist), system-ui, sans-serif;
+  --font-body: var(--f-geist), system-ui, sans-serif;
+  --font-mono: var(--f-geist-mono), ui-monospace, monospace;
+  --font-dot: var(--f-doto), var(--f-geist-mono), ui-monospace, monospace;
+  --radius: 2px;
+  --radius-sm: 0px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.02em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.1em;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 0.75rem;
+  --k-num-font: var(--f-doto), var(--f-geist-mono), ui-monospace, monospace;
+  --hour-h: 44px;
+  --ctl-h: 30px;
+  font-variant-numeric: tabular-nums;
+  scrollbar-width: thin;
+}
+.studio[data-charte='cadran-voyant'][data-mode='light'] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --border: #e3e3e3;
+  --border-strong: #8a8a8a;
+  --text: #000000;
+  --text-muted: #585858;
+  --text-faint: #666666;
+  --accent: #d71921;
+  --accent-soft: #fde6e7;
+  --accent-contrast: #ffffff;
+  --danger: #d71921;
+  --warning: #000000;
+  --success: #2e2e2e;
+  --cat-cours: #000000;
+  --cat-tache: #767676;
+  --cat-autre: #6b6b6b;
+  --surface-0: #fafafa;
+  --accent-solid: #000000;
+  --on-accent: #ffffff;
+  --voyant: #d71921;
+  --shadow: none;
+  color-scheme: light;
+}
+.studio[data-charte='cadran-voyant'][data-mode='dark'] {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #161616;
+  --border: #262626;
+  --border-strong: #7a7a7a;
+  --text: #ffffff;
+  --text-muted: #b8b8b8;
+  --text-faint: #9e9e9e;
+  --accent: #ff3b30;
+  --accent-soft: #2a0b0a;
+  --accent-contrast: #000000;
+  --danger: #ff3b30;
+  --warning: #ffffff;
+  --success: #e0e0e0;
+  --cat-cours: #ffffff;
+  --cat-tache: #a8a8a8;
+  --cat-autre: #8a8a8a;
+  --surface-0: #000000;
+  --accent-solid: #ffffff;
+  --on-accent: #000000;
+  --voyant: #ff3b30;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+/* ---------- D. Raycast chaud : noir chaud, surfaces nettes, rouge orangé, profondeur légère ---------- */
+.studio[data-charte='cadran-raycast'] {
+  --font-display: var(--f-inter), system-ui, sans-serif;
+  --font-body: var(--f-inter), system-ui, sans-serif;
+  --font-mono: var(--f-jetbrains), ui-monospace, monospace;
+  --font-accent: var(--f-instrument-serif), Georgia, serif;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.015em;
+  --k-label-case: none;
+  --k-label-tracking: 0;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 0.875rem;
+  --k-num-font: var(--f-jetbrains), ui-monospace, monospace;
+  --hour-h: 44px;
+  --ctl-h: 32px;
+  font-variant-numeric: tabular-nums;
+  scrollbar-width: thin;
+}
+.studio[data-charte='cadran-raycast'][data-mode='dark'] {
+  --bg: #0f0d0c;
+  --surface: #171413;
+  --surface-2: #1f1b19;
+  --border: #2b2623;
+  --border-strong: #75685e;
+  --text: #f4efea;
+  --text-muted: #bfb4ab;
+  --text-faint: #a59a91;
+  --accent: #ff5a3c;
+  --accent-soft: #3a1a12;
+  --accent-contrast: #1b0a05;
+  --danger: #ff6b86;
+  --warning: #f2b84b;
+  --success: #7ccb8b;
+  --cat-cours: #cdbba6;
+  --cat-tache: #ff5a3c;
+  --cat-autre: #8c8179;
+  --surface-0: #0b0a09;
+  --accent-solid: #ff5a3c;
+  --on-accent: #1b0a05;
+  --hl: rgb(255 240 225 / 0.06);
+  --shadow: inset 0 1px 0 var(--hl), 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 28px rgb(0 0 0 / 0.28);
+  --shadow-float: 0 0 0 1px rgb(255 240 225 / 0.08), inset 0 1px 0 var(--hl), 0 4px 8px rgb(0 0 0 / 0.35), 0 24px 48px rgb(0 0 0 / 0.45);
+  color-scheme: dark;
+}
+.studio[data-charte='cadran-raycast'][data-mode='light'] {
+  --bg: #f5f1ed;
+  --surface: #fffdfb;
+  --surface-2: #ede7e1;
+  --border: #e0d8d0;
+  --border-strong: #8c8076;
+  --text: #1a1512;
+  --text-muted: #5b514a;
+  --text-faint: #6b6159;
+  --accent: #c93418;
+  --accent-soft: #fbe0d8;
+  --accent-contrast: #ffffff;
+  --danger: #b3203f;
+  --warning: #855500;
+  --success: #2f7a47;
+  --cat-cours: #5e5040;
+  --cat-tache: #c93418;
+  --cat-autre: #8c8179;
+  --surface-0: #ece6e0;
+  --accent-solid: #c93418;
+  --on-accent: #ffffff;
+  --hl: rgb(255 255 255 / 0.8);
+  --shadow: inset 0 1px 0 var(--hl), 0 1px 2px rgb(60 40 25 / 0.1), 0 8px 22px rgb(60 40 25 / 0.07);
+  --shadow-float: 0 0 0 1px rgb(60 40 25 / 0.1), 0 4px 8px rgb(60 40 25 / 0.1), 0 24px 48px rgb(60 40 25 / 0.2);
+  color-scheme: light;
+}

@@ -1,0 +1,789 @@
+/* /demo/chartes-cadran : habillage de la page (neutre, hors chartes) et signatures des quatre chartes sur la
+   maquette du Cockpit (components/demo/chartes/Mock.js, classes .cx-*). Les couleurs, polices et rayons des
+   chartes viennent de app/demo/studio/chartes.css ; ici on ne règle que ce qui fait la signature de chacune. */
+
+/* ---------- Habillage de la page ---------- */
+.cd-page {
+  /* Plein écran, comme le Studio : la page couvre le rail réel du site. */
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: auto;
+  background: #f3f2ee;
+  color: #1d1b18;
+  font-family: var(--f-hanken), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cd-page * {
+  box-sizing: border-box;
+}
+.cd-banner {
+  padding: 8px 16px;
+  background: #1d1b18;
+  color: #f3f2ee;
+  font-size: 13px;
+}
+.cd-banner a {
+  color: #f3f2ee;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cd-wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+.cd-intro h1 {
+  margin: 20px 0 6px;
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.cd-intro p {
+  max-width: 62rem;
+  margin: 0 0 8px;
+  color: #4a463f;
+}
+.cd-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-top: 16px;
+  padding: 10px 0;
+  background: #f3f2ee;
+  border-bottom: 1px solid #d6d3cb;
+}
+.cd-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+.cd-bar-group {
+  min-width: 0;
+}
+.cd-bar-label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5a564e;
+}
+.cd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cd-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #a8a398;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1d1b18;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cd-chip:hover {
+  border-color: #1d1b18;
+}
+.cd-chip[aria-pressed='true'] {
+  background: #1d1b18;
+  border-color: #1d1b18;
+  color: #ffffff;
+}
+.cd-chip:focus-visible {
+  outline: 2px solid #1d1b18;
+  outline-offset: 2px;
+}
+.cd-links {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+.cd-links a {
+  color: #1d1b18;
+  text-underline-offset: 2px;
+}
+.cd-end {
+  margin: 32px 0 64px;
+  padding: 20px;
+  border: 1px solid #1d1b18;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.cd-end h2 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+.cd-end h3 {
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+}
+.cd-end ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.cd-end li {
+  margin: 4px 0;
+  max-width: 62rem;
+}
+.cd-end p {
+  max-width: 62rem;
+}
+.cd-compare {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cd-compare th,
+.cd-compare td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #d6d3cb;
+  text-align: left;
+  vertical-align: top;
+}
+.cd-compare th {
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #5a564e;
+}
+@media (max-width: 640px) {
+  .cd-compare thead {
+    display: none;
+  }
+  .cd-compare tr {
+    display: block;
+    padding: 6px 0;
+    border-bottom: 1px solid #d6d3cb;
+  }
+  .cd-compare td {
+    display: block;
+    padding: 1px 0;
+    border: 0;
+  }
+  .cd-compare td::before {
+    content: attr(data-l) ' : ';
+    font-weight: 600;
+  }
+}
+
+/* ---------- Une charte : section posée dans son propre jeu de jetons ---------- */
+.cd-sec {
+  margin-top: 28px;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.cd-sec * {
+  box-sizing: border-box;
+}
+.cd-sec h2,
+.cd-sec h3,
+.cd-sec h4,
+.cd-sec p,
+.cd-sec ul,
+.cd-sec ol,
+.cd-sec dl,
+.cd-sec dd {
+  margin: 0;
+}
+.cd-sec-head {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.cd-sec-head h2 {
+  font-family: var(--font-display);
+  font-weight: var(--k-title-weight);
+  letter-spacing: var(--k-title-tracking);
+  font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+  line-height: 1.1;
+}
+.cd-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7em;
+  height: 1.7em;
+  margin-right: 0.35em;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.55em;
+  font-weight: 600;
+  vertical-align: 0.25em;
+}
+.cd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.cd-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+.cd-pitch {
+  max-width: 60rem;
+  color: var(--text-muted);
+}
+.cd-modebar {
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.cd-cards {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .cd-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cd-cards .cd-wide {
+    grid-column: 1 / -1;
+  }
+}
+.cd-card {
+  min-width: 0;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.cd-card h3 {
+  margin-bottom: 10px;
+  font-family: var(--font-display);
+  font-weight: var(--k-title-weight);
+  letter-spacing: var(--k-title-tracking);
+  font-size: 1.05rem;
+}
+.cd-sw-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+.cd-sw-chip {
+  height: 38px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.cd-sw-name {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.25;
+}
+.cd-sw-hex {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cd-spec p + p {
+  margin-top: 10px;
+}
+.cd-spec .role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.cd-spec .big {
+  font-family: var(--font-display);
+  font-weight: var(--k-title-weight);
+  letter-spacing: var(--k-title-tracking);
+  font-size: 1.7rem;
+  line-height: 1.15;
+}
+.cd-spec .body {
+  max-width: 34rem;
+}
+.cd-spec .mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+.cd-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+.cd-tile {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--text);
+}
+.cd-tile-light {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+}
+.cd-ct {
+  display: grid;
+  gap: 0;
+  font-size: 13px;
+}
+.cd-ct-head,
+.cd-ct-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.cd-ct-head {
+  border-top: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.cd-ct-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cd-ct-sample {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cd-ct-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.cd-ct-num b {
+  font-weight: 700;
+}
+.cd-ct-ok {
+  color: var(--text);
+}
+.cd-ct-ko {
+  color: var(--danger);
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .cd-ct-head {
+    display: none;
+  }
+  .cd-ct-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .cd-ct-row > :first-child {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+  .cd-ct-cell::before {
+    content: attr(data-mode);
+    flex: none;
+    width: 3.2em;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+}
+.cd-sig {
+  display: grid;
+  gap: 4px;
+}
+.cd-sig strong {
+  font-family: var(--font-display);
+  font-weight: var(--k-title-weight);
+  font-size: 1.15rem;
+}
+.cd-flaws {
+  display: grid;
+  gap: 8px;
+  padding-left: 1.2rem;
+}
+.cd-flaws li::marker {
+  color: var(--text-muted);
+}
+.cd-note {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.cd-sec a {
+  color: var(--text);
+  text-underline-offset: 2px;
+}
+.cd-sec .cx {
+  background: var(--bg);
+}
+.cd-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =====================================================================================================
+   Signatures sur la maquette (.cx-*)
+   ===================================================================================================== */
+
+/* ---------- A. Papier et encre : le journal ---------- */
+[data-charte='cadran-papier'] .cx-brand-name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-style: italic;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+[data-charte='cadran-papier'] .cx-head {
+  padding-bottom: 8px;
+  border-bottom: 3px double var(--border-strong);
+}
+[data-charte='cadran-papier'] .cx-head h2 {
+  font-size: 18px;
+}
+[data-charte='cadran-papier'] .cx-summary {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+[data-charte='cadran-papier'] .cx-dayhead .dnum {
+  min-width: 0;
+  height: auto;
+  padding: 0 2px;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--text);
+}
+[data-charte='cadran-papier'] .cx-dayhead.is-today .dnum {
+  background: none;
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+[data-charte='cadran-papier'] .cx-now::before {
+  border-top: 2px solid var(--accent);
+}
+[data-charte='cadran-papier'] .cx-now::after {
+  left: -5px;
+  top: -4.5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+[data-charte='cadran-papier'] .cx-nowtag {
+  padding: 0 2px;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+}
+[data-charte='cadran-papier'] .cx-blk[data-kind='plage'] {
+  background: color-mix(in oklab, var(--bc) 8%, var(--surface));
+  border-left: 2px solid var(--bc);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+[data-charte='cadran-papier'] .cx-blk[data-kind='tache'] {
+  border: 1px solid var(--cat-tache-line);
+}
+[data-charte='cadran-papier'] .cx-blk[data-kind='tache'] .cx-blk-title::before {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--cat-tache);
+  border-radius: 50%;
+}
+[data-charte='cadran-papier'] .cx-r-title {
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 450;
+  line-height: 1.3;
+}
+
+/* ---------- B. Cuir et bordeaux : le signet et la couture ---------- */
+[data-charte='cadran-cuir'] .cx-brand-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+[data-charte='cadran-cuir'] .cx-panel {
+  border-top: 2px solid var(--accent-solid);
+}
+[data-charte='cadran-cuir'] .cx-head {
+  border-bottom: 1px dashed var(--border-strong);
+}
+[data-charte='cadran-cuir'] .cx-head h2 {
+  font-size: 15px;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+[data-charte='cadran-cuir'] .cx-r-item {
+  border-top: 1px dashed var(--border);
+}
+[data-charte='cadran-cuir'] .cx-dayhead.is-today {
+  position: relative;
+}
+[data-charte='cadran-cuir'] .cx-dayhead.is-today::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 8px;
+  width: 11px;
+  height: 28px;
+  background: var(--accent-solid);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+}
+[data-charte='cadran-cuir'] .cx-dayhead.is-today .dnum {
+  background: none;
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--laiton);
+  border-radius: 0;
+}
+[data-charte='cadran-cuir'] .cx-now::before {
+  border-top: 2px solid var(--laiton);
+}
+[data-charte='cadran-cuir'] .cx-now::after {
+  background: var(--laiton);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--laiton) 28%, transparent);
+}
+[data-charte='cadran-cuir'] .cx-nowtag {
+  background: var(--laiton);
+  color: var(--bg);
+}
+[data-charte='cadran-cuir'] .cx-nav[aria-current='page'] {
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+[data-charte='cadran-cuir'] .cx-blk[data-kind='plage'] {
+  background: color-mix(in oklab, var(--bc) 14%, var(--surface));
+}
+[data-charte='cadran-cuir'] .cx-blk[data-kind='tache'] {
+  border: 1px solid var(--cat-tache-line);
+  border-radius: var(--radius-sm);
+}
+[data-charte='cadran-cuir'] .cx-blk[data-kind='tache'] .cx-blk-title::before {
+  width: 7px;
+  height: 7px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cat-tache);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--cat-tache) 35%, transparent);
+  vertical-align: 1px;
+}
+
+/* ---------- C. Noir, blanc et voyant : points, blocs pleins, un seul rouge ---------- */
+[data-charte='cadran-voyant'] .cx {
+  border-radius: 0;
+  border-color: var(--text);
+}
+[data-charte='cadran-voyant'] .cx-panel {
+  border-radius: 0;
+  border-color: var(--text);
+}
+[data-charte='cadran-voyant'] .cx-rail {
+  border-right-color: var(--text);
+}
+[data-charte='cadran-voyant'] .cx-brand-name {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+[data-charte='cadran-voyant'] .cx-head h2 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-charte='cadran-voyant'] .cx-dayhead .dnum {
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--font-dot);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+[data-charte='cadran-voyant'] .cx-dayhead.is-today .dnum {
+  background: none;
+  color: var(--voyant);
+}
+[data-charte='cadran-voyant'] .cx-count b {
+  font-family: var(--font-dot);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+[data-charte='cadran-voyant'] .cx-col.is-today {
+  background-color: var(--surface-2);
+}
+[data-charte='cadran-voyant'] .cx-now::before {
+  border-top: 2px solid var(--voyant);
+}
+[data-charte='cadran-voyant'] .cx-now::after {
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--voyant);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--voyant) 24%, transparent);
+}
+[data-charte='cadran-voyant'] .cx-nowtag {
+  padding: 1px 4px;
+  border-radius: 0;
+  background: var(--voyant);
+  color: var(--bg);
+  font-family: var(--font-dot);
+  font-size: 15px;
+  font-weight: 800;
+}
+[data-charte='cadran-voyant'] .cx-lamp {
+  background: var(--voyant);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--voyant) 28%, transparent), 0 0 10px var(--voyant);
+}
+[data-charte='cadran-voyant'] .cx-lamp[data-off] {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+[data-charte='cadran-voyant'] .cx-nav {
+  border-radius: 0;
+}
+[data-charte='cadran-voyant'] .cx-nav[aria-current='page'] {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: none;
+}
+[data-charte='cadran-voyant'] .cx-nav[aria-current='page'] .cx-badge {
+  color: var(--bg);
+}
+[data-charte='cadran-voyant'] .cx-blk[data-kind='plage'] {
+  border: 0;
+  border-radius: 0;
+  background: var(--bc);
+  color: var(--bg);
+}
+[data-charte='cadran-voyant'] .cx-blk[data-kind='plage'] .cx-blk-time,
+[data-charte='cadran-voyant'] .cx-blk[data-kind='plage'] .cx-blk-task {
+  color: var(--bg);
+  opacity: 0.85;
+}
+[data-charte='cadran-voyant'] .cx-blk[data-kind='tache'] {
+  border: 1.5px solid var(--text);
+  border-radius: 0;
+  background: var(--bg);
+}
+[data-charte='cadran-voyant'] .cx-blk[data-kind='tache'] .cx-blk-title::before {
+  border: 1.5px solid var(--text);
+}
+[data-charte='cadran-voyant'] .cx-r-item[data-late]::before {
+  background: var(--voyant);
+}
+[data-charte='cadran-voyant'] .cx-r-late {
+  color: var(--voyant);
+}
+
+/* ---------- D. Raycast chaud : touches en relief, braise, sérif d'accent ---------- */
+[data-charte='cadran-raycast'] .cx-brand-name {
+  font-family: var(--font-accent);
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+[data-charte='cadran-raycast'] .cx-panel {
+  background-image: linear-gradient(180deg, color-mix(in oklab, var(--text) 3.5%, transparent), transparent 96px);
+}
+[data-charte='cadran-raycast'] .cx-summary {
+  font-family: var(--font-accent);
+  font-size: 19px;
+  font-style: italic;
+  color: var(--text);
+}
+[data-charte='cadran-raycast'] .cx-kbd {
+  padding: 2px 6px 1px;
+  border-radius: 5px;
+  border-bottom-width: 2px;
+  background: var(--surface-2);
+  box-shadow: inset 0 1px 0 var(--hl);
+}
+[data-charte='cadran-raycast'] .cx-nav[aria-current='page'],
+[data-charte='cadran-raycast'] .cx-r-item[aria-expanded='true'] {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 16%, var(--surface-2)), var(--surface-2) 85%);
+}
+[data-charte='cadran-raycast'] .cx-nav[aria-current='page'] {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+[data-charte='cadran-raycast'] .cx-r-item:hover {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--accent) 8%, var(--surface)), var(--surface) 85%);
+}
+[data-charte='cadran-raycast'] .cx-now::before {
+  border-top: 1.5px solid var(--accent);
+}
+[data-charte='cadran-raycast'] .cx-now::after {
+  left: -5px;
+  top: -4.5px;
+  width: 9px;
+  height: 9px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+}
+[data-charte='cadran-raycast'] .cx-blk[data-kind='plage'] {
+  background: color-mix(in oklab, var(--bc) 14%, var(--surface));
+  border-left-width: 3px;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--hl);
+}
+[data-charte='cadran-raycast'] .cx-blk[data-kind='tache'] {
+  border: 1px solid var(--cat-tache-line);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 var(--hl);
+}
+[data-charte='cadran-raycast'] .cx-btn[data-primary] .cx-kbd {
+  border-color: color-mix(in oklab, var(--on-accent) 40%, transparent);
+  background: color-mix(in oklab, var(--on-accent) 12%, transparent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+/* Sur téléphone, la barre de choix ne colle plus en haut : elle prendrait la moitié de l'écran. */
+@media (max-width: 760px) {
+  .cd-bar {
+    position: static;
+  }
+}

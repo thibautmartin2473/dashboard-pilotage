@@ -60,7 +60,8 @@ function Icon({ name }) {
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-export default function Mock({ data, nowMs }) {
+// `brand` (facultatif) remplace la marque du rail (carré + « Pilotage ») : /demo/chartes-cadran y met l'anneau horaire.
+export default function Mock({ data, nowMs, brand }) {
   const [span, setSpan] = useState(5);
   const [offset, setOffset] = useState(0);
   const [gone, setGone] = useState(() => new Set());
@@ -163,8 +164,12 @@ export default function Mock({ data, nowMs }) {
       <div className="cx-shell">
         <nav className="cx-rail" aria-label="Navigation principale (maquette)">
           <div className="cx-brand">
-            <span className="cx-mark" aria-hidden="true" />
-            <span className="cx-brand-name">Pilotage</span>
+            {brand ?? (
+              <>
+                <span className="cx-mark" aria-hidden="true" />
+                <span className="cx-brand-name">Pilotage</span>
+              </>
+            )}
           </div>
           {NAV.map((n, i) => (
             <button key={n.id} type="button" className="cx-nav" aria-current={i === 0 ? 'page' : undefined} aria-label={n.label} title={n.label}>

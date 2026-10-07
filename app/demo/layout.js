@@ -2,13 +2,18 @@ import {
   Fraunces,
   Geist,
   Geist_Mono,
+  Doto,
+  Hanken_Grotesk,
   IBM_Plex_Mono,
   IBM_Plex_Sans,
   Instrument_Sans,
+  Instrument_Serif,
   Inter,
   Inter_Tight,
   JetBrains_Mono,
+  Libre_Caslon_Text,
   Mona_Sans,
+  Newsreader,
 } from 'next/font/google';
 import './studio/chartes.css';
 
@@ -27,10 +32,19 @@ const jetbrains = JetBrains_Mono({ variable: '--f-jetbrains', subsets: ['latin']
 const mona = Mona_Sans({ variable: '--f-mona', subsets: ['latin'], axes: ['wdth'] });
 const instrument = Instrument_Sans({ variable: '--f-instrument', subsets: ['latin'], axes: ['wdth'] });
 
+// Chartes de Cadran d'après le moodboard (/demo/chartes-cadran) : Newsreader + Hanken Grotesk (Papier et encre),
+// Libre Caslon Text (Cuir et bordeaux, avec IBM Plex déjà chargée), Doto, police à matrice de points (Noir, blanc et
+// voyant, avec Geist), Instrument Serif (Raycast chaud, avec Inter et JetBrains Mono).
+const newsreader = Newsreader({ variable: '--f-newsreader', subsets: ['latin'], style: ['normal', 'italic'], axes: ['opsz'] });
+const hanken = Hanken_Grotesk({ variable: '--f-hanken', subsets: ['latin'] });
+const caslon = Libre_Caslon_Text({ variable: '--f-caslon', subsets: ['latin'], weight: ['400', '700'], style: ['normal', 'italic'] });
+const doto = Doto({ variable: '--f-doto', subsets: ['latin'] });
+const instrumentSerif = Instrument_Serif({ variable: '--f-instrument-serif', subsets: ['latin'], weight: '400', style: ['normal', 'italic'] });
+
 export default function DemoLayout({ children }) {
   return (
     <div
-      className={`${inter.variable} ${fraunces.variable} ${geist.variable} ${geistMono.variable} ${plex.variable} ${plexMono.variable} ${interTight.variable} ${jetbrains.variable} ${mona.variable} ${instrument.variable}`}
+      className={`${inter.variable} ${fraunces.variable} ${geist.variable} ${geistMono.variable} ${plex.variable} ${plexMono.variable} ${interTight.variable} ${jetbrains.variable} ${mona.variable} ${instrument.variable} ${newsreader.variable} ${hanken.variable} ${caslon.variable} ${doto.variable} ${instrumentSerif.variable}`}
     >
       {children}
     </div>
