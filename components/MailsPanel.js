@@ -1,83 +1,67 @@
 'use client';
 
-import { useState } from 'react';
 import Panel from './Panel';
-import { ErrorLine, SyncFooter, ToggleButton, mutedClass, useAction } from './ui';
-import { setMailFilter } from '@/app/edit-actions';
-import { MAIL_LIMIT, formatMailDate, latestMails } from '@/lib/home';
+import { SyncFooter, mutedClass } from './ui';
+import { formatMailDate, latestMails } from '@/lib/home';
 
-const FILTERS = [
-  ['all', 'Tous'],
-  ['gmail', 'Gmail'],
-  ['edhec', 'EDHEC'],
+// Les deux boîtes côte à côte : à gauche ce qui arrive sur thibautmartin04@gmail.com (source `gmail`),
+// à droite thibaut.martin95429@edhec.com (source `edhec`). Chaque colonne est triée par date
+// décroissante sans aucune pondération (latestMails), les non lus en gras, avec son compteur de non lus.
+// Empilées sur téléphone. Lecture seule : on traite les mails dans Gmail (instantané `mail_items`).
+const MAILBOXES = [
+  { source: 'gmail', address: 'thibautmartin04@gmail.com' },
+  { source: 'edhec', address: 'thibaut.martin95429@edhec.com' },
 ];
 
-// Les 50 derniers mails de l'instantané (`mail_items`), du plus récent au plus ancien, sans
-// aucune pondération. Lecture seule : on les traite dans Gmail. Le filtre choisi est enregistré
-// (dashboard_settings, clé mail_filter) pour survivre au rechargement et suivre d'un appareil à
-// l'autre ; si l'enregistrement échoue (table absente...), il reste actif en état local.
-export default function MailsPanel({ state, savedFilter, settings, now }) {
-  const [filter, setFilter] = useState(savedFilter);
-  const [seen, setSeen] = useState(savedFilter);
-  if (savedFilter !== seen) {
-    setSeen(savedFilter); // valeur enregistrée depuis un autre appareil
-    setFilter(savedFilter);
-  }
-  const { pending, error, run } = useAction();
-
-  const rows = state.data ?? [];
-  const items = latestMails(rows, filter);
-  const settingsProblem =
-    settings.error === 'missing'
-      ? 'Filtre non enregistré : table manquante, exécuter supabase/dashboard-edit.sql'
-      : settings.error
-        ? `Filtre non enregistré : ${settings.message}`
-        : null;
-
+function Mailbox({ address, mails }) {
+  const unread = mails.filter((m) => m.unread !== false).length;
   return (
-    <Panel title="Mails" count={state.data ? `${items.length}/${MAIL_LIMIT}` : undefined} state={state} file="agenda.sql">
-      <div className="mb-2 flex flex-wrap gap-2" role="group" aria-label="Filtrer les mails">
-        {FILTERS.map(([value, label]) => (
-          <ToggleButton
-            key={value}
-            pressed={filter === value}
-            disabled={pending}
-            onClick={() => {
-              setFilter(value);
-              run(() => setMailFilter(value));
-            }}
-          >
-            {label}
-          </ToggleButton>
-        ))}
-      </div>
-      <ErrorLine error={error ?? settingsProblem} />
-      <p className={`mb-1 ${mutedClass}`}>Lecture seule : les mails se traitent dans Gmail.</p>
-      {items.length ? (
-        <ul className="divide-y divide-zinc-100 dark:divide-zinc-900" data-testid="mail-list">
-          {items.map((m) => (
-            <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5 text-sm">
-              <span className="min-w-0 basis-40 truncate font-medium">{m.sender || 'Expéditeur inconnu'}</span>
-              <span className="min-w-0 flex-1 basis-48 break-words">
-                {m.unread !== false && (
-                  <span className="mr-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                    non lu
-                  </span>
+    <section aria-label={address} className="min-w-0" data-testid={`mailbox-${address}`}>
+      <h3 className="mb-1 flex flex-wrap items-baseline gap-x-2 border-b border-zinc-800 pb-1.5 text-sm font-semibold text-zinc-100">
+        <span className="min-w-0 break-all">{address}</span>
+        <span className="tabular rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 font-mono text-[11px] font-normal text-zinc-400" data-testid="unread-count">
+          {unread} non lu{unread > 1 ? 's' : ''}
+        </span>
+      </h3>
+      {mails.length ? (
+        <ul className="divide-y divide-zinc-800" data-testid="mail-list">
+          {mails.map((m) => {
+            const isUnread = m.unread !== false;
+            return (
+              <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5 text-sm">
+                <span className={`min-w-0 basis-36 truncate ${isUnread ? 'font-bold text-zinc-100' : 'font-medium text-zinc-400'}`}>
+                  {m.sender || 'Expéditeur inconnu'}
+                </span>
+                <span className={`min-w-0 flex-1 basis-48 break-words ${isUnread ? 'font-bold text-zinc-100' : 'text-zinc-400'}`}>
+                  {m.subject || '(sans objet)'}
+                </span>
+                <span className={`tabular-nums ${mutedClass}`}>{formatMailDate(m.received_at)}</span>
+                {m.link && (
+                  <a href={m.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
+                    Gmail
+                  </a>
                 )}
-                {m.subject || '(sans objet)'}
-              </span>
-              <span className={`tabular-nums ${mutedClass}`}>{formatMailDate(m.received_at)}</span>
-              {m.link && (
-                <a href={m.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
-                  Gmail
-                </a>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       ) : (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucun mail{filter === 'all' ? '' : ' pour ce filtre'}.</p>
+        <p className="py-2 text-sm text-zinc-400">Aucun mail dans cette boîte.</p>
       )}
+    </section>
+  );
+}
+
+export default function MailsPanel({ state, now }) {
+  const rows = state.data ?? [];
+  return (
+    <Panel title="Mails" state={state} file="agenda.sql">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
+        {MAILBOXES.map(({ source, address }) => (
+          <Mailbox key={source} address={address} mails={latestMails(rows, source)} />
+        ))}
+      </div>
+      <p className={`mt-2 ${mutedClass}`}>Lecture seule : les mails se traitent dans Gmail.</p>
       {!state.error && <SyncFooter rows={rows} href="https://mail.google.com/" label="Ouvrir Gmail" now={now} />}
     </Panel>
   );

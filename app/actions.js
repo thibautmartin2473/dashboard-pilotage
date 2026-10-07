@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { nextPosition, rows } from '@/lib/db-ops';
+import { nextPosition, rows, rowsNotDropped } from '@/lib/db-ops';
 import { BUCKETS, isMissingTable } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
@@ -47,7 +47,7 @@ export async function addTask({ title, bucket, due_date, project_slug }) {
     if (keyword) {
       const [events, existing] = await Promise.all([
         rows(db.from('calendar_events').select('id, title, starts_at, ends_at')),
-        rows(db.from('tasks').select('id, title, due_date, done_at').is('done_at', null)),
+        rowsNotDropped(() => db.from('tasks').select('id, title, due_date, done_at').is('done_at', null)),
       ]);
       const target = matchIdeaTarget(keyword, { events, tasks: existing, now: new Date() });
       if (target?.event_id) row.event_id = target.event_id;

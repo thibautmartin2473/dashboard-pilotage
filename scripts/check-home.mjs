@@ -297,7 +297,7 @@ assert.equal(todayLine(2, 3), "Aujourd'hui : 2 événements, 3 tâches");
 assert.equal(todayLine(null, 0), "Aujourd'hui : agenda indisponible, 0 tâche");
 assert.deepEqual(ids(todayEvents(buildWeek([ev('j', '2026-09-21T12:00:00Z', '2026-09-22T12:00:00Z', { all_day: true }), ev('r', at('09:00'), at('10:00'))], nowAgenda))), ['j', 'r']);
 
-assert.ok(describeWhen(ev('x', at('15:00'), at('16:00'))).includes('15h00–16h00'));
+assert.ok(describeWhen(ev('x', at('15:00'), at('16:00'))).includes('15h00-16h00'));
 assert.ok(describeWhen(ev('x', '2026-09-21T12:00:00Z', '2026-09-23T12:00:00Z', { all_day: true })).includes('toute la journée'));
 
 // --- Saisie d'événements (heure de Paris) ---

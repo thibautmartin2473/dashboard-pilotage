@@ -104,6 +104,6 @@ async function fetchVercelSignal(repo) {
 
   return {
     last_seen_at: new Date(latest.createdAt).toISOString(),
-    detail: `${latest.state ?? latest.readyState ?? 'unknown'}${latest.name ? ` — ${latest.name}` : ''}`,
+    detail: `${latest.state ?? latest.readyState ?? 'unknown'}${latest.name ? ` - ${latest.name}` : ''}`,
   };
 }

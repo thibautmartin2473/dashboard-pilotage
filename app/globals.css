@@ -10,32 +10,32 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
-  --font-mono: var(--font-jetbrains-mono);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 
   /* Surfaces et texte : zinc-950 = fond de page, zinc-900 = surface d'un
      panneau, zinc-800/700 = bordures, zinc-400 = texte secondaire,
      zinc-100 = texte fort (et fond des boutons actifs). */
-  --color-black: #161b25;
-  --color-zinc-950: #161b25;
-  --color-zinc-900: #1f2531;
-  --color-zinc-800: #2d3442;
-  --color-zinc-700: #374154;
-  --color-zinc-600: #485468;
-  --color-zinc-500: #99a3b7;
-  --color-zinc-400: #9aa4b8;
-  --color-zinc-300: #c3cbda;
-  --color-zinc-200: #d7dde8;
-  --color-zinc-100: #e6eaf2;
-  --color-zinc-50: #1f2531;
+  --color-black: #202429;
+  --color-zinc-950: #202429;
+  --color-zinc-900: #2c313a;
+  --color-zinc-800: #3d434d;
+  --color-zinc-700: #4a515c;
+  --color-zinc-600: #5d6572;
+  --color-zinc-500: #a3abb8;
+  --color-zinc-400: #aeb6c2;
+  --color-zinc-300: #c9cfd8;
+  --color-zinc-200: #dadee5;
+  --color-zinc-100: #e6e9ee;
+  --color-zinc-50: #2c313a;
 
   /* Accent et états. Les composants s'en servent via les rampes red/amber/green
      (leurs variantes -400 pour le texte, -950 pour les fonds). */
-  --color-accent: #4d7cfe;
-  --color-accent-soft: #232c4c;
-  --color-red-300: #f2645a;
-  --color-red-400: #f2645a;
-  --color-red-600: #f2645a;
+  --color-accent: #7aa2ff;
+  --color-accent-soft: #2d3858;
+  --color-red-300: #ff8279;
+  --color-red-400: #ff8279;
+  --color-red-600: #ff8279;
   --color-red-800: #4a2620;
   --color-red-950: #2a1512;
   --color-red-50: #2a1512;
@@ -49,15 +49,15 @@
 }
 
 :root {
-  --background: #161b25;
-  --foreground: #e6eaf2;
+  --background: #202429;
+  --foreground: #e6e9ee;
   color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* Les nombres du cockpit s'alignent en colonne (tuiles, heures, compteurs). */

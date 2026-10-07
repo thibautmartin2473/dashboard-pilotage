@@ -185,7 +185,9 @@ export async function dismissNotifications(ids, { markDone = true } = {}) {
     if (markDone) {
       const taskIds = [...new Set(found.map(recapTaskId).filter(Boolean))];
       for (const batch of chunks(taskIds)) {
-        const { error } = await db.from('tasks').update({ done_at: isoNow() }).in('id', batch).is('done_at', null);
+        const mark = () => db.from('tasks').update({ done_at: isoNow() }).in('id', batch).is('done_at', null);
+        let { error } = await mark().is('dropped_at', null); // une tâche supprimée ne se coche pas
+        if (error && isMissingColumn(error)) ({ error } = await mark()); // supabase/ranger.sql pas exécuté
         if (error) throw new Error(`Tâche non cochée, notification conservée (réessayer) : ${error.message}`);
       }
     }
