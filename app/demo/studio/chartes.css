@@ -1,0 +1,272 @@
+/* Propriétaire : agent « chartes ». Contrat de jetons : docs/refonte-taches/STUDIO.md.
+   Quatre chartes x deux modes, posées sur .studio[data-charte][data-mode].
+   Jetons du contrat : --bg --surface --surface-2 --border --border-strong --text --text-muted
+   --text-faint --accent --accent-soft --accent-contrast --danger --warning --success
+   --cat-cours --cat-tache --cat-autre --radius --radius-sm --shadow --font-display --font-body --font-mono.
+   Jetons de kit (propres aux vues communes de sections/, facultatifs ailleurs) :
+   --k-title-weight --k-title-style --k-title-tracking --k-label-case --k-label-tracking
+   --k-label-weight --k-rule --k-gap --k-num-font.
+   Contrastes vérifiés au calcul (scripts : texte et texte atténué >= 4.5:1 sur --bg, --surface et --surface-2). */
+
+/* ---------- Socle commun ---------- */
+.studio {
+  --font-mono: var(--f-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.studio *:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.studio ::selection {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* ---------- Graphite : précise et dense ---------- */
+.studio[data-charte='graphite'] {
+  --font-display: var(--f-geist), system-ui, sans-serif;
+  --font-body: var(--f-geist), system-ui, sans-serif;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.02em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.08em;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 0.75rem;
+  --k-num-font: var(--f-geist-mono), ui-monospace, monospace;
+}
+.studio[data-charte='graphite'][data-mode='light'] {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-2: #eaecf0;
+  --border: #dde0e6;
+  --border-strong: #bcc2cc;
+  --text: #14171c;
+  --text-muted: #535b69;
+  --text-faint: #667080;
+  --accent: #2f54e0;
+  --accent-soft: #e4eafd;
+  --accent-contrast: #ffffff;
+  --danger: #c0262d;
+  --warning: #9a5a00;
+  --success: #1c7a3a;
+  --cat-cours: #c2255c;
+  --cat-tache: #cf5f0a;
+  --cat-autre: #2f54e0;
+  --shadow: 0 1px 0 rgb(15 20 30 / 0.04), 0 2px 8px rgb(15 20 30 / 0.05);
+  color-scheme: light;
+}
+.studio[data-charte='graphite'][data-mode='dark'] {
+  --bg: #0e1013;
+  --surface: #15181d;
+  --surface-2: #1d2128;
+  --border: #272c34;
+  --border-strong: #3a414d;
+  --text: #e8ebf0;
+  --text-muted: #9aa2af;
+  --text-faint: #7f8896;
+  --accent: #8399ff;
+  --accent-soft: #1b2342;
+  --accent-contrast: #0b0e18;
+  --danger: #ff7a7f;
+  --warning: #f0aa45;
+  --success: #52c97c;
+  --cat-cours: #ff7aa8;
+  --cat-tache: #ffa14a;
+  --cat-autre: #7b95ff;
+  --shadow: 0 0 0 1px rgb(255 255 255 / 0.02), 0 2px 10px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+/* ---------- Papier : éditoriale, chaleureuse, beaucoup d'air ---------- */
+.studio[data-charte='papier'] {
+  --font-display: var(--f-fraunces), Georgia, 'Times New Roman', serif;
+  --font-body: var(--f-inter), system-ui, sans-serif;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --k-title-weight: 500;
+  --k-title-style: normal;
+  --k-title-tracking: -0.015em;
+  --k-label-case: none;
+  --k-label-tracking: 0;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 1.25rem;
+  --k-num-font: var(--f-fraunces), Georgia, serif;
+}
+.studio[data-charte='papier'][data-mode='light'] {
+  --bg: #f5eedf;
+  --surface: #fcf8ef;
+  --surface-2: #eee5d1;
+  --border: #e1d6bd;
+  --border-strong: #c4b595;
+  --text: #2b2118;
+  --text-muted: #675a49;
+  --text-faint: #76694f;
+  --accent: #9b3a1c;
+  --accent-soft: #f2dfd1;
+  --accent-contrast: #fffaf2;
+  --danger: #a3281b;
+  --warning: #85560a;
+  --success: #3a6a32;
+  --cat-cours: #a3304a;
+  --cat-tache: #b0600f;
+  --cat-autre: #2d5b7a;
+  --shadow: 0 1px 2px rgb(80 55 20 / 0.06), 0 10px 30px rgb(80 55 20 / 0.07);
+  color-scheme: light;
+}
+.studio[data-charte='papier'][data-mode='dark'] {
+  --bg: #1b1713;
+  --surface: #241f19;
+  --surface-2: #2e2720;
+  --border: #3a3228;
+  --border-strong: #53483a;
+  --text: #f0e7d6;
+  --text-muted: #b6a893;
+  --text-faint: #9a8d79;
+  --accent: #e8905f;
+  --accent-soft: #3a2a1f;
+  --accent-contrast: #1d1109;
+  --danger: #f28e80;
+  --warning: #e8b455;
+  --success: #94c283;
+  --cat-cours: #ee8aa0;
+  --cat-tache: #eba04e;
+  --cat-autre: #7fb2d3;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 10px 30px rgb(0 0 0 / 0.28);
+  color-scheme: dark;
+}
+.studio[data-charte='papier'][data-mode='light'] {
+  background-image: radial-gradient(120% 60% at 50% -10%, rgb(255 255 255 / 0.55), transparent 70%);
+  background-attachment: local;
+}
+
+/* ---------- Nuit : sombre d'abord, lumineuse, surfaces en verre ---------- */
+.studio[data-charte='nuit'] {
+  --font-display: var(--f-inter), system-ui, sans-serif;
+  --font-body: var(--f-inter), system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --k-title-weight: 600;
+  --k-title-style: normal;
+  --k-title-tracking: -0.025em;
+  --k-label-case: none;
+  --k-label-tracking: 0.01em;
+  --k-label-weight: 500;
+  --k-rule: 1px;
+  --k-gap: 1rem;
+  --k-num-font: var(--f-inter), system-ui, sans-serif;
+}
+.studio[data-charte='nuit'][data-mode='dark'] {
+  --bg: #080b1b;
+  --surface: #10152d;
+  --surface-2: #181e3e;
+  --border: #222a54;
+  --border-strong: #353f79;
+  --text: #e8ebff;
+  --text-muted: #9ca5d6;
+  --text-faint: #7f89c4;
+  --accent: #a091ff;
+  --accent-soft: #231f56;
+  --accent-contrast: #0a0723;
+  --danger: #ff7b8c;
+  --warning: #ffbf58;
+  --success: #52e2ab;
+  --cat-cours: #ff7cb8;
+  --cat-tache: #ffb857;
+  --cat-autre: #5cd8ff;
+  --shadow: 0 0 0 1px rgb(255 255 255 / 0.05) inset, 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 14px 40px rgb(2 4 18 / 0.55);
+  color-scheme: dark;
+  background-image:
+    radial-gradient(60% 40% at 15% -5%, rgb(120 100 255 / 0.22), transparent 70%),
+    radial-gradient(50% 35% at 95% 0%, rgb(60 200 255 / 0.12), transparent 70%);
+  background-attachment: local;
+}
+.studio[data-charte='nuit'][data-mode='light'] {
+  --bg: #eceffc;
+  --surface: #ffffff;
+  --surface-2: #e4e8f9;
+  --border: #d6dbf2;
+  --border-strong: #b4bce3;
+  --text: #13163a;
+  --text-muted: #4d5483;
+  --text-faint: #646a99;
+  --accent: #5a43e4;
+  --accent-soft: #e7e3ff;
+  --accent-contrast: #ffffff;
+  --danger: #c4234a;
+  --warning: #9c5e08;
+  --success: #0c7857;
+  --cat-cours: #c92d84;
+  --cat-tache: #c0650a;
+  --cat-autre: #0b7aa8;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 8px 30px rgb(70 70 160 / 0.13);
+  color-scheme: light;
+  background-image:
+    radial-gradient(60% 40% at 15% -5%, rgb(130 110 255 / 0.18), transparent 70%),
+    radial-gradient(50% 35% at 95% 0%, rgb(80 200 255 / 0.14), transparent 70%);
+  background-attachment: local;
+}
+
+/* ---------- Suisse : style international, grille stricte, un seul rouge ---------- */
+.studio[data-charte='suisse'] {
+  --font-display: var(--f-plex), 'Helvetica Neue', Arial, sans-serif;
+  --font-body: var(--f-plex), 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: var(--f-plex-mono), ui-monospace, monospace;
+  --radius: 0px;
+  --radius-sm: 0px;
+  --shadow: none;
+  --k-title-weight: 700;
+  --k-title-style: normal;
+  --k-title-tracking: -0.01em;
+  --k-label-case: uppercase;
+  --k-label-tracking: 0.12em;
+  --k-label-weight: 600;
+  --k-rule: 1px;
+  --k-gap: 1rem;
+  --k-num-font: var(--f-plex), 'Helvetica Neue', Arial, sans-serif;
+}
+.studio[data-charte='suisse'][data-mode='light'] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f1f1f1;
+  --border: #d4d4d4;
+  --border-strong: #0a0a0a;
+  --text: #0a0a0a;
+  --text-muted: #545454;
+  --text-faint: #767676;
+  --accent: #e0000f;
+  --accent-soft: #fff0f1;
+  --accent-contrast: #ffffff;
+  --danger: #e0000f;
+  --warning: #7a5600;
+  --success: #17653a;
+  --cat-cours: #e0000f;
+  --cat-tache: #0a0a0a;
+  --cat-autre: #6b6b6b;
+  color-scheme: light;
+}
+.studio[data-charte='suisse'][data-mode='dark'] {
+  --bg: #0a0a0a;
+  --surface: #0a0a0a;
+  --surface-2: #1a1a1a;
+  --border: #333333;
+  --border-strong: #f2f2f2;
+  --text: #f5f5f5;
+  --text-muted: #b3b3b3;
+  --text-faint: #969696;
+  --accent: #ff3b30;
+  --accent-soft: #2e0f0d;
+  --accent-contrast: #0a0a0a;
+  --danger: #ff3b30;
+  --warning: #e0b040;
+  --success: #5fcf8a;
+  --cat-cours: #ff3b30;
+  --cat-tache: #f5f5f5;
+  --cat-autre: #9a9a9a;
+  color-scheme: dark;
+}
