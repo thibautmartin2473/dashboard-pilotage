@@ -33,6 +33,12 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
    simplification pour le favicon et l'icône, la version vivante (calculée sur la vraie journée)
    et la piste de couleur (bleu Martini, vert Aston éclairci ou giallo, proposées sur la page).
    Il tranche, puis on passe à la charte.
+**Prochaine action (mise en pause le 2026-10-07 au soir, fenêtre de tokens à 20 %)** : relancer
+l'agent du moodboard (brief : 16 à 20 interfaces réelles plébiscitées, au moins 6 familles
+visuelles dont du clair et de la couleur, capture, palette, typo, preuve ; page `/demo/references`
+avec boutons « J'aime » / « Pas pour moi » et récapitulatif copiable ; `MOODBOARD.md`). Il avait
+commencé (2 captures dans `public/demo/references/`), arrêté avant la page. Estimation : 350k.
+
 2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
    Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
    références réelles plébiscitées (`/demo/references`, `MOODBOARD.md`) : il marque « J'aime » /
