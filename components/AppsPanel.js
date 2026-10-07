@@ -183,15 +183,23 @@ function colorFor(key) {
   return TILE_COLORS[h];
 }
 
+// Logos des apps (public/logos/, copiés depuis leurs dépôts), par slug de projet ; sinon les initiales.
+const APP_LOGOS = { spircle: '/logos/spircle.svg', 'edhec-ai': '/logos/edhec-ai.png' };
+
 const STATUS_DOT = { blocked: 'bg-red-500', in_progress: 'bg-amber-500' };
 
 // Un carré cliquable façon écran d'accueil : pastille colorée + nom, statut en pastille si notable.
-function Square({ href, external, name, status }) {
+function Square({ href, external, name, status, logo }) {
   const dot = STATUS_DOT[status];
   const content = (
     <>
-      <span className={`relative flex size-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${colorFor(name)}`}>
-        {initials(name)}
+      <span className={`relative flex size-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${logo ? '' : colorFor(name)}`}>
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logo} alt="" width={40} height={40} className="size-10 rounded-2xl object-cover" />
+        ) : (
+          initials(name)
+        )}
         {dot && <span className={`absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-zinc-900 ${dot}`} />}
       </span>
       <span className="line-clamp-2 w-full break-words text-center text-[11px] leading-tight text-zinc-200">{name}</span>
@@ -223,11 +231,11 @@ export default function AppsPanel({ apps, state, projects }) {
     const project = bySlug.get(a.project_slug);
     if (project) used.add(project.slug);
     const external = /^https?:\/\//i.test(a.url);
-    return { key: `app:${a.id}`, name: a.name, href: a.url, external, status: project?.status };
+    return { key: `app:${a.id}`, name: a.name, href: a.url, external, status: project?.status, logo: APP_LOGOS[a.project_slug] };
   });
   for (const p of projects) {
     if (used.has(p.slug)) continue;
-    tiles.push({ key: `project:${p.id}`, name: p.name, href: `/projects/${p.slug}`, external: false, status: p.status });
+    tiles.push({ key: `project:${p.id}`, name: p.name, href: `/projects/${p.slug}`, external: false, status: p.status, logo: APP_LOGOS[p.slug] });
   }
 
   return (
@@ -241,7 +249,7 @@ export default function AppsPanel({ apps, state, projects }) {
           <ul className="grid grid-cols-1 gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))' }} data-testid="apps-grid">
             {tiles.map((t) => (
               <li key={t.key}>
-                <Square href={t.href} external={t.external} name={t.name} status={t.status} />
+                <Square href={t.href} external={t.external} name={t.name} status={t.status} logo={t.logo} />
               </li>
             ))}
           </ul>
