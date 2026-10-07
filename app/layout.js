@@ -1,21 +1,21 @@
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
-import Nav from "@/components/Nav";
+import { Geist, Geist_Mono } from "next/font/google";
+import Rail from "@/components/Rail";
 import "./globals.css";
 
-// Cockpit : une grotesque serrée pour les titres, un mono à chiffres tabulaires
-// pour tout ce qui se compare en colonne (heures, compteurs, âges de synchro).
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+// Graphite : Geist pour le texte, Geist Mono pour les chiffres qui se comparent
+// en colonne (heures, compteurs, âges de synchro).
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 export const metadata = {
-  title: "Tour de Contrôle",
+  title: "Pilotage",
   description: "Où en est chacun de mes projets, et par où je reprends.",
 };
 
@@ -23,18 +23,19 @@ export const metadata = {
 // défilement) doivent suivre, sinon ils repassent en blanc sur fond sombre.
 export const viewport = {
   colorScheme: "dark",
-  themeColor: "#161b25",
+  themeColor: "#202429",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="fr"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-950">
-        <Nav />
-        <main className="flex-1">{children}</main>
+      <body className="min-h-full flex flex-col bg-zinc-950 md:flex-row">
+        <Rail />
+        {/* Aucune largeur maximale : le Cockpit utilise tout l'écran. */}
+        <main className="min-w-0 flex-1">{children}</main>
       </body>
     </html>
   );

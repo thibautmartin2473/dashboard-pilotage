@@ -12,7 +12,8 @@ import {
   shiftEvent, snapMinutes, timeParis, todayParis,
 } from '@/lib/home';
 
-const HOUR_PX = 30; // hauteur d'une heure dans la grille (compacte : une journée 8h-21h tient à l'écran)
+const HOUR_PX = 36; // hauteur d'une heure dans la grille (compacte : une journée 8h-21h tient à l'écran)
+const VISIBLE_DAYS = 5; // jours visibles d'un coup (J à J+4) : une colonne = un cinquième de la bande
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
 const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
@@ -20,6 +21,15 @@ const NO_OVERRIDES = {}; // identité stable : la frise n'est pas recalculée sa
 // Lignes « Jour » et « Fait » : une ligne de grille a la hauteur de sa case la plus pleine sur toute
 // la frise, donc chaque case montre au plus ROW_CHIPS éléments puis « +N » (liste au survol).
 const ROW_CHIPS = 2;
+
+// Petits pictogrammes sobres (SVG) : coche pour une tâche faite, case vide pour une tâche à faire.
+function Tick({ done = true }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 12 12" className="mr-1 inline-block h-2.5 w-2.5 align-[-1px]" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      {done ? <path d="M2 6.5l2.6 2.6L10 3.5" /> : <rect x="2" y="2" width="8" height="8" rx="1.5" />}
+    </svg>
+  );
+}
 
 function MoreChip({ items }) {
   if (items.length <= ROW_CHIPS) return null;
@@ -183,7 +193,7 @@ function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, 
           )}
           {google && event.pending_move && (
             <p className="text-xs font-medium text-amber-700 dark:text-amber-300" data-testid="pending-move">
-              ↻ à renvoyer vers Google (déplacé ici, la synchro ne l&apos;écrase pas)
+              À renvoyer vers Google (déplacé ici, la synchro ne l&apos;écrase pas)
             </p>
           )}
           {google && !event.pending_move && (
@@ -246,15 +256,15 @@ function WeekNav({ offset, go, step, first, last }) {
 }
 
 // Frise de TIMELINE_DAYS jours (J-35 à J+98, buildWeek, heure de Paris) rendue d'un seul tenant dans
-// une bande qui défile horizontalement : 8 jours visibles sur ordinateur (une colonne = un huitième
-// de la largeur), moins sur téléphone. Elle s'ouvre sur aujourd'hui ; on la fait glisser à la main
+// une bande qui défile horizontalement : 5 jours visibles d'un coup (J à J+4, une colonne = un
+// cinquième de la largeur de la bande), moins sur téléphone (DAY_MIN_REM). Elle s'ouvre sur aujourd'hui ; on la fait glisser à la main
 // (souris : appui sur le fond de la grille ; pavé tactile, doigt, Maj + molette : défilement natif)
 // ou aux flèches, avec un aimant sur chaque jour. Un bloc par événement à son créneau, et une
 // ligne « Fait » (tâches terminées ce jour-là). La colonne des heures reste fixe.
 export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, done, categories }) {
   const [selectedId, setSelectedId] = useState(null);
   const [offset, setOffset] = useState(0); // premier jour visible, en jours depuis aujourd'hui
-  const [visible, setVisible] = useState(WEEK_DAYS); // nombre de colonnes entières visibles
+  const [visible, setVisible] = useState(VISIBLE_DAYS); // nombre de colonnes entières visibles
   const scrollRef = useRef(null);
   const [aligned, setAligned] = useState(false); // bande masquée tant qu'elle n'est pas calée sur aujourd'hui
   const [adding, setAdding] = useState(false);
@@ -313,7 +323,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     setOffset(offsetRef.current);
     setVisible(Math.max(1, Math.floor((el.clientWidth - el.querySelector('[data-testid="agenda-gutter"]').offsetWidth) / w + 0.05)));
   };
-  // Largeur d'un jour = un huitième de la bande hors colonne des heures, jamais moins de DAY_MIN_REM :
+  // Largeur d'un jour = un cinquième de la bande hors colonne des heures, jamais moins de DAY_MIN_REM :
   // mesurée sur la bande (ResizeObserver), puis la bande se recale sur le même premier jour visible
   // (aujourd'hui à l'ouverture).
   const [dayPx, setDayPx] = useState(null);
@@ -324,7 +334,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     const measure = () => {
       const gutterPx = el.querySelector('[data-testid="agenda-gutter"]').offsetWidth;
       const minPx = (gutterPx / GUTTER_REM) * DAY_MIN_REM;
-      setDayPx(Math.max(minPx, (el.clientWidth - gutterPx) / WEEK_DAYS));
+      setDayPx(Math.max(minPx, (el.clientWidth - gutterPx) / VISIBLE_DAYS));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -483,7 +493,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                       title={`${t.title} (fait à ${timeParis(t.done_at)})`}
                       className="block truncate rounded bg-emerald-100 px-1 text-xs text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
                     >
-                      ✓ {t.title}
+                      <Tick /> {t.title}
                     </span>
                   ))}
                   <MoreChip items={(doneMap[d.day] ?? []).map((t) => t.title)} />
@@ -553,16 +563,16 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                       />
                     )}
                     <span className="block break-words">
-                      {b.pending_move && '↻ '}
-                      {b.conflict && '⚠ '}
-                      {linked.ideas.length > 0 && '💡 '}
+                      {b.pending_move && <span className="font-semibold">Renvoi </span>}
+                      {b.conflict && <span className="font-semibold">Conflit </span>}
+                      {linked.ideas.length > 0 && <span className="font-semibold">Idée </span>}
                       {b.title}
                     </span>
                     {shown.length > 0 && (
                       <span className="mt-0.5 block space-y-px" data-testid="block-tasks">
                         {shown.map((t) => (
                           <span key={t.id} className="block truncate text-[9px] opacity-90">
-                            ✓ {t.title}
+                            <Tick done={false} /> {t.title}
                           </span>
                         ))}
                         {linked.tasks.length > shown.length && (
@@ -577,7 +587,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                       >
                         {linked.ideas.map((n) => (
                           <p key={n.id} className="break-words">
-                            💡 {n.content}
+                            <span className="font-semibold">Idée :</span> {n.content}
                           </p>
                         ))}
                       </div>

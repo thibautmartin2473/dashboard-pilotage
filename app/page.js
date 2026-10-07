@@ -1,50 +1,25 @@
-import ActionsPanel from '@/components/ActionsPanel';
 import AgendaPanel from '@/components/AgendaPanel';
 import AppsPanel from '@/components/AppsPanel';
 import AutoRefresh from '@/components/AutoRefresh';
 import CommandBox from '@/components/CommandBox';
-import IdeasPanel from '@/components/IdeasPanel';
-import LayoutEditor from '@/components/LayoutEditor';
 import MailsPanel from '@/components/MailsPanel';
-import { HomeSlot } from '@/components/ui';
-import { getAllProjects, lastActivityAt, projectStatus } from '@/lib/data';
+import RangerColumn from '@/components/cockpit/RangerColumn';
+import RangerForced from '@/components/cockpit/RangerForced';
+import { getAllProjects, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
-import {
-  HOME_PANELS, MAIL_SOURCES, STALE_DAYS, buildWeek, describeWhen, eventIdsOnDay, resolveCategories, resolveLayout,
-  splitTasks, summarize, todayEvents, todayLine, todayParis,
-} from '@/lib/home';
+import { buildWeek, resolveCategories, todayEvents, todayParis } from '@/lib/home';
+import { buildRangerItems } from '@/lib/ranger';
 import { supabaseConfigured } from '@/lib/supabase';
 
 // Les données personnelles sont lues à chaque requête (jamais figées au build).
 export const dynamic = 'force-dynamic';
 
-// Une tuile du bandeau : une étiquette, un nombre lisible de loin, une ligne de
-// contexte. `alert` la passe en rouge quand le chiffre demande une action.
-function Kpi({ label, value, sub, accent = false, alert = false, testId }) {
-  return (
-    <div
-      data-testid={testId}
-      className={`rounded-xl border bg-zinc-900 px-3.5 py-3 ${alert ? 'border-red-800' : 'border-zinc-800'}`}
-    >
-      <div
-        className={`font-mono text-[10px] font-semibold tracking-[0.1em] uppercase ${alert ? 'text-red-400' : 'text-zinc-400'}`}
-      >
-        {label}
-      </div>
-      <div
-        className={`tabular mt-1 font-mono text-2xl font-bold ${alert ? 'text-red-400' : accent ? 'text-[var(--color-accent)]' : 'text-zinc-100'}`}
-      >
-        {value}
-      </div>
-      <div className="mt-0.5 truncate text-xs text-zinc-400" title={typeof sub === 'string' ? sub : undefined}>
-        {sub}
-      </div>
-    </div>
-  );
-}
-
+// Le Cockpit : pleine largeur. La Zone Commande en une ligne, puis l'agenda (5 jours d'un coup, tâches
+// dans leurs blocs) à gauche et la colonne « À ranger » à droite, les deux boîtes mail côte à côte,
+// puis Apps et projets. Les tâches et les idées n'ont plus de panneau à elles : tout ce qui n'a pas
+// encore de place passe par « À ranger ».
 export default async function HomePage() {
-  const [projects, { tasks, ideas, events, mails, apps, settings, notifications, done }] = await Promise.all([
+  const [projects, { tasks, ideas, events, mails, apps, settings, notifications, done, ranger }] = await Promise.all([
     getAllProjects(),
     loadHomePanels(),
   ]);
@@ -54,12 +29,10 @@ export default async function HomePage() {
   const categories = resolveCategories(setting('agenda_categories'));
   const week = events.data ? buildWeek(events.data, now, categories) : null;
   const todayList = todayEvents(week);
-  const sections = tasks.data && splitTasks(tasks.data, today, eventIdsOnDay(events.data ?? [], today));
-  const summary = summarize({
-    tasks: tasks.data ?? null,
-    projects: projects.map((p) => ({ name: p.name, lastActivity: lastActivityAt(p) })),
-    today,
-  });
+  // Tâches reportées (« Plus tard », jour futur) : ni dans la zone Commande ni dans l'agenda avant leur jour.
+  // La liste « À ranger » reçoit tout : elle gère elle-même les reports (lib/ranger.js).
+  const allTasks = tasks.data ?? [];
+  const activeTasks = allTasks.filter((t) => !(t.snoozed_until && t.snoozed_until > today));
 
   // Données publiques des projets, allégées pour le client (les sessions n'ont rien à faire dans les props).
   const slim = projects.map((p) => ({
@@ -71,126 +44,91 @@ export default async function HomePage() {
     status: projectStatus(p),
   }));
 
-  const layout = resolveLayout(setting('home_layout'));
-  const filter = setting('mail_filter');
-  const mailFilter = MAIL_SOURCES.includes(filter) ? filter : 'all';
+  // Liste « À ranger » : tâches sans bloc à venir, idées, propositions des mails (lib/ranger.js).
+  const list = buildRangerItems({
+    tasks: allTasks,
+    ideas: ideas.data ?? [],
+    notifications: notifications.data ?? [],
+    events: events.data ?? [],
+    categories,
+    now,
+    projectNames: Object.fromEntries(slim.map((p) => [p.slug, p.name])),
+  });
+  const problems = [
+    tasks.error && 'Tâches indisponibles',
+    ideas.error && 'Idées indisponibles',
+    events.error && 'Agenda indisponible : les suggestions de blocs sont limitées',
+    notifications.error === 'error' && 'Propositions des mails indisponibles',
+  ].filter(Boolean);
 
-  // Cibles possibles d'une idée : tâches non faites et événements pas encore finis.
-  const targets = [
-    ...(tasks.data ?? []).map((t) => ({ value: `task:${t.id}`, label: `Tâche : ${t.title}` })),
-    ...(events.data ?? [])
-      .filter((e) => new Date(e.ends_at ?? e.starts_at) >= now)
-      .map((e) => ({ value: `event:${e.id}`, label: `Agenda : ${e.title} (${describeWhen(e)})` })),
-  ];
-  const linkedIdeas = ideas.data ?? [];
-  const activeTasks = tasks.data ?? [];
-  const eventTargets = targets.filter((t) => t.value.startsWith('event:'));
-
-  const panels = {
-    agenda: (
-      <AgendaPanel
-        week={week}
-        state={events}
-        now={now.getTime()}
-        ideas={linkedIdeas}
-        tasks={activeTasks}
-        done={done.data ?? []}
-        categories={categories}
-      />
-    ),
-    ideas: <IdeasPanel notes={ideas.data} state={ideas} now={now.getTime()} targets={targets} />,
-    actions: (
-      <ActionsPanel
-        sections={sections}
-        todayEvents={todayList}
-        projects={slim}
-        state={tasks}
-        today={today}
-        notifications={notifications}
-        ideas={linkedIdeas}
-        eventTargets={eventTargets}
-      />
-    ),
-    mails: <MailsPanel state={mails} savedFilter={mailFilter} settings={settings} now={now.getTime()} />,
-    apps: <AppsPanel apps={apps.data} state={apps} projects={slim} />,
-  };
+  const statusLine = [
+    todayList ? `Aujourd'hui : ${todayList.length} événement${todayList.length > 1 ? 's' : ''}` : 'Agenda indisponible',
+    week?.next ? `Prochain : ${week.next.time} ${week.next.title}` : 'Rien de prévu aujourd\'hui',
+    week?.conflicts > 0 ? `${week.conflicts} conflit(s) d'agenda` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <div className="px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+    <div className="px-3 py-4 sm:px-4 lg:px-5">
       <AutoRefresh />
-      {!supabaseConfigured && (
-        <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          Mode démo : Supabase n&apos;est pas configuré (variables <code>NEXT_PUBLIC_SUPABASE_URL</code>/
-          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>). Les projets affichés sont des exemples.
+      <div id="cockpit-content">
+        {!supabaseConfigured && (
+          <p className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            Mode démo : Supabase n&apos;est pas configuré (variables <code>NEXT_PUBLIC_SUPABASE_URL</code>/
+            <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>). Les projets affichés sont des exemples.
+          </p>
+        )}
+
+        <h1 className="sr-only">Accueil</h1>
+
+        {/* Zone Commande en une ligne fine : l'en-tête du panneau reste lu par les lecteurs d'écran. */}
+        <div className="[&_section>div]:p-2 [&_section>h2]:sr-only" data-testid="command-line">
+          <CommandBox data={{ events: events.data ?? [], tasks: activeTasks }} />
+        </div>
+        <p className="mt-1.5 px-1 tabular font-mono text-[11px] text-zinc-400" data-testid="summary">
+          {statusLine}
         </p>
-      )}
 
-      <h1 className="text-xl font-bold tracking-tight">Accueil</h1>
+        <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div id="agenda" className="min-w-0">
+            <AgendaPanel
+              week={week}
+              state={events}
+              now={now.getTime()}
+              ideas={ideas.data ?? []}
+              tasks={activeTasks}
+              done={done.data ?? []}
+              categories={categories}
+            />
+          </div>
+          <div className="min-w-0">
+            {problems.length > 0 && (
+              <p className="mb-2 rounded-lg border border-amber-800 bg-amber-950 px-3 py-1.5 text-xs text-amber-400" role="status">
+                {problems.join(' · ')}
+              </p>
+            )}
+            <RangerColumn
+              items={list.items}
+              todayTasks={list.todayTasks}
+              options={list.options}
+              ready={ranger.ready}
+              today={today}
+            />
+          </div>
+        </div>
 
-      {/* Bandeau du cockpit : les quatre chiffres qui disent s'il faut agir
-          maintenant. Le détail reste dans les panneaux, jamais ici. */}
-      <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-4" data-testid="summary">
-        <Kpi
-          label="Aujourd'hui"
-          value={todayList ? todayList.length : '—'}
-          sub={todayLine(todayList ? todayList.length : null, sections ? sections.today.length : null)}
-        />
-        <Kpi
-          label="Prochain"
-          value={week?.next ? week.next.time : '—'}
-          sub={week?.next ? week.next.title : 'rien de prévu'}
-          accent={Boolean(week?.next)}
-        />
-        <Kpi
-          label="À trancher"
-          value={notifications.data ? notifications.data.length + (week?.conflicts ?? 0) : '—'}
-          sub={
-            week?.conflicts > 0
-              ? `dont ${week.conflicts} conflit(s) d'agenda`
-              : notifications.data
-                ? 'notifications en attente'
-                : 'notifications indisponibles'
-          }
-          alert={week?.conflicts > 0}
-          testId="notification-count"
-        />
-        <Kpi
-          label="En retard"
-          value={summary.overdueCount ?? '—'}
-          sub={`Dernier projet actif : ${summary.latestProject ?? 'aucun'}`}
-          alert={Boolean(summary.overdueCount)}
-        />
+        <div id="mails" className="mt-3 min-w-0">
+          <MailsPanel state={mails} now={now.getTime()} />
+        </div>
+
+        <div id="apps" className="mt-3 min-w-0">
+          <AppsPanel apps={apps.data} state={apps} projects={slim} />
+        </div>
       </div>
 
-      <p className="mt-2 tabular font-mono text-[11px] text-zinc-400">
-        Sans activité depuis plus de {STALE_DAYS} j : {summary.staleProjects.join(', ') || 'aucun'}
-      </p>
-
-      <div className="mt-4">
-        <CommandBox data={{ events: events.data ?? [], tasks: activeTasks }} />
-      </div>
-
-      <div className="mt-3">
-        <LayoutEditor layout={layout} settings={settings} />
-      </div>
-
-      {/* Vue globale : l'agenda (large) occupe toute la ligne en entier ; les autres
-          panneaux sont compacts en grille, chacun étendu ou replié à la demande. */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-        {layout.order
-          .filter((id) => !layout.hidden.includes(id))
-          .map((id) =>
-            HOME_PANELS[id].wide ? (
-              <div key={id} className="min-w-0 md:col-span-full">
-                {panels[id]}
-              </div>
-            ) : (
-              <HomeSlot key={id} id={id} layout={layout}>
-                {panels[id]}
-              </HomeSlot>
-            ),
-          )}
-      </div>
+      {/* Hors de #cockpit-content : le reste de la page devient inerte pendant le rangement forcé. */}
+      <RangerForced items={list.dueItems} options={list.options} ready={ranger.ready} today={today} />
     </div>
   );
 }

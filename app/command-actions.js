@@ -2,13 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { must, nextPosition, touch } from '@/lib/db-ops';
+import { must, nextPosition, rows, touch } from '@/lib/db-ops';
 import { eventRow, isMissingColumn, isMissingTable, isoToParisLocal } from '@/lib/home';
+import { isRecap, recapGroupKey, recapTaskId } from '@/lib/notifications';
 
 // Server Actions de la zone Commande et des notifications de l'accueil. Elles passent par
 // la page `/`, donc derrière le Basic Auth de proxy.js, et écrivent avec la clé service_role.
 // Retour : { ok: true } ou { error } (jamais d'échec silencieux).
 
+const MAX_BULK = 2000; // notifications reçues par requête (groupe, « Tout ignorer »)
+const BATCH = 100; // ids par requête .in() côté base (longueur d'URL)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const isoNow = () => new Date().toISOString();
@@ -35,6 +38,34 @@ const dueDate = (value) => {
   must(value === null || DAY.test(value), 'Date invalide');
   return value;
 };
+
+// Découpe une liste en lots de BATCH ids.
+function chunks(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i += BATCH) out.push(list.slice(i, i + BATCH));
+  return out;
+}
+
+// Relit en base les notifications `new` parmi `ids` (jamais les champs envoyés par le client).
+// `recapOnly` : ne garde que celles dont dedupe_key commence par « recap: ».
+async function readNew(db, ids, recapOnly) {
+  const found = [];
+  for (const batch of chunks(ids)) {
+    let query = db.from('notifications').select('id, title, dedupe_key').in('id', batch).eq('status', 'new');
+    if (recapOnly) query = query.like('dedupe_key', 'recap:%');
+    found.push(...(await rows(query)));
+  }
+  return found.filter((r) => !recapOnly || isRecap(r));
+}
+
+// Change le statut des notifications `ids` par lots, uniquement celles encore en `from` ;
+// `onBatch` reçoit les ids réellement modifiés de chaque lot (pour le retour arrière).
+async function setStatus(db, ids, from, to, onBatch) {
+  for (const batch of chunks(ids)) {
+    const changed = await rows(db.from('notifications').update({ status: to }).in('id', batch).eq('status', from).select('id'));
+    onBatch?.(changed.map((r) => r.id));
+  }
+}
 
 async function insert(db, table, values, label, done) {
   const { error } = await db.from(table).insert(values);
@@ -91,15 +122,28 @@ export async function applyCommand(actions) {
 // On « réserve » la notification (new -> accepted) avant de créer l'élément : un double clic ne crée
 // qu'un élément ; si la création échoue, on la rend. `title`, `start`/`end` (événement, heure de Paris,
 // AAAA-MM-JJTHH:MM) et `due_date` sont facultatifs : ils remplacent la proposition (bouton Modifier).
-export async function acceptNotification({ id, title, start, end, due_date } = {}) {
+// `alsoIds` : les autres notifications du même groupe « Oublié hier ? » (même tâche rappelée plusieurs
+// jours) : elles passent en `accepted` avec celle-ci, sans rien créer de plus.
+export async function acceptNotification({ id, title, start, end, due_date, alsoIds } = {}) {
   return run(async (db) => {
     must(UUID.test(id), 'Identifiant invalide');
+    const others = [...new Set(alsoIds ?? [])].filter((x) => x !== id);
+    must(others.length <= MAX_BULK && others.every((x) => UUID.test(x)), 'Identifiant invalide');
     const [n] = await touch(
       db.from('notifications').update({ status: 'accepted' }).eq('id', id).eq('status', 'new'),
       'Notification déjà traitée',
-      'kind, title, starts_at, ends_at, due_date'
+      'kind, title, starts_at, ends_at, due_date, dedupe_key'
     );
+    const reserved = [];
     try {
+      // Les autres du groupe sont réservées AVANT la création, d'après les lignes relues en base : seules
+      // celles encore `new`, « recap: » et de la même tâche (même uuid, ou même titre normalisé) comptent.
+      if (others.length && isRecap(n)) {
+        const key = recapGroupKey(n.title);
+        const taskId = recapTaskId(n);
+        const same = (await readNew(db, others, true)).filter((r) => recapGroupKey(r.title) === key || (taskId && recapTaskId(r) === taskId));
+        await setStatus(db, same.map((r) => r.id), 'new', 'accepted', (done) => reserved.push(...done));
+      }
       const name = text(title ?? n.title, 'Titre', 200);
       if (n.kind === 'event') {
         must(start || n.starts_at, 'Date de début manquante');
@@ -115,18 +159,49 @@ export async function acceptNotification({ id, title, start, end, due_date } = {
         await insert(db, 'tasks', { ...row, ...position }, 'tâche', []);
       } // info : marquée acceptée, rien à créer
     } catch (err) {
-      const { error } = await db.from('notifications').update({ status: 'new' }).eq('id', id);
-      if (error) err.message += ` (la notification n'a pas pu être remise à traiter : ${error.message})`;
+      // Retour arrière : la notification principale et les autres déjà réservées redeviennent à traiter.
+      try {
+        await setStatus(db, [id, ...reserved], 'accepted', 'new');
+      } catch (undoErr) {
+        err.message += ` (les notifications n'ont pas pu être remises à traiter : ${undoErr.message})`;
+      }
+      throw err;
+    }
+  });
+}
+
+// « Ignorer » = « c'était fait » (texte des cartes « Oublié hier ? ») : pour une notification « recap: » dont
+// la clé porte l'uuid d'une tâche, cette tâche encore ouverte est cochée faite. Un id Google (bloc) ou tout
+// autre format ne touche à aucune tâche. `markDone: false` (bouton « Tout ignorer ») écarte sans cocher.
+export async function dismissNotifications(ids, { markDone = true } = {}) {
+  return run(async (db) => {
+    must(Array.isArray(ids) && ids.length > 0 && ids.length <= MAX_BULK && ids.every((x) => UUID.test(x)), 'Identifiant invalide');
+    const list = [...new Set(ids)];
+    // Lignes relues en base : une seule notification s'ignore quelle qu'elle soit ; un lot ne vise que des « recap: » `new`.
+    const found = await readNew(db, list, list.length > 1);
+    must(found.length > 0, 'Notification déjà traitée');
+    // D'abord les tâches, puis les notifications : si la seconde étape échoue, l'erreur remonte, les notifications
+    // restent à traiter et un nouvel essai est possible (une tâche déjà cochée ne pose pas de problème).
+    if (markDone) {
+      const taskIds = [...new Set(found.map(recapTaskId).filter(Boolean))];
+      for (const batch of chunks(taskIds)) {
+        const mark = () => db.from('tasks').update({ done_at: isoNow() }).in('id', batch).is('done_at', null);
+        let { error } = await mark().is('dropped_at', null); // une tâche supprimée ne se coche pas
+        if (error && isMissingColumn(error)) ({ error } = await mark()); // supabase/ranger.sql pas exécuté
+        if (error) throw new Error(`Tâche non cochée, notification conservée (réessayer) : ${error.message}`);
+      }
+    }
+    try {
+      await setStatus(db, found.map((r) => r.id), 'new', 'dismissed');
+    } catch (err) {
+      err.message = `Tâches cochées, mais les notifications n'ont pas toutes été écartées (réessayer) : ${err.message}`;
       throw err;
     }
   });
 }
 
 export async function dismissNotification(id) {
-  return run(async (db) => {
-    must(UUID.test(id), 'Identifiant invalide');
-    await touch(db.from('notifications').update({ status: 'dismissed' }).eq('id', id).eq('status', 'new'), 'Notification déjà traitée');
-  });
+  return dismissNotifications([id]);
 }
 
 // Supprime la ligne, donc aussi la mémoire de son dedupe_key : « Ignorer » empêche le retour, pas « Supprimer ».

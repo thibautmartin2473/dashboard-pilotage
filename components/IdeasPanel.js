@@ -17,7 +17,7 @@ export function LinkedIdeas({ ideas, taskId, eventId }) {
     <ul className={`mt-0.5 space-y-0.5 ${mutedClass}`} data-testid="linked-ideas">
       {list.map((n) => (
         <li key={n.id} className="break-words">
-          💡 {n.content}
+          <span className="font-semibold">Idée :</span> {n.content}
         </li>
       ))}
     </ul>

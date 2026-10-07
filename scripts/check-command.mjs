@@ -28,7 +28,7 @@ assert.deepEqual(
     ['event', 'Session de travail Claude', '2026-09-25T14:00', '2026-09-25T16:00'],
   ]
 );
-assert.equal(sample[0].label, "Créer l'événement « Session de travail Claude » · mer. 23 sept. 14h–16h");
+assert.equal(sample[0].label, "Créer l'événement « Session de travail Claude » · mer. 23 sept. 14h-16h");
 assert.equal(parisToIso(sample[0].start), '2026-09-23T12:00:00.000Z'); // heure de Paris (UTC+2)
 assert.deepEqual(events('Ajoute-moi une Session de travail Claude de 14h à 16h mercredi et vendredi'), events(
   'ajoute moi une session de travail claude de 14 à 16h mercredi et vendredi'
@@ -37,7 +37,7 @@ assert.deepEqual(events('Ajoute-moi une Session de travail Claude de 14h à 16h 
 // Heures : minutes, passage de minuit, « à 14h » seul (1 h), durée.
 assert.deepEqual(events('ajoute une réunion de 9h30 à 11h demain'), [['event', 'Réunion', '2026-09-22T09:30', '2026-09-22T11:00']]);
 assert.deepEqual(events('ajoute une veille de 23h à 1h vendredi'), [['event', 'Veille', '2026-09-25T23:00', '2026-09-26T01:00']]);
-assert.match(ok('ajoute une veille de 23h à 1h vendredi')[0].label, /23h–1h \(le lendemain\)$/);
+assert.match(ok('ajoute une veille de 23h à 1h vendredi')[0].label, /23h-1h \(le lendemain\)$/);
 assert.deepEqual(events('ajoute une réunion demain à 10h'), [['event', 'Réunion', '2026-09-22T10:00', '2026-09-22T11:00']]);
 assert.deepEqual(events('ajoute un atelier mercredi à 14h pendant 2h'), [['event', 'Atelier', '2026-09-23T14:00', '2026-09-23T16:00']]);
 assert.deepEqual(events('ajoute un atelier mercredi à 14h30 pendant 45 min'), [['event', 'Atelier', '2026-09-23T14:30', '2026-09-23T15:15']]);

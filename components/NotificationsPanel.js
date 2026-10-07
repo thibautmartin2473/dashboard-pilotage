@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Button, ConfirmDelete, ErrorLine, Field, mutedClass, useAction } from './ui';
-import { acceptNotification, deleteNotification, dismissNotification } from '@/app/command-actions';
+import { acceptNotification, deleteNotification, dismissNotifications } from '@/app/command-actions';
 import { describeWhen, isoToParisLocal } from '@/lib/home';
+import { groupNotifications } from '@/lib/notifications';
 
 const KINDS = {
   event: ['Événement', 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'],
@@ -13,10 +14,11 @@ const KINDS = {
 };
 
 // Modifier : titre et dates proposés, puis « Accepter » crée l'élément avec ces valeurs.
-function EditForm({ n, onDone }) {
+// `group` : { title, count, ids } pour une carte « Oublié hier ? » regroupée par tâche.
+function EditForm({ n, group, onDone }) {
   const { pending, error, run } = useAction();
   const [form, setForm] = useState({
-    title: n.title,
+    title: group ? group.title : n.title,
     start: n.starts_at ? isoToParisLocal(n.starts_at) : '',
     end: n.ends_at ? isoToParisLocal(n.ends_at) : '',
     due_date: n.due_date ?? '',
@@ -26,7 +28,7 @@ function EditForm({ n, onDone }) {
     e.preventDefault();
     const values = n.kind === 'event' ? { title: form.title, start: form.start, end: form.end } : { title: form.title, due_date: form.due_date };
     run(async () => {
-      const result = await acceptNotification({ id: n.id, ...values });
+      const result = await acceptNotification({ id: n.id, ...values, ...(group && { alsoIds: group.ids }) });
       if (!result.error) onDone();
       return result;
     });
@@ -66,7 +68,7 @@ function EditForm({ n, onDone }) {
   );
 }
 
-function NotificationRow({ n }) {
+function NotificationRow({ n, group }) {
   const { pending, error, run } = useAction();
   const [editing, setEditing] = useState(false);
   const [label, pill] = KINDS[n.kind] ?? [n.kind, KINDS.info[1]];
@@ -79,7 +81,8 @@ function NotificationRow({ n }) {
     <li className={`py-2 ${pending ? 'opacity-50' : ''}`} data-testid="notification">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${pill}`}>{label}</span>
-        <span className="min-w-0 break-words text-sm font-medium">{n.title}</span>
+        <span className="min-w-0 break-words text-sm font-medium">{group ? group.title : n.title}</span>
+        {group && group.count > 1 && <span className={mutedClass}>rappelée {group.count} fois</span>}
       </div>
       {n.detail && <p className={`break-words ${mutedClass}`}>{n.detail}</p>}
       {(when || link) && (
@@ -94,10 +97,10 @@ function NotificationRow({ n }) {
         </p>
       )}
       {editing ? (
-        <EditForm n={n} onDone={() => setEditing(false)} />
+        <EditForm n={n} group={group} onDone={() => setEditing(false)} />
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Button disabled={pending} onClick={() => run(() => acceptNotification({ id: n.id }))}>
+          <Button disabled={pending} onClick={() => run(() => acceptNotification(group ? { id: n.id, title: group.title, alsoIds: group.ids } : { id: n.id }))}>
             Accepter
           </Button>
           {n.kind !== 'info' && (
@@ -105,10 +108,10 @@ function NotificationRow({ n }) {
               Modifier
             </Button>
           )}
-          <Button disabled={pending} onClick={() => run(() => dismissNotification(n.id))}>
+          <Button disabled={pending} onClick={() => run(() => dismissNotifications(group ? group.ids : [n.id]))}>
             Ignorer
           </Button>
-          <ConfirmDelete pending={pending} onConfirm={() => run(() => deleteNotification(n.id))} label={`Supprimer : ${n.title}`} />
+          {!group && <ConfirmDelete pending={pending} onConfirm={() => run(() => deleteNotification(n.id))} label={`Supprimer : ${n.title}`} />}
         </div>
       )}
       <ErrorLine error={error} />
@@ -119,8 +122,24 @@ function NotificationRow({ n }) {
 // Propositions de Claude issues des mails (statut « new »), affichées comme une section de la liste
 // des tâches. `state` = { data } ou { error, message } : table absente ou panne s'affichent à la place
 // de la liste, jamais comme « rien à valider ». Rien en attente : pas de section.
+// Barre « Tout ignorer » : écarte tous les « Oublié hier ? » d'un coup, sans cocher les tâches
+// (faire le ménage ne dit pas que tout a été fait).
+function IgnoreAll({ ids }) {
+  const { pending, error, run } = useAction();
+  return (
+    <div className="mt-2">
+      <Button disabled={pending} onClick={() => run(() => dismissNotifications(ids, { markDone: false }))} title="Écarte les rappels sans cocher les tâches">
+        {pending ? 'Nettoyage…' : `Tout ignorer (${ids.length})`}
+      </Button>
+      <ErrorLine error={error} />
+    </div>
+  );
+}
+
 export default function NotificationsPanel({ state }) {
   const list = state.data ?? [];
+  const { others, recaps } = groupNotifications(list);
+  const recapIds = recaps.flatMap((g) => g.ids);
   if (!state.error && list.length === 0) return null;
   return (
     <section className="mt-3" data-testid="notifications">
@@ -133,11 +152,15 @@ export default function NotificationsPanel({ state }) {
         </p>
       ) : (
         <ul className="divide-y divide-zinc-100 dark:divide-zinc-900">
-          {list.map((n) => (
+          {others.map((n) => (
             <NotificationRow key={n.id} n={n} />
+          ))}
+          {recaps.map((g) => (
+            <NotificationRow key={g.key} n={g.latest} group={g} />
           ))}
         </ul>
       )}
+      {!state.error && recapIds.length > 1 && <IgnoreAll ids={recapIds} />}
     </section>
   );
 }
