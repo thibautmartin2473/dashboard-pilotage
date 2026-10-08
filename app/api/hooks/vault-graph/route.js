@@ -27,6 +27,10 @@ export async function POST(request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
+  // Refus avant lecture quand l'en-tête annonce déjà trop gros ; le contrôle en octets suit pour le reste.
+  if (Number(request.headers.get('content-length')) > MAX_BYTES) {
+    return NextResponse.json({ error: 'payload too large' }, { status: 413 });
+  }
   const raw = await request.text();
   if (Buffer.byteLength(raw) > MAX_BYTES) {
     return NextResponse.json({ error: 'payload too large' }, { status: 413 });
