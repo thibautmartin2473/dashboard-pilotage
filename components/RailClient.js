@@ -43,6 +43,16 @@ const ICONS = {
       <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z" />
     </>
   ),
+  constellation: (
+    <>
+      <circle cx="6" cy="7" r="1.6" />
+      <circle cx="17.5" cy="5.5" r="1.6" />
+      <circle cx="12" cy="13" r="1.9" />
+      <circle cx="5.5" cy="18" r="1.6" />
+      <circle cx="18.5" cy="17.5" r="1.6" />
+      <path d="M7.3 8.2 10.6 11.7M16.4 6.7l-3.3 4.8M10.6 14.3l-3.8 2.6M13.5 14.2l3.6 2.4" />
+    </>
+  ),
   apps: (
     <path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2.5h8A1.5 1.5 0 0 1 20.5 10v8A1.5 1.5 0 0 1 19 19.5H5A1.5 1.5 0 0 1 3.5 18Z" />
   ),
@@ -73,6 +83,7 @@ const MAIN = [
   { href: '/#agenda', label: 'Agenda', icon: 'agenda' },
   { href: '/#mails', label: 'Mails', icon: 'mails' },
   { href: '/brain', label: 'Idées', icon: 'idees', match: (p) => p.startsWith('/brain') },
+  { href: '/constellation', label: 'Constellation', icon: 'constellation', match: (p) => p.startsWith('/constellation') },
 ];
 const APPS_LINK = { href: '/apps', label: 'Apps et projets', icon: 'apps', match: (p) => p.startsWith('/apps') || p.startsWith('/projects') };
 

@@ -1,6 +1,7 @@
 import AgendaPanel from '@/components/AgendaPanel';
 import AutoRefresh from '@/components/AutoRefresh';
 import CommandPalette from '@/components/CommandPalette';
+import ConstellationFond from '@/components/ConstellationFond';
 import MailsPanel from '@/components/MailsPanel';
 import NowBar from '@/components/cockpit/NowBar';
 import RangerColumn from '@/components/cockpit/RangerColumn';
@@ -67,7 +68,11 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-full flex-col xl:h-dvh xl:overflow-hidden">
-      <div id="cadran-fond" aria-hidden="true" className="fixed inset-0 -z-10" />
+      {/* Sans prop : le fond charge le graphe seul (/api/vault-graph, toutes les 5 min), pour ne pas
+          relire 200 Ko en base à chaque rafraîchissement de 60 s de la page. */}
+      <div id="cadran-fond" aria-hidden="true" className="fixed inset-0 -z-10">
+        <ConstellationFond />
+      </div>
       <AutoRefresh />
       <div id="cockpit-content" className="flex min-h-0 flex-1 flex-col gap-3 p-3">
         <NowBar
