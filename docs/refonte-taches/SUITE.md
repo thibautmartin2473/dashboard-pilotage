@@ -1,5 +1,11 @@
 # Refonte du design de Cadran : où on en est et la suite, session par session
 
+**Vision (Thibaut, 2026-10-08)** : « le but est de rendre Obsidian obsolète, car on le vibecode nous-mêmes pour
+le remplacer ». Constellation est la première brique ; viendront la lecture, la recherche et l'édition des notes.
+Le plugin Obsidian n'est qu'un pont. À trancher dans une session dédiée : la source du vault sans Obsidian.
+Constellation retenue (2026-10-08) : en fond d'écran derrière le Cockpit, cartes à 75 % d'opacité, points colorés
+par dossier, mise en page façon Obsidian recadrée sur toute la page (rendus `rendus/constellation-v4-*`).
+
 Point de reprise unique. Demande de Thibaut (2026-10-07) : « segmente le travail, on va l'étaler
 sur plusieurs sessions, mais ne perds pas ce que tu as fait ». Règle : **une catégorie à la fois**,
 il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositions de design »).

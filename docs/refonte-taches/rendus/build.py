@@ -35,27 +35,37 @@ keep = np.where(deg > 0)[0]
 remap = {int(o): i for i, o in enumerate(keep)}
 L = np.array([(remap[a], remap[b]) for a, b in links])
 n = len(keep)
-rng = np.random.default_rng(7)
-pos = rng.normal(size=(n, 2))
-k = 1.0 / np.sqrt(n)
-t = 0.1
-for it in range(400):
-    d = pos[:, None, :] - pos[None, :, :]
-    dist = np.sqrt((d ** 2).sum(-1)) + 1e-6
-    rep = (k * k / dist ** 2)[:, :, None] * d
-    disp = rep.sum(1)
-    e = pos[L[:, 0]] - pos[L[:, 1]]
-    el = np.sqrt((e ** 2).sum(-1))[:, None] + 1e-6
-    att = e * el / k
-    np.add.at(disp, L[:, 0], -att)
-    np.add.at(disp, L[:, 1], att)
-    disp -= pos * 0.35  # gravité vers le centre
-    ln = np.sqrt((disp ** 2).sum(-1))[:, None] + 1e-9
-    pos += disp / ln * np.minimum(ln, t)
-    t *= 0.985
-lo = np.percentile(pos, 2, axis=0); hi = np.percentile(pos, 98, axis=0); pos = np.clip((pos - lo) / (hi - lo), -0.02, 1.02)
+# Mise en page façon Obsidian (même principe que d3-force) : répulsion entre notes,
+# ressorts sur les liens, rappel doux vers le centre, puis recadrage plein écran.
+ang = np.arange(n) * np.pi * (3 - np.sqrt(5))
+rad = 10 * np.sqrt(0.5 + np.arange(n))
+pos = np.stack([rad * np.cos(ang), rad * np.sin(ang)], 1)
+vel = np.zeros_like(pos)
+dk0 = np.maximum(deg[keep], 1)
+cnt = np.bincount(L.ravel(), minlength=n)
+lstr = 1 / np.minimum(cnt[L[:, 0]], cnt[L[:, 1]])
+bias = cnt[L[:, 0]] / (cnt[L[:, 0]] + cnt[L[:, 1]])
+alpha = 1.0
+for it in range(520):
+    d = pos[None, :, :] - pos[:, None, :]
+    l2 = np.maximum((d ** 2).sum(-1), 1.0)
+    np.fill_diagonal(l2, np.inf)
+    vel += (d * (-30.0 * max(alpha, 0.05) / l2)[:, :, None]).sum(1)
+    e = pos[L[:, 1]] + vel[L[:, 1]] - pos[L[:, 0]] - vel[L[:, 0]]
+    el = np.sqrt((e ** 2).sum(-1)) + 1e-6
+    f = ((el - 18.0) / el * alpha * lstr)[:, None] * e
+    np.add.at(vel, L[:, 1], -f * bias[:, None])
+    np.add.at(vel, L[:, 0], f * (1 - bias)[:, None])
+    vel += -pos * 0.012
+    vel *= 0.6
+    pos += vel
+    alpha *= 0.99
+pos -= pos.mean(0)
 W, H = 1440, 900
-xs = 60 + pos[:, 0] * (W - 120); ys = 40 + pos[:, 1] * (H - 80)
+# Recadrage : le nuage rond est étiré doucement pour remplir la page (marges 4 %), centré.
+lo = np.percentile(pos, 1, axis=0); hi = np.percentile(pos, 99, axis=0)
+u = (pos - (lo + hi) / 2) / ((hi - lo) / 2)
+xs = W / 2 + u[:, 0] * W * 0.46; ys = H / 2 + u[:, 1] * H * 0.44
 dk = deg[keep]
 groups = [notes[names[o]].split(os.sep)[0] for o in keep]
 lines = ''.join(f'<line x1="{xs[a]:.0f}" y1="{ys[a]:.0f}" x2="{xs[b]:.0f}" y2="{ys[b]:.0f}"/>' for a, b in L)
@@ -69,7 +79,7 @@ def col(rel):
     if top.startswith('03'):
         return '#4E5C78'
     return '#5A6478'
-dots = ''.join(f'<circle cx="{xs[i]:.0f}" cy="{ys[i]:.0f}" r="{1.8 + min(dk[i], 40) ** 0.5 * 1.0:.1f}" fill="{col(notes[names[keep[i]]])}"/>' for i in range(n))
-svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice"><g stroke="#4E5C78" stroke-width="0.6" stroke-opacity="0.55">{lines}</g><g>{dots}</g></svg>'
+dots = ''.join(f'<circle cx="{xs[i]:.0f}" cy="{ys[i]:.0f}" r="{2.2 + min(dk[i], 60) ** 0.5 * 0.9:.1f}" fill="{col(notes[names[keep[i]]])}"/>' for i in range(n))
+svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice"><g stroke="#4E5C78" stroke-width="0.7" stroke-opacity="0.45">{lines}</g><g>{dots}</g></svg>'
 open(os.path.join(OUT, 'graph.svg'), 'w', encoding='utf-8').write(svg)
 print(json.dumps({'notes': N, 'avec_liens': n, 'liens': len(links)}))
