@@ -236,6 +236,34 @@ body {
   }
 }
 
+/* Écrans d'attente (components/cockpit/Squelettes.js) : barres grises qui pulsent très doucement. Dans la
+   couche components pour que les utilitaires (arrondi, taille) l'emportent. Statiques si prefers-reduced-motion. */
+@keyframes cadran-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@layer components {
+  /* Indicateur d'attente d'un lien (components/LienAttente.js) : apparaît en fondu après 80 ms (une
+     navigation instantanée ne clignote pas), puis pulse doucement. */
+  .attente-lien {
+    animation:
+      cadran-fade 160ms ease-out 80ms backwards,
+      cadran-pulse 1s ease-in-out 240ms infinite;
+  }
+  .sq-bar {
+    background: var(--btn-fill);
+    border-radius: 0.375rem;
+    animation: cadran-pulse 2.4s ease-in-out infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sq-bar,
+  .attente-lien {
+    animation: none;
+  }
+}
+
 /* Les nombres du cockpit s'alignent en colonne (tuiles, heures, compteurs). */
 .tabular {
   font-variant-numeric: tabular-nums;

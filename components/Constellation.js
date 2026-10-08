@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { construireSim, pasForces, refroidie, reveiller, signatureGraphe } from '@/lib/constellation-sim';
+import { appliquerPositions, construireSim, encoderPositions, pasForces, positionsValides, refroidie, reveiller, signatureGraphe } from '@/lib/constellation-sim';
 
 // Constellation : graphe en direct du vault Obsidian (données envoyées par le plugin « Constellation
 // vers Cockpit », lues côté serveur par lib/vault-graph.js). Canvas sans dépendance, calculs dans le
@@ -39,6 +39,29 @@ const THEME_COLORS = {
   '01 Projets': '#8E9CB4',
 };
 const LINK_DEFAULT = '#3A4256';
+
+// Mémoire des positions du fond (localStorage, une seule entrée : celle du dernier graphe). Tout est dans un
+// try/catch : stockage absent, plein ou bloqué = on recalcule, sans erreur.
+const CLE_POSITIONS = 'cadran:constellation:positions';
+
+function lirePositions(signature, n) {
+  try {
+    const brut = window.localStorage.getItem(CLE_POSITIONS);
+    if (!brut) return null;
+    const mem = JSON.parse(brut);
+    return mem?.signature === signature && positionsValides(mem.positions, n) ? mem.positions : null;
+  } catch {
+    return null;
+  }
+}
+
+function ecrirePositions(sim) {
+  try {
+    window.localStorage.setItem(CLE_POSITIONS, JSON.stringify({ signature: sim.signature, positions: encoderPositions(sim) }));
+  } catch {
+    // Stockage indisponible ou plein : le prochain chargement recalculera.
+  }
+}
 
 // Marge du canvas du fond : il dépasse de 4 % de chaque côté pour que la dérive ne découvre jamais un bord.
 const MARGE_FOND = 0.04;
@@ -294,9 +317,11 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
     const figer = () => {
       const sim = simRef.current;
       if (!sim) return;
+      const calcule = !refroidie(sim);
       while (!refroidie(sim)) pasForces(sim);
       cadrer();
       dessiner();
+      if (fond && calcule) ecrirePositions(sim);
     };
 
     const redessiner = () => {
@@ -310,6 +335,8 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
     let tempoCalcul = 0;
     const calculerFige = () => {
       clearTimeout(tempoCalcul);
+      const calcule = !refroidie(simRef.current); // faux si les positions viennent de la mémoire du navigateur
+      const t0 = performance.now();
       const tranche = () => {
         tempoCalcul = 0;
         const sim = simRef.current;
@@ -322,6 +349,12 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
         }
         cadrer();
         dessiner();
+        // Repère lisible (tests) : d'où viennent les positions dessinées.
+        canvas.dataset.positions = calcule ? 'calculees' : 'memoire';
+        if (calcule) {
+          canvas.dataset.calculMs = String(Math.round(performance.now() - t0));
+          ecrirePositions(sim);
+        }
       };
       tempoCalcul = setTimeout(tranche, 0);
     };
@@ -516,9 +549,16 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       simRef.current = null;
       return;
     }
-    simRef.current = preparerGroupes(construireSim(graphRef.current, simRef.current));
+    const sim = preparerGroupes(construireSim(graphRef.current, simRef.current));
+    sim.signature = signature;
+    // Fond : mêmes positions que la dernière fois pour ce graphe exact = pas de recalcul.
+    if (fond) {
+      const memoire = lirePositions(signature, sim.n);
+      if (memoire) appliquerPositions(sim, memoire);
+    }
+    simRef.current = sim;
     ctlRef.current?.nouveau();
-  }, [signature]);
+  }, [signature, fond]);
 
   if (!aGraphe) {
     // Fond : rien à dessiner, aucune erreur. Plein : l'état d'attente.

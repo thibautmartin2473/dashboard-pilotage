@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import LienAttente from '@/components/LienAttente';
 import { buildAppTiles, initials, tileStyle } from '@/lib/app-logos';
+import { shortcutLabel } from '@/lib/nav-shortcuts';
 
 // Anneau de focus du rail : bleu encre, il reste visible sur le verre.
 const FOCUS = 'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus)]';
@@ -199,9 +201,13 @@ function AppRow({ tile, onPick, touch, rail }) {
 }
 
 function Items({ tiles, pathname, onPick, touch = false, rail = false }) {
+  // Retour immédiat au clic : l'entrée cliquée prend tout de suite l'état actif (`has-[[data-pending]]`, posé par
+  // LienAttente pendant la navigation) avec une barre --action à gauche, et l'ancienne entrée active s'éteint.
   const row = (active) =>
-    `flex items-center gap-3 rounded-xl px-[14px] text-[14px] transition-colors ${touch ? 'min-h-11' : 'min-h-10'} ${FOCUS} ${
-      active ? 'bg-[var(--glass-active)] font-semibold text-[var(--glass-text)]' : 'text-[var(--glass-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--glass-text)]'
+    `relative flex items-center gap-3 rounded-xl px-[14px] text-[14px] transition-colors ${touch ? 'min-h-11' : 'min-h-10'} ${FOCUS} has-[[data-pending]]:bg-[var(--glass-active)] has-[[data-pending]]:font-semibold has-[[data-pending]]:text-[var(--glass-text)] ${
+      active
+        ? 'bg-[var(--glass-active)] font-semibold text-[var(--glass-text)] group-has-[[data-pending]]/liste:not-has-[[data-pending]]:bg-transparent group-has-[[data-pending]]/liste:not-has-[[data-pending]]:font-normal group-has-[[data-pending]]/liste:not-has-[[data-pending]]:text-[var(--glass-muted)]'
+        : 'text-[var(--glass-muted)] hover:bg-[var(--glass-hover)] hover:text-[var(--glass-text)]'
     }`;
   const labelClass = rail ? LABEL_RAIL : '';
   const link = (it) => {
@@ -211,15 +217,20 @@ function Items({ tiles, pathname, onPick, touch = false, rail = false }) {
         <Link
           href={it.href}
           onClick={onPick}
-          aria-current={active ? 'page' : undefined} aria-label={it.label} title={rail ? it.label : undefined} className={row(active)}>
+          aria-current={active ? 'page' : undefined}
+          aria-label={it.label}
+          title={shortcutLabel(it.href, it.label)}
+          className={row(active)}
+        >
           <Icon id={it.icon} />
           <span className={`truncate ${labelClass}`}>{it.label}</span>
+          <LienAttente className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-[var(--action)]" />
         </Link>
       </li>
     );
   };
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="group/liste flex min-h-full flex-col">
       <ul className="flex flex-col gap-0.5">{MAIN.map(link)}</ul>
       <ul className="mt-auto flex flex-col gap-0.5 pt-4">
         <li className="mx-3 mb-1 border-t border-[var(--glass-border)]" aria-hidden="true" />
