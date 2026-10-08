@@ -12,7 +12,7 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
 
 ## Pour reprendre (début de chaque session)
 
-1. `Set-Location C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage ; git switch demo/v2`
+1. `Set-Location C:SERS	HIBACLAUDE.GLOBALAPPSDASHBOARD-PILOTAGE-DEMO` (WORKTREE DE LA BRANCHE `DEMO/V2` : UN `GIT SWITCH DEMO/V2` DEPUIS `APPSDASHBOARD-PILOTAGE` EST REFUSé, LA BRANCHE EST DéJà PRISE PAR CE WORKTREE)
 2. Lancer les démos en local (lecture seule de la vraie base, sans mot de passe, ce PC seulement) :
    `npx next dev -p 3100 -H 127.0.0.1`, puis http://127.0.0.1:3100/demo
    (le fichier `.env.development.local`, non suivi par git, coupe le Basic Auth en dev).
