@@ -74,6 +74,22 @@
   --plage: #6e7b45;
   --tache: #3b6a9a;
 
+  /* Blocs de l'agenda (SPEC section 3, façon Calendrier d'Apple) : filet de 3 px à gauche, fond pâle opaque,
+     texte de la même teinte (7,8 / 6,7 / 7,8:1 sur leur fond). Cours et sport partagent l'olive. L'examen
+     est un bordeaux plein (texte blanc 10,3:1). La prépa de la SPEC (#8e9cb4) ne donne que 2,2:1 en filet sur
+     une carte : filet foncé à #6c7c99 (3,4:1), texte #3c4a66. Tâches : --action (bleu acier). */
+  --bloc-cours: #6e7b45;
+  --bloc-cours-fond: #e7ebdd;
+  --bloc-cours-texte: #3f4a22;
+  --bloc-examen: #7a1e2c;
+  --bloc-examen-texte: #ffffff;
+  --bloc-rdv: #a0714a;
+  --bloc-rdv-fond: #efe2d3;
+  --bloc-rdv-texte: #6a4426;
+  --bloc-prepa: #6c7c99;
+  --bloc-prepa-fond: #eef0f3;
+  --bloc-prepa-texte: #3c4a66;
+
   --background: var(--page);
   --foreground: var(--ink);
   color-scheme: light;

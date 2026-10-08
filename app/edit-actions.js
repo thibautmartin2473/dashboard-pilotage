@@ -5,8 +5,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { applyPositions, deleteProject, moveRow, must, nextPosition, rows, rowsNotDropped, touch } from '@/lib/db-ops';
 import { MILESTONE_STATUSES } from '@/lib/constants';
 import {
-  BUCKETS, CATEGORY_KINDS, DEFAULT_CATEGORIES, MAIL_SOURCES, OTHER_KEY, eventIdsOnDay, eventRow, isMissingColumn,
-  isMissingTable, reorderUpdates, resolveCategories, resolveLayout, slugify, splitTasks, todayParis,
+  BLOCK_KINDS, BUCKETS, CATEGORY_KINDS, DEFAULT_CATEGORIES, MAIL_SOURCES, OTHER_KEY, eventIdsOnDay, eventRow, isMissingColumn,
+  isMissingTable, reorderUpdates, resolveCategories, resolveKindOverrides, resolveLayout, slugify, splitTasks, todayParis,
 } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
@@ -388,5 +388,27 @@ export async function moveCategory(key, direction) {
     const next = [...categories];
     [next[i], next[j]] = [next[j], next[i]];
     await saveSetting(db, 'agenda_categories', next);
+  });
+}
+
+// ---- Type d'un bloc de l'agenda (dashboard_settings, clé « agenda_kind_overrides ») ----
+// Le type d'un bloc (cours, sport, examen, rendez-vous, prépa, travail, courte) se déduit de sa catégorie
+// et de son titre (blockKind, lib/home.js). Le menu « Type » du détail enregistre ici une surcharge
+// { [id de l'événement]: type } qui l'emporte ; aucune table ni colonne en plus. kind vide = retour à
+// l'automatique. Lecture-modification-écriture comme saveCategory ; au plus KIND_OVERRIDES_MAX entrées
+// (les plus anciennes partent d'abord : un bloc passé n'a plus besoin de sa surcharge).
+const KIND_OVERRIDES_MAX = 500;
+
+export async function saveKindOverride({ eventId, kind }) {
+  return run(async (db) => {
+    eventId = text(eventId, 'Événement', 300);
+    must(!kind || BLOCK_KINDS.includes(kind), 'Type invalide');
+    const [row] = await rows(db.from('dashboard_settings').select('value').eq('key', 'agenda_kind_overrides'));
+    const next = resolveKindOverrides(row?.value);
+    delete next[eventId]; // le remet en fin d'ordre d'insertion
+    if (kind) next[eventId] = kind;
+    const keys = Object.keys(next);
+    for (const old of keys.slice(0, Math.max(0, keys.length - KIND_OVERRIDES_MAX))) delete next[old];
+    await saveSetting(db, 'agenda_kind_overrides', next);
   });
 }

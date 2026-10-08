@@ -1,9 +1,9 @@
 // Vérification de la logique pure de l'accueil : node scripts/check-home.mjs
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, categoryOf, clampOffset, doneByDay, describeWhen, eventForm, eventIdsOnDay, eventRow,
-  formatMailDate, formatRemaining, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
-  nowState, reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
+  BLOCK_KINDS, DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, blockKind, blockLayer, blockTiming, blockUrgency, buildWeek, categoryOf, clampOffset, doneEventIds, describeWhen, eventForm, eventIdsOnDay, eventRow,
+  formatMailDate, formatRemaining, isShortTask, isToConfirm, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
+  layoutBlocks, nowState, reorderUpdates, resolveCategories, resolveKindOverrides, resolveLayout, showBlockIcon, titleKind, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
   todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
@@ -164,30 +164,24 @@ assert.deepEqual([fw.days[0].day, fw.days[-WEEK_OFFSET_MIN].day, fw.days.at(-1).
 assert.equal(fw.days[-WEEK_OFFSET_MIN].isToday, true);
 assert.deepEqual(ids(fw.days.flatMap((d) => d.blocks)), ['hier', 'j8']);
 
-// Ligne « Fait » : tâches terminées rangées par jour de Paris (00h30 à Paris le 21 = 22h30 UTC le 20).
-const faits = doneByDay([
-  { id: 'x', done_at: '2026-09-20T22:30:00Z' },
-  { id: 'y', done_at: '2026-09-20T08:00:00Z' },
-  { id: 'z', done_at: '2026-09-20T06:00:00Z' },
-  { id: 'pas-fait', done_at: null },
-]);
-assert.deepEqual(Object.keys(faits).sort(), ['2026-09-20', '2026-09-21']);
-assert.deepEqual(ids(faits['2026-09-20']), ['z', 'y']); // plus ancienne d'abord
-assert.deepEqual(ids(faits['2026-09-21']), ['x']);
-assert.deepEqual(doneByDay(undefined), {});
-
-// Positionnement : plage 8h-21h (780 min). a = 17h00-18h00 -> top 540/780, hauteur 60/780.
-assert.deepEqual([wk.hourStart, wk.hourEnd], [8, 21]);
+// Positionnement : plage fixe 8h-22h (840 min). a = 17h00-18h00 -> top 540/840, hauteur 60/840.
+assert.deepEqual([wk.hourStart, wk.hourEnd], [8, 22]);
 const a = blocks(wk)[1];
 assert.deepEqual([a.startMin, a.endMin], [1020, 1080]);
-near(a.top, (540 / 780) * 100);
-near(a.height, (60 / 780) * 100);
+near(a.top, (540 / 840) * 100);
+near(a.height, (60 / 840) * 100);
 assert.deepEqual([a.col, a.cols, blocks(wk)[2].col, blocks(wk)[2].cols], [0, 1, 0, 1]); // 18h00-18h00 : pas côte à côte
 
 // Repère de l'heure actuelle : 10h00 -> 120 min après 8h00, sur la colonne du jour seulement.
-near(wk.days[0].nowTop, (120 / 780) * 100);
+near(wk.days[0].nowTop, (120 / 840) * 100);
+// « Maintenant » = bande teintée sur l'heure en cours (10h-11h), pas de trait, aujourd'hui seulement.
+near(wk.days[0].nowBand.top, (120 / 840) * 100);
+near(wk.days[0].nowBand.height, (60 / 840) * 100);
+assert.deepEqual(wk.days.slice(1).map((d) => d.nowBand), Array(7).fill(null));
 assert.deepEqual(wk.days.slice(1).map((d) => d.nowTop), Array(7).fill(null));
 assert.equal(buildWeek([], new Date(at('23:30'))).days[0].nowTop, null); // hors plage affichée
+assert.equal(buildWeek([], new Date(at('23:30'))).days[0].nowBand, null);
+assert.equal(buildWeek([], new Date(at('07:59'))).days[0].nowBand, null);
 
 // Conflit : a et b empiètent, ils s'affichent côte à côte ; c reste seul.
 wk = buildWeek([ev('a', at('17:00'), at('18:30')), ev('b', at('18:00'), at('19:00')), ev('c', at('20:00'), at('21:00'))], nowAgenda);
@@ -251,27 +245,30 @@ assert.equal(wk.conflicts, 1); // coursC/inconnu (deux plages) seulement
 assert.equal(blocks(wk, 0).find((b) => b.id === 'perso').category.name, 'Perso');
 assert.equal(blocks(wk, 0).find((b) => b.id === 'inconnu').category.key, OTHER_KEY);
 
-// Événement qui traverse minuit : un bloc sur chaque jour, borné à la journée ; plage étendue à 0h-24h.
+// Événement qui traverse minuit : un bloc par jour, borné à la journée (startMin / endMin gardent les vraies
+// minutes) ; la plage reste 8h-22h, donc ces blocs de nuit sont hors plage : listés par jour dans before / after.
 wk = buildWeek([
   ev('nuit', at('23:00'), at('01:00', '22')),
   ev('tot', at('00:30', '22'), at('02:00', '22')),
   ev('soir', at('22:00', '23'), at('00:00', '24')), // finit à minuit pile : pas sur le 24
 ], nowAgenda);
-assert.deepEqual([wk.hourStart, wk.hourEnd], [0, 24]);
-assert.deepEqual(ids(blocks(wk, 0)), ['nuit']);
-assert.deepEqual(ids(blocks(wk, 1)), ['nuit', 'tot']);
-assert.deepEqual(ids(blocks(wk, 2)), ['soir']);
-assert.deepEqual(ids(blocks(wk, 3)), []);
-assert.deepEqual([blocks(wk, 0)[0].startMin, blocks(wk, 0)[0].endMin], [1380, 1440]);
-assert.deepEqual([blocks(wk, 1)[0].startMin, blocks(wk, 1)[0].endMin], [0, 60]);
-assert.deepEqual([blocks(wk, 2)[0].startMin, blocks(wk, 2)[0].endMin], [1320, 1440]);
-near(blocks(wk, 0)[0].top, (1380 / 1440) * 100);
-assert.equal(wk.conflicts, 1); // nuit et tot se chevauchent entre 0h30 et 1h00
-assert.deepEqual(blocks(wk, 1).map((b) => b.conflict), [true, true]);
+assert.deepEqual([wk.hourStart, wk.hourEnd], [8, 22]);
+assert.deepEqual(wk.days.slice(0, 4).map((d) => d.blocks.length), [0, 0, 0, 0]);
+assert.deepEqual(wk.days.slice(0, 4).map((d) => d.after), [['nuit'], [], ['soir'], []]);
+assert.deepEqual(wk.days.slice(0, 4).map((d) => d.before), [[], ['nuit', 'tot'], [], []]);
+assert.equal(wk.conflicts, 1); // nuit et tot se chevauchent entre 0h30 et 1h00 (même hors plage)
+
+// Troncature au bord : 7h-9h commence avant 8h, 21h-23h finit après 22h ; startMin / endMin gardent les vraies minutes.
+wk = buildWeek([ev('tot', at('07:00'), at('09:00')), ev('tard', at('21:00'), at('23:00')), ev('dedans', at('12:00'), at('13:00'))], nowAgenda);
+assert.deepEqual(ids(blocks(wk)), ['tot', 'dedans', 'tard']);
+assert.deepEqual(blocks(wk).map((b) => [b.startMin, b.endMin, b.visStart, b.visEnd]), [[420, 540, 480, 540], [720, 780, 720, 780], [1260, 1380, 1260, 1320]]);
+assert.deepEqual(blocks(wk).map((b) => [b.clippedTop, b.clippedBottom]), [[true, false], [false, false], [false, true]]);
+near(blocks(wk)[0].top, 0);
+near(blocks(wk)[2].top + blocks(wk)[2].height, 100);
 
 // Commencé hier soir et encore en cours : présent aujourd'hui de 0h à 11h.
 wk = buildWeek([ev('nuit', '2026-09-20T23:00:00+02:00', '2026-09-21T11:00:00+02:00')], nowAgenda);
-assert.deepEqual([blocks(wk)[0].startMin, blocks(wk)[0].endMin], [0, 660]);
+assert.deepEqual([blocks(wk)[0].startMin, blocks(wk)[0].endMin, blocks(wk)[0].visStart], [0, 660, 480]);
 assert.equal(wk.conflicts, 0);
 
 // Sans heure de fin : bloc de 30 min. Jour entier de plusieurs jours (fin exclusive) : 21 et 22 seulement.
@@ -282,7 +279,7 @@ wk = buildWeek([
 assert.deepEqual([blocks(wk)[0].startMin, blocks(wk)[0].endMin], [840, 870]);
 assert.deepEqual(wk.days.map((d) => d.allDay.length).slice(0, 4), [1, 1, 0, 0]);
 wk = buildWeek([], nowAgenda);
-assert.deepEqual([wk.days.length, wk.hourStart, wk.hourEnd, wk.conflicts, wk.next], [8, 8, 21, 0, null]);
+assert.deepEqual([wk.days.length, wk.hourStart, wk.hourEnd, wk.conflicts, wk.next], [8, 8, 22, 0, null]);
 
 // Un jour avec un événement et zéro tâche ne doit jamais dire « rien ».
 wk = buildWeek([ev('rdv', at('17:00'), at('18:00'))], nowAgenda);
@@ -457,5 +454,100 @@ assert.equal(shiftEvent({ starts_at: '2026-10-24T12:00:00Z', ends_at: '2026-10-2
   assert.equal(formatRemaining(60), '1 h 00');
   assert.equal(formatRemaining(125), '2 h 05');
 }
+
+// --- Types de blocs : blockKind (reclassement d'après le titre, catégories, surcharge) ---
+const catPlage = DEFAULT_CATEGORIES.find((c) => c.key === '11'); // kind plage
+const catTache = DEFAULT_CATEGORIES.find((c) => c.key === '6'); // kind tache
+const kindOf = (title, category = catPlage, overrides = {}, o = {}) => blockKind(ev('x', at('14:00'), at('16:00'), { title, ...o }), category, overrides);
+assert.equal(kindOf('Corporate Finance'), 'cours'); // le reste des plages
+assert.equal(kindOf('Leadership'), 'cours'); // un mot capitalisé qui n'est pas un prénom
+assert.equal(kindOf('Final Exam'), 'examen');
+assert.equal(kindOf('Partiel de comptabilité'), 'examen');
+assert.equal(kindOf('Midterm ACC 812'), 'examen');
+assert.equal(kindOf('Test 2'), 'examen');
+assert.equal(kindOf('Contestation'), 'cours'); // « test » dans un mot plus long : pas un examen
+assert.equal(kindOf('Call Bain'), 'rdv');
+assert.equal(kindOf('Rendez-vous banque'), 'rdv');
+assert.equal(kindOf('Entretien Goldman'), 'rdv');
+assert.equal(kindOf('Visio avec le recruteur'), 'rdv');
+assert.equal(kindOf('Marie'), 'rdv'); // un prénom seul en tête
+assert.equal(kindOf('Marie - point CV'), 'rdv');
+assert.equal(kindOf('Thomas Gerber / Bain'), 'rdv');
+assert.equal(kindOf('Strategy Boost'), 'prepa');
+assert.equal(kindOf('Case Coach n°1'), 'prepa');
+assert.equal(kindOf('Cas en binôme'), 'prepa');
+assert.equal(kindOf('Padel'), 'sport');
+assert.equal(kindOf('Salle de sport'), 'sport');
+assert.equal(kindOf('Salle 204 Corporate Finance'), 'cours'); // « salle » d'un cours : pas du sport
+assert.equal(kindOf('Run 10 km'), 'sport');
+assert.equal(titleKind('Examen : Call Bain'), 'examen'); // l'examen l'emporte sur le rendez-vous
+assert.equal(titleKind('Strategy Boost avec Marie'), 'prepa');
+// Catégorie `tache` : travail de fond, ou tâche courte (30 min ou moins ; 1 h au plus avec un verbe d'action).
+assert.equal(kindOf('Session de travail Claude', catTache), 'travail');
+assert.equal(kindOf('Case Coach n°1', catTache), 'travail'); // pas de reclassement pour une tâche
+assert.equal(kindOf('Relire le CV', catTache, {}, { starts_at: at('14:00'), ends_at: at('14:30') }), 'courte');
+assert.equal(kindOf('Mail', catTache, {}, { starts_at: at('14:00'), ends_at: null }), 'courte'); // sans fin = 30 min
+assert.equal(kindOf('Appeler la banque', catTache, {}, { starts_at: at('14:00'), ends_at: at('14:45') }), 'courte');
+assert.equal(kindOf('Appeler la banque', catTache), 'travail'); // 2 h : un travail de fond, malgré le verbe
+assert.equal(kindOf('Réviser la comptabilité et la finance de marché', catTache, {}, { starts_at: at('14:00'), ends_at: at('14:50') }), 'travail');
+assert.equal(isShortTask(ev('x', at('14:00'), at('14:30'))), true);
+// Journée entière : bandeau, jamais reclassée, même avec une surcharge.
+assert.equal(kindOf('Examen', catPlage, { x: 'cours' }, { all_day: true }), 'journee');
+// Surcharge prioritaire sur le titre et sur la catégorie ; surcharge invalide ou d'un autre bloc ignorée.
+assert.equal(kindOf('Final Exam', catPlage, { x: 'cours' }), 'cours');
+assert.equal(kindOf('Session de travail', catTache, { x: 'rdv' }), 'rdv');
+assert.equal(kindOf('Final Exam', catPlage, { x: 'nimporte' }), 'examen');
+assert.equal(kindOf('Final Exam', catPlage, { autre: 'cours' }), 'examen');
+assert.equal(kindOf('Final Exam', catPlage, { constructor: 'cours' }, { id: 'constructor' }), 'cours');
+assert.equal(blockKind(ev('x', at('14:00'), at('15:00')), undefined, {}), 'cours'); // catégorie absente : traité comme une plage
+assert.deepEqual(resolveKindOverrides({ a: 'examen', b: 'journee', c: 'nimporte', '': 'cours', d: 'travail' }), { a: 'examen', d: 'travail' });
+assert.deepEqual([resolveKindOverrides(null), resolveKindOverrides(['cours']), resolveKindOverrides('x')], [{}, {}, {}]);
+assert.deepEqual(BLOCK_KINDS.map(blockLayer), ['plage', 'plage', 'plage', 'plage', 'plage', 'tache', 'tache']);
+
+// La surcharge passe par buildWeek : le bloc reçoit le type choisi et sa couche.
+wk = buildWeek([ev('e', at('09:00'), at('11:00'), { title: 'Final Exam' })], nowAgenda, DEFAULT_CATEGORIES, 0, 8, { e: 'travail' });
+assert.deepEqual([blocks(wk)[0].kind, blocks(wk)[0].layer], ['travail', 'tache']);
+wk = buildWeek([ev('e', at('09:00'), at('11:00'), { title: 'Final Exam' }), ev('j', '2026-09-21T12:00:00Z', '2026-09-22T12:00:00Z', { all_day: true })], nowAgenda);
+assert.deepEqual([blocks(wk)[0].kind, wk.days[0].allDay[0].kind], ['examen', 'journee']);
+
+// Icône de type masquée sous 30 minutes (durée réelle) ; bloc « à confirmer » ; en cours / passé.
+assert.deepEqual([showBlockIcon(ev('x', at('14:00'), at('14:30'))), showBlockIcon(ev('x', at('14:00'), at('14:20'))), showBlockIcon(ev('x', at('14:00'), null))], [true, false, false]);
+assert.deepEqual([isToConfirm({ title: 'Dîner ?' }), isToConfirm({ title: 'Cours à confirmer' }), isToConfirm({ title: 'Cours', status: 'tentative' }), isToConfirm({ title: 'Cours' })], [true, true, true, false]);
+const bloc = ev('x', at('14:00'), at('15:00'));
+assert.deepEqual(blockTiming(bloc, new Date(at('13:59')).getTime()), { running: false, past: false });
+assert.deepEqual(blockTiming(bloc, new Date(at('14:00')).getTime()), { running: true, past: false });
+assert.deepEqual(blockTiming(bloc, new Date(at('15:00')).getTime()), { running: false, past: true }); // la fin n'est plus en cours
+
+// Urgence : tâche liée en retard (échéance passée) ou échéance du jour dépassée (bloc fini).
+const apres = new Date(at('16:00')).getTime();
+const avant = new Date(at('13:00')).getTime();
+assert.deepEqual(blockUrgency([t({ due_date: '2026-09-20' })], bloc, today, avant), { late: true, urgent: true });
+assert.deepEqual(blockUrgency([t({ due_date: '2026-09-21' })], bloc, today, avant), { late: false, urgent: false });
+assert.deepEqual(blockUrgency([t({ due_date: '2026-09-21' })], bloc, today, apres), { late: false, urgent: true });
+assert.deepEqual(blockUrgency([], bloc, today, apres), { late: false, urgent: false });
+assert.deepEqual(blockUrgency([t({ due_date: '2026-09-20', done_at: 'x' })], bloc, today, apres), { late: false, urgent: false });
+
+// Bloc « fait » : une tâche liée terminée et plus aucune ouverte.
+assert.deepEqual([...doneEventIds([{ event_id: 'a' }, { event_id: 'b' }, { event_id: null }], [{ event_id: 'b' }])], ['a']);
+assert.deepEqual([...doneEventIds(undefined, undefined)], []);
+
+// --- Mise en page : colonnes entre blocs de la MÊME couche seulement ---
+const lb = (id, layer, visStart, visEnd) => ({ id, layer, visStart, visEnd, col: 0, cols: 1 });
+// Une tâche posée sur une plage ne la pousse pas dans une colonne étroite : plage pleine, tâche par-dessus.
+let lay = layoutBlocks([lb('cours', 'plage', 540, 720), lb('tache', 'tache', 600, 660)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.over]), [[0, 1, false], [0, 1, true]]);
+// Deux tâches qui se chevauchent sur une plage : côte à côte entre elles, la plage reste pleine.
+lay = layoutBlocks([lb('cours', 'plage', 540, 720), lb('t1', 'tache', 570, 660), lb('t2', 'tache', 600, 690)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.over]), [[0, 1, false], [0, 2, true], [1, 2, true]]);
+// Deux plages qui se chevauchent : côte à côte ; une tâche sans plage dessous n'est pas « posée dessus ».
+lay = layoutBlocks([lb('a', 'plage', 540, 660), lb('b', 'plage', 600, 720), lb('t', 'tache', 780, 840)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.over]), [[0, 2, false], [1, 2, false], [0, 1, false]]);
+// Tâche qui touche seulement la plage (fin = début) : pas par-dessus.
+lay = layoutBlocks([lb('a', 'plage', 540, 600), lb('t', 'tache', 600, 660)]);
+assert.deepEqual(lay.map((b) => b.over), [false, false]);
+// Dans buildWeek : cours 9h-12h et tâche 10h-11h (couleur 6) -> plus aucune colonne partagée, plus de conflit.
+wk = buildWeek([ev('c', at('09:00'), at('12:00'), { color_id: '11', title: 'Cours' }), ev('w', at('10:00'), at('11:00'), { color_id: '6', title: 'Session de travail' })], nowAgenda);
+assert.deepEqual(blocks(wk).map((b) => [b.id, b.layer, b.col, b.cols, b.over, b.conflict]), [['c', 'plage', 0, 1, false, false], ['w', 'tache', 0, 1, true, false]]);
+assert.equal(wk.conflicts, 0);
 
 console.log('check-home : OK');

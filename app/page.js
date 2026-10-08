@@ -8,7 +8,7 @@ import RangerColumn from '@/components/cockpit/RangerColumn';
 import RangerForced from '@/components/cockpit/RangerForced';
 import { getAllProjects, projectStatus } from '@/lib/data';
 import { loadHomePanels } from '@/lib/home-data';
-import { buildWeek, resolveCategories, todayParis } from '@/lib/home';
+import { buildWeek, resolveCategories, resolveKindOverrides, todayParis } from '@/lib/home';
 import { buildRangerItems } from '@/lib/ranger';
 import { supabaseConfigured } from '@/lib/supabase';
 
@@ -31,7 +31,8 @@ export default async function HomePage() {
   const today = todayParis(now);
   const setting = (key) => settings.data?.find((row) => row.key === key)?.value;
   const categories = resolveCategories(setting('agenda_categories'));
-  const week = events.data ? buildWeek(events.data, now, categories) : null;
+  const kindOverrides = resolveKindOverrides(setting('agenda_kind_overrides')); // types de blocs choisis à la main
+  const week = events.data ? buildWeek(events.data, now, categories, 0, undefined, kindOverrides) : null;
   // Tâches reportées (« Plus tard », jour futur) : ni dans la zone Commande ni dans l'agenda avant leur jour.
   // La liste « À ranger » reçoit tout : elle gère elle-même les reports (lib/ranger.js).
   const allTasks = tasks.data ?? [];
@@ -111,6 +112,7 @@ export default async function HomePage() {
               tasks={activeTasks}
               done={done.data ?? []}
               categories={categories}
+              kindOverrides={kindOverrides}
             />
           </div>
           <div className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-1">
