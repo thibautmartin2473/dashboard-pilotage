@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
+import LienAttente from './LienAttente';
 import { CARD } from './card';
 import './keys.css';
 
@@ -162,9 +163,11 @@ export function FocusTitle({ href, children }) {
     <Link
       href={href}
       title="Ouvrir en plein écran"
-      className="rounded-md hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+      className="relative rounded-md hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
     >
       {children}
+      {/* Barre fine sous le titre pendant la navigation (useLinkStatus). */}
+      <LienAttente className="absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-[var(--action)]" />
     </Link>
   );
 }

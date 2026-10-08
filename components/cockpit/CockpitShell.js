@@ -1,25 +1,20 @@
-import AutoRefresh from '@/components/AutoRefresh';
 import CommandPalette from '@/components/CommandPalette';
-import ConstellationFond from '@/components/ConstellationFond';
 import NowBar from '@/components/cockpit/NowBar';
 import { supabaseConfigured } from '@/lib/supabase';
 
-// Cadre commun du Cockpit et de ses vues plein écran (/agenda, /a-ranger, /mails) : fond animé, relecture
-// automatique, bandeau « Maintenant » en haut, messages d'indisponibilité, puis la zone (`children`) qui
-// occupe tout le reste. Sur grand écran (>= 1280 px) la page tient dans la fenêtre (`xl:h-dvh`) et seule la
-// zone défile ; en dessous, tout s'empile et la page défile. La fenêtre Commande (Ctrl+K) est ici pour que
-// toutes les vues l'aient. `after` se rend hors de #cockpit-content (rangement forcé : le reste de la page
-// devient inerte pendant qu'il est ouvert).
+// Contenu propre à chaque vue du Cockpit (/, /agenda, /a-ranger, /mails, /brain) : bandeau « Maintenant » en
+// haut, messages d'indisponibilité, puis la zone (`children`) qui occupe tout le reste, et la fenêtre Commande
+// (Ctrl+K). Le cadre qui ne doit PAS se remonter d'une vue à l'autre (fond Constellation, relecture
+// automatique, raccourcis, hauteur de la fenêtre) est dans `app/(cadran)/layout.js`. Ce composant reste dans
+// chaque page parce que le bandeau et la fenêtre Commande ont besoin des données de la page (événements,
+// tâches), relues à chaque navigation et à chaque `router.refresh()` : un layout ne se rend pas de nouveau à
+// la navigation, ses données seraient périmées, et il bloquerait l'écran d'attente `loading.js`.
+// `after` se rend hors de #cockpit-content (rangement forcé : le reste de la page devient inerte pendant
+// qu'il est ouvert).
 export default function CockpitShell({ data, title = 'Accueil', after = null, children }) {
   const { events, categories, now, list, lateCount, problems, activeTasks } = data;
   return (
-    <div className="flex min-h-full flex-col xl:h-dvh xl:overflow-hidden">
-      {/* Sans prop : le fond charge le graphe seul (/api/vault-graph, toutes les 5 min), pour ne pas
-          relire 200 Ko en base à chaque rafraîchissement de 60 s de la page. */}
-      <div id="cadran-fond" aria-hidden="true" className="fixed inset-0 -z-10">
-        <ConstellationFond />
-      </div>
-      <AutoRefresh />
+    <>
       <div id="cockpit-content" className="flex min-h-0 flex-1 flex-col gap-3 p-3">
         <NowBar
           events={events.data ?? []}
@@ -52,6 +47,6 @@ export default function CockpitShell({ data, title = 'Accueil', after = null, ch
 
       <CommandPalette data={{ events: events.data ?? [], tasks: activeTasks }} />
       {after}
-    </div>
+    </>
   );
 }

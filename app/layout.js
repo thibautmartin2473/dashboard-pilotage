@@ -1,3 +1,4 @@
+import NavShortcuts from "@/components/NavShortcuts";
 import Rail from "@/components/Rail";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }) {
     <html lang="fr" className="h-full antialiased">
       <body className="min-h-full flex flex-col md:flex-row">
         <Rail />
+        <NavShortcuts />
         {/* Aucune largeur maximale : le Cockpit utilise tout l'écran. */}
         <main className="min-w-0 flex-1">{children}</main>
       </body>
