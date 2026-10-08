@@ -65,6 +65,15 @@ toujours visibles sur l'élément choisi ; 10A rangement forcé en feuille iOS ;
 en icône ; 15B une liste de mails avec étiquette EDHEC ; 16 téléphone à voir. Restent 3 (police), 6, 7, 8,
 11, 16, puis reprise de la PR #30.
 
+**Constellation (demande de la session « Mods sur Claude », contrat accepté le 2026-10-08)** : à intégrer
+dans la reprise de la PR #30. Table `vault_graph` (une ligne, `id text primary key` = 'vault', `nodes jsonb`
+[{ id, path, name, group, degree }] avec `path` toujours présent, `links jsonb` [[indexSource,
+indexCible]], `updated_at timestamptz`), RLS active sans policy anon, SQL `supabase/vault-graph.sql` à
+exécuter par Thibaut ; route `POST /api/hooks/vault-graph` (déjà hors Basic Auth), Bearer HOOK_SECRET sinon
+401, 413 au-delà de 5 000 noeuds ou 2 Mo, `group` = premier dossier du chemin ; emplacement vide « en
+attente de la première synchronisation » (onglet du rail ou tuile : choix de Thibaut en attente).
+**Prévenir la session « Mods sur Claude » par message après le commit** ; le dessin du graphe est pour elle.
+
 **Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
 Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
 estimés. Reste : lot 2 (fonctions 5, 13, 7, environ 0,5 M), lot 3 (2, 3, 8, environ 0,8 M), lot 4 (4, 12,
