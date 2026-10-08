@@ -124,8 +124,10 @@ en vue plein écran. Spécification : section 7 de `dashboard-pilotage-demo/docs
   (à poser dans `#cadran-fond`), `app/constellation/page.js` (vue plein écran : le rail n'y est pas rendu, le lien Retour prend le focus et un texte rappelle que le graphe se manipule à la souris ou au doigt), `app/api/vault-graph/route.js`
   (lecture pour le fond, Basic Auth du site, `?since=` pour ne rien renvoyer si le graphe n'a pas changé).
 - **Modes** : `fond` = décor pleine fenêtre derrière le Cockpit (opacité 0,55 réglable par la prop
-  `opacite`, aucune interaction, un clic sur une zone de fond libre ouvre `/constellation`, dérive lente
-  en CSS par paliers). `plein` = molette pour zoomer, glisser pour se déplacer, glisser un point pour le
+  `opacite`, aucune interaction, un clic sur une zone de fond libre ouvre `/constellation`) : **figé**
+  (demande de Thibaut du 2026-10-08, latence ressentie) : simulation calculée par tranches de 6 ms rendues
+  au navigateur, sans dessin intermédiaire, un seul dessin final, aucune animation CSS (elle forçait le
+  recalcul du flou du verre posé par-dessus). `plein` = molette pour zoomer, glisser pour se déplacer, glisser un point pour le
   déplacer, survol qui allume les voisins, clic qui ouvre la note via `obsidian://open`.
 - **Règles de coût (à garder)** : aucun token, tout tourne dans le navigateur. La simulation tourne à
   l'ouverture et quand on interagit, puis refroidit et S'ARRÊTE (plus de calcul ni de

@@ -263,6 +263,8 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       if (detruit || document.hidden) return;
       const sim = simRef.current;
       if (!sim) return;
+      // Fond : le calcul en cours appartient à calculerFige, qui dessine lui-même à la fin.
+      if (fond && !refroidie(sim)) return;
       if (!refroidie(sim)) {
         const debut = performance.now();
         let pas = 0;
@@ -300,6 +302,28 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
     const redessiner = () => {
       sale = true;
       planifier();
+    };
+
+    // Fond : graphe FIGÉ. La simulation est calculée par tranches de 6 ms rendues au navigateur entre
+    // deux (les clics de la page restent prioritaires), sans aucun dessin intermédiaire, puis un seul
+    // dessin final. Plus rien ne tourne ensuite. L'animation façon Obsidian reste sur /constellation.
+    let tempoCalcul = 0;
+    const calculerFige = () => {
+      clearTimeout(tempoCalcul);
+      const tranche = () => {
+        tempoCalcul = 0;
+        const sim = simRef.current;
+        if (detruit || !sim) return;
+        const debut = performance.now();
+        while (!refroidie(sim) && performance.now() - debut < 6) pasForces(sim);
+        if (!refroidie(sim)) {
+          tempoCalcul = setTimeout(tranche, 0);
+          return;
+        }
+        cadrer();
+        dessiner();
+      };
+      tempoCalcul = setTimeout(tranche, 0);
     };
 
     const surReprise = (alpha) => {
@@ -458,7 +482,11 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
           figer();
           return;
         }
-        if (fond || !utilisateurABouge) cadrer();
+        if (fond) {
+          calculerFige();
+          return;
+        }
+        if (!utilisateurABouge) cadrer();
         redessiner();
       },
     };
@@ -469,6 +497,7 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       ctlRef.current = null;
       cancelAnimationFrame(raf);
       cancelAnimationFrame(tempoResize);
+      clearTimeout(tempoCalcul);
       window.removeEventListener('resize', surResize);
       document.removeEventListener('visibilitychange', surVisibilite);
       if (!fond) {
@@ -504,11 +533,11 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
   if (fond) {
     return (
       <div ref={wrapRef} aria-hidden="true" style={{ position: 'absolute', left: `${-MARGE_FOND * 100}%`, top: `${-MARGE_FOND * 100}%`, width: `${(1 + 2 * MARGE_FOND) * 100}%`, height: `${(1 + 2 * MARGE_FOND) * 100}%`, pointerEvents: 'none' }}>
-        <style>{`@keyframes constellation-derive{from{transform:translate3d(-10px,6px,0) rotate(-1.2deg)}to{transform:translate3d(10px,-6px,0) rotate(1.2deg)}}@media (prefers-reduced-motion:reduce){.constellation-fond{animation:none!important}}`}</style>
+        {/* Figé : aucune animation CSS (elle forçait le recalcul du flou du verre posé par-dessus). */}
         <canvas
           ref={canvasRef}
           className="constellation-fond"
-          style={{ width: '100%', height: '100%', display: 'block', opacity: opacite, pointerEvents: 'none', animation: 'constellation-derive 160s steps(320) infinite alternate', willChange: 'transform' }}
+          style={{ width: '100%', height: '100%', display: 'block', opacity: opacite, pointerEvents: 'none' }}
         />
       </div>
     );
