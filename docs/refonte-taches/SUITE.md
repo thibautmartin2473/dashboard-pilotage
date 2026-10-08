@@ -48,6 +48,12 @@ et en-têtes en brun cuir niveau 2 ; agenda, À ranger et mails en texte sombre 
 15 règles de `recherche/papiers-ui.md` s'appliquent. **Tous les choix de design sont faits : reste la
 mise en vrai (session E), en lots avec une PR chacun.**
 
+**Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
+Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
+estimés. Reste : lot 2 (fonctions 5, 13, 7, environ 0,5 M), lot 3 (2, 3, 8, environ 0,8 M), lot 4 (4, 12,
+environ 0,6 M). Défaut connu à traiter d'abord : dans l'agenda, plage et tâches successives côte à
+côte en colonnes étroites, au lieu de tâches posées sur la plage.
+
 2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
    Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
    références réelles plébiscitées (`/demo/references`, `MOODBOARD.md`) : il marque « J'aime » /
