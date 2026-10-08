@@ -75,6 +75,14 @@ exécuter par Thibaut ; route `POST /api/hooks/vault-graph` (déjà hors Basic A
 401, 413 au-delà de 5 000 noeuds ou 2 Mo, `group` = premier dossier du chemin ; emplacement vide « en
 attente de la première synchronisation » (onglet du rail ou tuile : choix de Thibaut en attente).
 **Prévenir la session « Mods sur Claude » par message après le commit** ; le dessin du graphe est pour elle.
+**Kit prêt (2026-10-08)** : `C:/Users/thiba/CLAUDE.GLOBAL/Tools/claude-mods/constellation/dashboard-kit/` (README =
+correspondance fichier par fichier : `supabase/vault-graph.sql`, `app/api/hooks/vault-graph/route.js` qui accepte
+`x-hook-secret` et `Authorization: Bearer`, `lib/vault-graph.js` avec `loadVaultGraph()`, `components/Constellation.js`
+en canvas sans dépendance, état vide « En attente de la première synchronisation d'Obsidian »). À intégrer
+dans la reprise de la PR #30 en remplaçant ses couleurs provisoires « Nuit niçoise » par la charte du nouveau cap.
+Plugin Obsidian `constellation-cockpit` prêt mais désactivé ; prévenir la session « Mods sur Claude » quand la
+route est en ligne et la table créée. Emplacement : fond d'écran (rendus A, B, C dans `rendus/`) ou onglet, choix
+de Thibaut en attente.
 
 **Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
 Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
