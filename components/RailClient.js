@@ -239,7 +239,11 @@ function trapTab(e, container) {
   if (f.length === 0) return;
   const first = f[0];
   const last = f[f.length - 1];
-  if (e.shiftKey && document.activeElement === first) {
+  if (!container.contains(document.activeElement)) {
+    // Le focus a quitté le tiroir (clic dans le fond, page derrière) : Tab le ramène dedans.
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus();
+  } else if (e.shiftKey && document.activeElement === first) {
     e.preventDefault();
     last.focus();
   } else if (!e.shiftKey && document.activeElement === last) {
@@ -275,6 +279,10 @@ export default function RailClient({ projects, apps = [], day }) {
     setDrawer(false);
     burger.current?.focus();
   };
+
+  // /constellation est une vue plein écran qui recouvre la page : le rail n'y est pas rendu, sinon il resterait
+  // tabulable derrière (le lien « Retour au Cadran » de la page fait office de navigation).
+  if (pathname.startsWith('/constellation')) return null;
 
   return (
     <>

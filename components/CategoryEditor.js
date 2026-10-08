@@ -72,9 +72,9 @@ export function CategoryPicker({ value, categories, onChange }) {
             </option>
           ))}
         </Select>
-        <button type="button" className="text-xs underline" onClick={() => setEditing((o) => !o)}>
+        <Button level="tertiary" className="px-2 text-xs underline" onClick={() => setEditing((o) => !o)}>
           modifier la catégorie
-        </button>
+        </Button>
       </div>
       {editing && <CategoryForm category={current} onDone={() => setEditing(false)} />}
     </div>

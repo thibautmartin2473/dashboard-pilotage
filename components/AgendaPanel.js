@@ -27,17 +27,26 @@ const TASK_LINE_PX = 14; // hauteur d'une ligne de tâche liée dans un bloc
 
 // Teintes des blocs (jetons de globals.css) : fond pâle, filet de 3 px à gauche, texte de la même teinte.
 // Examen : bordeaux plein. Travail de fond : bleu acier plein. Tâche courte : pastille à contour.
+// `solid` : fond plein à texte blanc, qui passe en fond pâle à texte sombre une fois le bloc passé.
 const OLIVE = { fill: 'var(--bloc-cours-fond)', rule: 'var(--bloc-cours)', ink: 'var(--bloc-cours-texte)' };
 const TONES = {
   cours: OLIVE,
   sport: OLIVE,
-  examen: { fill: 'var(--bloc-examen)', rule: 'var(--bloc-examen)', ink: 'var(--bloc-examen-texte)' },
+  examen: { fill: 'var(--bloc-examen)', rule: 'var(--bloc-examen)', ink: 'var(--bloc-examen-texte)', solid: true },
   rdv: { fill: 'var(--bloc-rdv-fond)', rule: 'var(--bloc-rdv)', ink: 'var(--bloc-rdv-texte)' },
   prepa: { fill: 'var(--bloc-prepa-fond)', rule: 'var(--bloc-prepa)', ink: 'var(--bloc-prepa-texte)' },
-  travail: { fill: 'var(--action)', rule: 'var(--action)', ink: 'var(--action-text)' },
-  courte: { fill: 'var(--card-solid)', rule: 'var(--action)', ink: 'var(--action)' },
+  travail: { fill: 'var(--action)', rule: 'var(--action)', ink: 'var(--action-text)', solid: true },
+  courte: { fill: 'var(--card-solid)', rule: 'var(--action)', ink: 'var(--action-ink)' },
   journee: { fill: 'var(--btn-fill)', rule: 'var(--line-strong)', ink: 'var(--ink)' },
 };
+
+// Atténue une couleur de fond ou de filet (mélange avec du transparent) sans toucher au texte : un bloc passé
+// s'efface par son fond et son filet, jamais par une opacité sur le bloc entier (le texte tomberait à 3:1).
+const fade = (color, pct) => (pct >= 100 ? color : `color-mix(in srgb, ${color} ${pct}%, transparent)`);
+const PAST_FILL = 55; // part de fond gardée pour un bloc passé (75 pour une tâche, posée sur une plage)
+const PAST_FILL_TASK = 75;
+const PAST_RULE = 60; // part de filet gardée
+const PAST_SOLID_FILL = 16; // fond pâle d'un bloc plein (examen, travail de fond) une fois passé
 
 // Anneau double (bord clair puis couleur) : « en cours » (action) et « conflit » (corail).
 const ring = (color) => `0 0 0 1.5px var(--card-solid), 0 0 0 3.5px ${color}`;
@@ -162,19 +171,22 @@ function EventForm({ initial, today, categories, onDone }) {
   );
 }
 
-// Case à cocher « fait » sur une tâche placée dans la plage (comme ActionsPanel, completeTask).
+// Case à cocher « fait » sur une tâche placée dans la plage (Server Action completeTask).
 function PlacedTask({ task }) {
   const { pending, run } = useAction();
   return (
-    <li className={`flex items-center gap-1.5 ${pending ? 'opacity-50' : ''}`}>
-      <input
-        type="checkbox"
-        checked={pending}
-        disabled={pending}
-        onChange={() => run(() => completeTask(task.id))}
-        aria-label={`Terminer : ${task.title}`}
-        className="size-4 shrink-0 [accent-color:var(--action)]"
-      />
+    <li className={`flex items-center gap-0.5 ${pending ? 'opacity-50' : ''}`}>
+      {/* Zone cliquable de 32 px autour de la case de 16 px (marges négatives : la mise en page ne bouge pas). */}
+      <label className="-my-1.5 -ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center">
+        <input
+          type="checkbox"
+          checked={pending}
+          disabled={pending}
+          onChange={() => run(() => completeTask(task.id))}
+          aria-label={`Terminer : ${task.title}`}
+          className="size-4 [accent-color:var(--action)]"
+        />
+      </label>
       <span className="break-words">{task.title}</span>
     </li>
   );
@@ -212,9 +224,15 @@ function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, 
   const changeKind = (value) => {
     onKind(event.id, value);
     run(async () => {
-      const result = await saveKindOverride({ eventId: event.id, kind: value });
-      if (result.error) onKind(event.id, null);
-      return result;
+      try {
+        const result = await saveKindOverride({ eventId: event.id, kind: value });
+        if (result.error) onKind(event.id, null);
+        return result;
+      } catch (err) {
+        // L'action a levé (réseau, serveur) : même retour arrière qu'une erreur renvoyée, puis useAction affiche le message.
+        onKind(event.id, null);
+        throw err;
+      }
     });
   };
 
@@ -314,14 +332,21 @@ function WeekNav({ offset, go, step, first, last, visible }) {
   );
 }
 
-// Bouton « + » : ajouter un événement, ou ouvrir les catégories. Se ferme à Échap ou en cliquant ailleurs.
+// Bouton « + » : ajouter un événement, ou ouvrir les catégories. Bouton à aria-expanded suivi d'une liste de
+// boutons simples (pas de role="menu" : il imposerait la navigation aux flèches). Échap ferme et rend le
+// focus au bouton « + » ; un clic ailleurs ferme sans toucher au focus.
 function AddMenu({ disabled, onAdd, onCategories }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const triggerRef = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
     const outside = (e) => !ref.current?.contains(e.target) && setOpen(false);
-    const escape = (e) => e.key === 'Escape' && setOpen(false);
+    const escape = (e) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
     window.addEventListener('pointerdown', outside);
     window.addEventListener('keydown', escape);
     return () => {
@@ -335,18 +360,17 @@ function AddMenu({ disabled, onAdd, onCategories }) {
   };
   return (
     <div ref={ref} className="relative">
-      <IconButton label="Ajouter" level="primary" disabled={disabled} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <IconButton ref={triggerRef} label="Ajouter" level="primary" disabled={disabled} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Plus />
       </IconButton>
       {open && (
         <div
-          role="menu"
           className="absolute right-0 top-full z-40 mt-1 flex w-52 flex-col gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--card-solid)] p-1 shadow-md"
         >
-          <Button role="menuitem" level="tertiary" className="justify-start" onClick={pick(onAdd)}>
+          <Button level="tertiary" className="justify-start" onClick={pick(onAdd)}>
             Ajouter un événement
           </Button>
-          <Button role="menuitem" level="tertiary" className="justify-start" onClick={pick(onCategories)}>
+          <Button level="tertiary" className="justify-start" onClick={pick(onCategories)}>
             Catégories
           </Button>
         </div>
@@ -362,7 +386,7 @@ function AddMenu({ disabled, onAdd, onCategories }) {
 // ou aux flèches, avec un aimant sur chaque jour. Heures fixes de 8 h à 22 h. Blocs façon Calendrier
 // d'Apple (type, icône, états : voir lib/home.js blockKind et la section « Agenda » de CLAUDE.md), les
 // tâches posées par-dessus leur plage. La colonne des heures reste fixe.
-export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, done, categories, kindOverrides = NO_OVERRIDES }) {
+export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, openTasks, done, categories, kindOverrides = NO_OVERRIDES }) {
   const [selectedId, setSelectedId] = useState(null);
   const [offset, setOffset] = useState(0); // premier jour visible, en jours depuis aujourd'hui
   const [visible, setVisible] = useState(VISIBLE_DAYS); // nombre de colonnes entières visibles
@@ -415,7 +439,9 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
         : null,
     [serverWeek, state.data, overrides, now, categories, kindMap]
   );
-  const doneIds = useMemo(() => doneEventIds(done, tasks), [done, tasks]);
+  // « Fait » = une tâche terminée et plus aucune ouverte sur le bloc, reportées comprises : `openTasks` est la liste
+  // complète (`tasks` n'a pas les reportées, elle ne sert qu'à l'affichage), sinon un bloc à tâche reportée serait barré.
+  const doneIds = useMemo(() => doneEventIds(done, openTasks ?? tasks), [done, openTasks, tasks]);
   const todayStr = todayParis(new Date(now));
   const hours = week ? week.hourEnd - week.hourStart : 0;
 
@@ -517,9 +543,15 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   const commit = (event, times) => {
     setOverride(event.id, { ...times, pending_move: (event.origin ?? 'google') === 'google' });
     moving.run(async () => {
-      const result = await moveEvent({ id: event.id, ...times });
-      if (result.error) setOverride(event.id, null);
-      return result;
+      try {
+        const result = await moveEvent({ id: event.id, ...times });
+        if (result.error) setOverride(event.id, null);
+        return result;
+      } catch (err) {
+        // L'action a levé : même retour arrière qu'une erreur renvoyée, puis useAction affiche le message.
+        setOverride(event.id, null);
+        throw err;
+      }
     });
   };
 
@@ -612,7 +644,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                   type="button"
                   onClick={() => open(e)}
                   title={`${e.title} (toute la journée)`}
-                  className="block w-full truncate rounded-[3px] border-l-[3px] px-1 text-left text-xs"
+                  className="block min-h-8 w-full truncate rounded-[3px] border-l-[3px] px-1 text-left text-xs leading-8"
                   style={{ background: TONES.journee.fill, color: TONES.journee.ink, borderLeftColor: TONES.journee.rule }}
                 >
                   {e.title}
@@ -690,11 +722,18 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                 const label = `${b.title} (${timeParis(b.starts_at)})${states.length ? ` : ${states.join(', ')}` : ''}${
                   linked.tasks.length > taskLines.length ? ` · ${linked.tasks.length} tâche(s) liée(s)` : ''
                 }${b.clippedTop ? ` · commence avant ${week.hourStart} h` : ''}${b.clippedBottom ? ` · finit après ${week.hourEnd} h` : ''}`;
+                // Passé et pas fait : seuls le fond et le filet s'estompent, le texte garde son contraste (>= 4,5:1).
+                const past = timing.past && !isDone;
+                const ruleMix = past && !urgency.late ? PAST_RULE : 100;
+                const fillMix = past ? (b.layer === 'tache' ? PAST_FILL_TASK : PAST_FILL) : 100;
+                const paleSolid = past && tone.solid;
+                const fillColor = toConfirm ? 'transparent' : isDone ? 'var(--done-soft)' : paleSolid ? fade(tone.fill, PAST_SOLID_FILL) : fade(tone.fill, fillMix);
+                const inkColor = toConfirm ? 'var(--ink)' : isDone ? 'var(--done-ink)' : paleSolid ? 'var(--ink)' : tone.ink;
                 const border = pastille
-                  ? { border: `1.5px solid ${urgency.late ? 'var(--late)' : 'var(--action)'}` }
+                  ? { border: `1.5px solid ${fade(urgency.late ? 'var(--late)' : 'var(--action)', ruleMix)}` }
                   : toConfirm
-                    ? { border: '1.5px dashed var(--ink-muted)' }
-                    : { borderLeft: `3px solid ${urgency.late ? 'var(--late)' : isDone ? 'var(--done)' : tone.rule}` };
+                    ? { border: `1.5px dashed ${fade('var(--ink-muted)', ruleMix)}` }
+                    : { borderLeft: `3px solid ${fade(urgency.late ? 'var(--late)' : isDone ? 'var(--done)' : tone.rule, ruleMix)}` };
                 return (
                   <div
                     key={b.id}
@@ -713,9 +752,8 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                         pastille ? 'rounded-[10px]' : 'rounded-[5px]'
                       } ${isDone ? 'line-through' : ''}`}
                       style={{
-                        background: toConfirm ? 'transparent' : isDone ? 'var(--done-soft)' : tone.fill,
-                        color: toConfirm ? 'var(--ink)' : isDone ? 'var(--done)' : tone.ink,
-                        opacity: isDone ? 0.85 : timing.past ? (b.layer === 'tache' ? 0.72 : 0.6) : 1, // passé : atténué, moins pour une tâche (posée sur une plage, elle ne doit pas virer au gris)
+                        background: fillColor,
+                        color: inkColor,
                         ...border,
                         ...(shadows && { boxShadow: shadows }),
                       }}
@@ -808,7 +846,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
           <span />
         )}
         <div className="flex items-center gap-3">
-          {/* Même périmètre que la tuile « À trancher » : J à J+7, pas toute la frise. */}
+          {/* Conflits de J à J+7 (serverWeek), pas de toute la frise. */}
           {serverWeek?.conflicts > 0 && (
             <span className="border-l-2 border-[var(--late)] pl-2 text-sm font-semibold">{serverWeek.conflicts} conflit(s)</span>
           )}

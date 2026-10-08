@@ -46,9 +46,11 @@ const MARGE_FOND = 0.04;
 const BUDGET_MS = 3;
 const PAS_PAR_IMAGE = 2;
 
-function ago(iso) {
-  if (!iso) return '';
-  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+// `maintenant` (ms) vient d'un état posé après le montage : l'heure n'est jamais lue pendant le rendu, sinon le
+// texte du serveur et celui du navigateur diffèrent (erreur d'hydratation). Vide tant qu'il n'est pas connu.
+function ago(iso, maintenant) {
+  if (!iso || maintenant === null) return '';
+  const s = Math.max(0, Math.round((maintenant - new Date(iso).getTime()) / 1000));
   if (s < 60) return `il y a ${s} s`;
   if (s < 3600) return `il y a ${Math.round(s / 60)} min`;
   if (s < 86400) return `il y a ${Math.round(s / 3600)} h`;
@@ -88,7 +90,7 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
   const ctlRef = useRef(null);
   const graphRef = useRef(graph);
   const [hover, setHover] = useState(null);
-  const [, setTick] = useState(0);
+  const [maintenant, setMaintenant] = useState(null); // ms, connu après le montage seulement (voir ago)
 
   // Signature du contenu : AutoRefresh renvoie un objet neuf toutes les 60 s, la simulation ne repart que
   // si le graphe a réellement changé.
@@ -98,6 +100,18 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
   useEffect(() => {
     graphRef.current = graph;
   });
+
+  // Heure de la ligne « synchronisé il y a... » : lue après le montage, puis toutes les 30 s (vue plein seulement).
+  useEffect(() => {
+    if (fond) return undefined;
+    const maj = () => setMaintenant(Date.now());
+    const premier = setTimeout(maj, 0);
+    const horloge = setInterval(maj, 30000);
+    return () => {
+      clearTimeout(premier);
+      clearInterval(horloge);
+    };
+  }, [fond]);
 
   // Moteur d'affichage : canvas, vue, boucle d'animation, interactions.
   useEffect(() => {
@@ -404,6 +418,10 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       const etat = drag;
       drag = null;
       if (!etat || !sim) return;
+      if (event.type === 'pointercancel') {
+        sim.epingle = -1; // geste interrompu : on lâche le point, sans jamais ouvrir de note
+        return;
+      }
       // Relâché loin de l'appui (même sans mouvement intermédiaire) : c'est un glissement, pas un clic.
       const loin = Math.abs(event.clientX - etat.x0) + Math.abs(event.clientY - etat.y0) > 3;
       if (etat.node !== null && etat.moved) {
@@ -426,8 +444,8 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       canvas.addEventListener('pointerdown', surAppui);
       window.addEventListener('pointermove', surMouvement);
       window.addEventListener('pointerup', surRelache);
+      window.addEventListener('pointercancel', surRelache); // geste interrompu (appel, geste système) : même fin qu'un relâchement
     }
-    const horloge = fond ? 0 : setInterval(() => setTick((t) => t + 1), 30000);
 
     ctlRef.current = {
       // Graphe nouveau ou modifié : dessin immédiat, puis simulation si elle est chaude.
@@ -451,7 +469,6 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
       ctlRef.current = null;
       cancelAnimationFrame(raf);
       cancelAnimationFrame(tempoResize);
-      clearInterval(horloge);
       window.removeEventListener('resize', surResize);
       document.removeEventListener('visibilitychange', surVisibilite);
       if (!fond) {
@@ -459,6 +476,7 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
         canvas.removeEventListener('pointerdown', surAppui);
         window.removeEventListener('pointermove', surMouvement);
         window.removeEventListener('pointerup', surRelache);
+        window.removeEventListener('pointercancel', surRelache);
       }
     };
   }, [fond, aGraphe, height]);
@@ -500,7 +518,7 @@ export default function Constellation({ graph, mode = 'plein', height, opacite =
     <div ref={wrapRef} style={{ position: 'relative', width: '100%', height: height ?? '100%' }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab', touchAction: 'none' }} />
       <div style={{ position: 'absolute', left: 12, bottom: 10, fontSize: 12, color: '#8E9CB4', pointerEvents: 'none' }}>
-        {`${graph.nodes.length} notes, ${graph.links.length} liens, synchronisé ${ago(graph.updatedAt)}`}
+        {`${graph.nodes.length} notes, ${graph.links.length} liens${ago(graph.updatedAt, maintenant) ? `, synchronisé ${ago(graph.updatedAt, maintenant)}` : ''}`}
       </div>
       {hover && (
         <div style={{ position: 'absolute', right: 12, top: 10, fontSize: 12, color: '#ECEBE6', background: 'rgba(20,22,23,0.85)', padding: '4px 10px', borderRadius: 6, pointerEvents: 'none' }}>

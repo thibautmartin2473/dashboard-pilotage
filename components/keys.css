@@ -70,10 +70,11 @@
     opacity: 0.45;
   }
 
-  /* Niveau 3, tertiaire : pas de fond au repos, texte en bleu acier, fond gris au survol. */
+  /* Niveau 3, tertiaire : pas de fond au repos, texte en bleu acier foncé (--action-ink : 6,8:1 sur carte,
+     5,4:1 au survol, 4,7:1 à l'appui), fond gris au survol. */
   .key--tertiary {
     --key-fill: transparent;
-    color: var(--action);
+    color: var(--action-ink);
   }
   .key--tertiary:disabled,
   .key--tertiary[aria-disabled='true'] {
@@ -81,9 +82,10 @@
     color: var(--ink-muted);
   }
 
-  /* Ton destructif : texte corail foncé (le corail pâle ne ferait que 3,2:1), jamais un fond plein. */
+  /* Ton destructif : texte corail foncé (le corail pâle ne ferait que 3,2:1), jamais un fond plein. --late-ink
+     plutôt que --late-text : le bouton gris (--btn-fill) et le creux d'une carte font tomber --late-text à 4,1:1. */
   .key--late {
-    color: var(--late-text);
+    color: var(--late-ink);
   }
   .key--late:hover:not(:disabled) {
     background: var(--late-soft);
@@ -93,7 +95,7 @@
   .key[aria-pressed='true'] {
     --key-fill: var(--action-soft);
     --key-fill-hover: var(--action-soft);
-    color: var(--action);
+    color: var(--action-ink);
     font-weight: 600;
   }
 

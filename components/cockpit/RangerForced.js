@@ -190,6 +190,14 @@ function Dialog({ initial, options, ready, today, onClose }) {
     return () => {
       if (page) page.inert = false;
       document.body.style.overflow = overflow;
+      // La feuille disparaît avec le focus dedans : on le rend à la première ligne de « À ranger », sinon au
+      // contenu principal (rendu focalisable le temps du focus).
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      const target = document.querySelector('#a-ranger [data-row]') ?? page;
+      if (!target) return;
+      if (!target.matches('button, a, input, [tabindex]')) target.tabIndex = -1;
+      target.focus();
     };
   }, []);
   const currentKey = current?.key;

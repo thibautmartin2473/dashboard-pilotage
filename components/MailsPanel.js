@@ -29,7 +29,7 @@ function MailRow({ mail, now }) {
   const subject = mail.subject || '(sans objet)';
   const content = (
     <>
-      {edhec && <span className="shrink-0 rounded-md bg-[var(--action-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--action)]">EDHEC</span>}
+      {edhec && <span className="shrink-0 rounded-md bg-[var(--action-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--action-ink)]">EDHEC</span>}
       <span className={`max-w-[38%] shrink-0 truncate text-sm ${unread ? 'font-semibold' : 'font-medium text-[var(--ink-muted)]'}`}>{sender}</span>
       <span className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold' : 'text-[var(--ink-muted)]'}`}>{subject}</span>
       <span className="tabular shrink-0 text-xs text-[var(--ink-muted)]" title={formatMailDate(mail.received_at)}>

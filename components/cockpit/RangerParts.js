@@ -60,7 +60,7 @@ export function Gestures({ g, on, label }) {
 const TYPE_STYLE = {
   task: 'bg-[var(--btn-fill)] text-[var(--ink)]',
   idea: 'bg-[var(--btn-fill)] text-[var(--ink)]',
-  notification: 'bg-[var(--action-soft)] text-[var(--action)]',
+  notification: 'bg-[var(--action-soft)] text-[var(--action-ink)]',
 };
 
 export function TypeBadge({ item }) {

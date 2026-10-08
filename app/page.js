@@ -110,6 +110,7 @@ export default async function HomePage() {
               now={now.getTime()}
               ideas={ideas.data ?? []}
               tasks={activeTasks}
+              openTasks={allTasks}
               done={done.data ?? []}
               categories={categories}
               kindOverrides={kindOverrides}

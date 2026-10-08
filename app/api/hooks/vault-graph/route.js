@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
@@ -6,16 +7,28 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 // HOOK_SECRET, accepté en x-hook-secret ou en Authorization: Bearer.
 const MAX_NODES = 5000;
 const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_TEXT = 500; // longueur maximale de chaque chaîne du contrat (path, name, group, type)
+const MAX_DEGREE = 100000;
+
+// Comparaison du secret en temps constant : un Buffer de même longueur des deux côtés (longueurs différentes : faux).
+function secretOk(given, expected) {
+  if (!expected) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+const clip = (value, fallback = '') => String(value ?? fallback).slice(0, MAX_TEXT);
 
 export async function POST(request) {
   const bearer = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const secret = request.headers.get('x-hook-secret') || bearer;
-  if (!process.env.HOOK_SECRET || secret !== process.env.HOOK_SECRET) {
+  if (!secretOk(secret, process.env.HOOK_SECRET)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
   const raw = await request.text();
-  if (raw.length > MAX_BYTES) {
+  if (Buffer.byteLength(raw) > MAX_BYTES) {
     return NextResponse.json({ error: 'payload too large' }, { status: 413 });
   }
 
@@ -37,11 +50,11 @@ export async function POST(request) {
   // On ne garde que les champs du contrat, et des liens valides.
   const cleanNodes = nodes.map((n, i) => ({
     id: i,
-    path: String(n?.path ?? ''),
-    name: String(n?.name ?? ''),
-    group: String(n?.group ?? ''),
-    type: String(n?.type ?? 'Note'),
-    degree: Number.isFinite(n?.degree) ? n.degree : 0,
+    path: clip(n?.path),
+    name: clip(n?.name),
+    group: clip(n?.group),
+    type: clip(n?.type, 'Note'),
+    degree: Number.isInteger(n?.degree) ? Math.min(MAX_DEGREE, Math.max(0, n.degree)) : 0,
   }));
   const cleanLinks = links.filter(
     l => Array.isArray(l) && l.length === 2 && l.every(x => Number.isInteger(x) && x >= 0 && x < cleanNodes.length)

@@ -99,7 +99,7 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
     >
       <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4 py-2 text-sm font-semibold">
         <span className="min-w-0 flex-1 truncate">À ranger</span>
-        <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink-muted)]" data-testid="ranger-count">
+        <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink)]" data-testid="ranger-count">
           {visible.length}
         </span>
       </h2>
@@ -150,7 +150,7 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
             return (
               <li
                 key={item.key}
-                className={`rounded-xl ${selected ? 'bg-[var(--action-soft)]' : ''} ${item.isDue ? 'border-l-[3px] border-[var(--late)]' : 'border-l-[3px] border-transparent'}`}
+                className={`rounded-xl ${selected ? 'bg-[var(--action-soft)] [--ink-muted:var(--ink-muted-on-tint)] [--late-text:var(--late-ink)]' : ''} ${item.isDue ? 'border-l-[3px] border-[var(--late)]' : 'border-l-[3px] border-transparent'}`}
                 data-testid="ranger-item"
               >
                 <button
@@ -165,7 +165,7 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
                     {item.title}
                   </span>
                   {item.isDue && <span className="shrink-0 text-xs font-semibold text-[var(--late-text)]">retard</span>}
-                  <span className={`max-w-[38%] shrink truncate text-xs ${item.suggestion.target ? 'text-[var(--action)]' : 'text-[var(--ink-muted)]'}`} title={item.suggestion.reason}>
+                  <span className={`max-w-[38%] shrink truncate text-xs ${item.suggestion.target ? 'text-[var(--action-ink)]' : 'text-[var(--ink-muted)]'}`} title={item.suggestion.reason}>
                     {suggestion}
                   </span>
                 </button>

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   BLOCK_KINDS, DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, blockKind, blockLayer, blockTiming, blockUrgency, buildWeek, categoryOf, clampOffset, doneEventIds, describeWhen, eventForm, eventIdsOnDay, eventRow,
   formatMailDate, formatRemaining, isShortTask, isToConfirm, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
-  layoutBlocks, nowState, reorderUpdates, resolveCategories, resolveKindOverrides, resolveLayout, showBlockIcon, titleKind, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
-  todayEmptyMessage, todayEvents, todayLine, todayParis,
+  layoutBlocks, nowState, reorderUpdates, capKindEntries, resolveCategories, resolveKindEntries, resolveKindOverrides, resolveLayout, showBlockIcon, titleKind, shiftEvent, slugify, snapMinutes, splitTasks, timeParis,
+  todayEmptyMessage, todayEvents, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
 
@@ -93,17 +93,6 @@ assert.deepEqual(reorderUpdates(list, 'zz', 'up'), []);
 const tied = [{ id: 'a', position: 0 }, { id: 'b', position: 0 }, { id: 'c', position: 0 }];
 assert.deepEqual(reorderUpdates(tied, 'a', 'down'), [{ id: 'a', position: 1 }, { id: 'c', position: 2 }]); // b, a, c
 assert.deepEqual(reorderUpdates(tied, 'c', 'up'), [{ id: 'c', position: 1 }, { id: 'b', position: 2 }]); // a, c, b
-
-const now = new Date('2026-09-21T12:00:00Z').getTime();
-const projects = [
-  { name: 'Spircle', lastActivity: '2026-09-21T08:00:00Z' },
-  { name: 'Stage', lastActivity: '2026-09-10T08:00:00Z' },
-  { name: 'Neuf', lastActivity: null },
-];
-assert.deepEqual(summarize({ tasks, projects, today, now }), {
-  todayCount: 4, overdueCount: 1, latestProject: 'Spircle', staleProjects: ['Stage', 'Neuf'],
-});
-assert.equal(summarize({ tasks: null, projects, today, now }).todayCount, null);
 
 assert.equal(isMissingTable({ code: 'PGRST205' }), true);
 assert.equal(isMissingTable({ code: '42501' }), false);
@@ -283,15 +272,10 @@ assert.deepEqual([wk.days.length, wk.hourStart, wk.hourEnd, wk.conflicts, wk.nex
 
 // Un jour avec un événement et zéro tâche ne doit jamais dire « rien ».
 wk = buildWeek([ev('rdv', at('17:00'), at('18:00'))], nowAgenda);
-const line = todayLine(todayEvents(wk).length, splitTasks([], today).today.length);
-assert.equal(line, "Aujourd'hui : 1 événement, 0 tâche");
-assert.doesNotMatch(line, /rien/i);
 assert.equal(todayEmptyMessage(0, todayEvents(wk)), null);
 assert.equal(todayEmptyMessage(2, []), null);
 assert.equal(todayEmptyMessage(0, todayEvents(buildWeek([], nowAgenda))), 'Rien ici.');
 assert.equal(todayEmptyMessage(0, todayEvents(null)), 'Aucune tâche (agenda indisponible).');
-assert.equal(todayLine(2, 3), "Aujourd'hui : 2 événements, 3 tâches");
-assert.equal(todayLine(null, 0), "Aujourd'hui : agenda indisponible, 0 tâche");
 assert.deepEqual(ids(todayEvents(buildWeek([ev('j', '2026-09-21T12:00:00Z', '2026-09-22T12:00:00Z', { all_day: true }), ev('r', at('09:00'), at('10:00'))], nowAgenda))), ['j', 'r']);
 
 assert.ok(describeWhen(ev('x', at('15:00'), at('16:00'))).includes('15h00-16h00'));
@@ -479,6 +463,11 @@ assert.equal(kindOf('Cas en binôme'), 'prepa');
 assert.equal(kindOf('Padel'), 'sport');
 assert.equal(kindOf('Salle de sport'), 'sport');
 assert.equal(kindOf('Salle 204 Corporate Finance'), 'cours'); // « salle » d'un cours : pas du sport
+assert.equal(kindOf('Salle des marchés'), 'cours'); // « salle » seul n'est pas du sport
+assert.equal(kindOf('Salle de gym'), 'sport');
+assert.equal(kindOf('Muscu'), 'sport');
+assert.equal(kindOf('Projet final'), 'cours'); // « final » seul n'est pas un examen
+assert.equal(kindOf('Examen final'), 'examen');
 assert.equal(kindOf('Run 10 km'), 'sport');
 assert.equal(titleKind('Examen : Call Bain'), 'examen'); // l'examen l'emporte sur le rendez-vous
 assert.equal(titleKind('Strategy Boost avec Marie'), 'prepa');
@@ -502,6 +491,17 @@ assert.equal(kindOf('Final Exam', catPlage, { constructor: 'cours' }, { id: 'con
 assert.equal(blockKind(ev('x', at('14:00'), at('15:00')), undefined, {}), 'cours'); // catégorie absente : traité comme une plage
 assert.deepEqual(resolveKindOverrides({ a: 'examen', b: 'journee', c: 'nimporte', '': 'cours', d: 'travail' }), { a: 'examen', d: 'travail' });
 assert.deepEqual([resolveKindOverrides(null), resolveKindOverrides(['cours']), resolveKindOverrides('x')], [{}, {}, {}]);
+// Nouveau format { kind, at } et ancien format (chaîne) mélangés : le client lit toujours des types.
+assert.deepEqual(resolveKindOverrides({ a: { kind: 'examen', at: 5 }, b: 'cours', c: { kind: 'nimporte', at: 1 }, d: { at: 1 } }), { a: 'examen', b: 'cours' });
+assert.deepEqual(resolveKindEntries({ a: { kind: 'examen', at: 5 }, b: 'cours', c: { kind: 'rdv', at: 'x' } }), {
+  a: { kind: 'examen', at: 5 }, b: { kind: 'cours', at: 0 }, c: { kind: 'rdv', at: 0 },
+});
+// Éviction au-delà du plafond : les plus anciennes par `at` (pas par ordre de clés), jamais celle qu'on écrit.
+const entries = { z: { kind: 'cours', at: 3 }, a: { kind: 'cours', at: 1 }, m: { kind: 'cours', at: 2 }, n: { kind: 'sport', at: 0 } };
+assert.deepEqual(Object.keys(capKindEntries(entries, 'z', 3)).sort(), ['a', 'm', 'z']); // n (at 0) part
+assert.deepEqual(Object.keys(capKindEntries(entries, 'n', 2)).sort(), ['n', 'z']); // n est gardée malgré at 0
+assert.equal(capKindEntries(entries, 'z', 4), entries); // sous le plafond : rien ne bouge
+assert.equal(Object.keys(entries).length, 4); // l'entrée n'est pas modifiée
 assert.deepEqual(BLOCK_KINDS.map(blockLayer), ['plage', 'plage', 'plage', 'plage', 'plage', 'tache', 'tache']);
 
 // La surcharge passe par buildWeek : le bloc reçoit le type choisi et sa couche.
@@ -530,6 +530,8 @@ assert.deepEqual(blockUrgency([t({ due_date: '2026-09-20', done_at: 'x' })], blo
 // Bloc « fait » : une tâche liée terminée et plus aucune ouverte.
 assert.deepEqual([...doneEventIds([{ event_id: 'a' }, { event_id: 'b' }, { event_id: null }], [{ event_id: 'b' }])], ['a']);
 assert.deepEqual([...doneEventIds(undefined, undefined)], []);
+// Une tâche reportée reste une tâche ouverte du bloc : le bloc n'est pas « fait » (l'agenda reçoit la liste complète).
+assert.deepEqual([...doneEventIds([{ event_id: 'a' }], [{ event_id: 'a', snoozed_until: '2099-01-01' }])], []);
 
 // --- Mise en page : colonnes entre blocs de la MÊME couche seulement ---
 const lb = (id, layer, visStart, visEnd) => ({ id, layer, visStart, visEnd, col: 0, cols: 1 });

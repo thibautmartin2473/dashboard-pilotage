@@ -3,10 +3,10 @@
 // Briques d'interface partagées : tout le site les utilise, un relooking se fait
 // ici et nulle part ailleurs. Boutons façon Apple (components/keys.css), cartes blanches à 75 %.
 
-import { createContext, useContext, useOptimistic, useState, useTransition } from 'react';
-import { saveLayout } from '@/app/edit-actions';
+import { useState, useTransition } from 'react';
 import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
+import { CARD } from './card';
 import './keys.css';
 
 // Champs : contour --line-strong (3:1), 32 px de haut (44 px au doigt), anneau de focus --focus.
@@ -29,12 +29,6 @@ export function keyClass({ level = 'secondary', tone = 'neutral', icon = false }
   ]
     .filter(Boolean)
     .join(' ');
-}
-
-// Lettre de raccourci encadrée : retirée de l'affichage (le raccourci s'indique au survol, voir
-// shortcutTitle). Gardée comme composant vide pour ne casser aucun import.
-export function KeyCap() {
-  return null;
 }
 
 // Infobulle d'un bouton à raccourci clavier : « Valider (V) ». Un titre déjà posé (raison d'un bouton
@@ -101,11 +95,6 @@ export function IconButton({ label, children, level = 'secondary', tone = 'neutr
   );
 }
 
-// Bouton de filtre : état actif distinct (fond bleu acier tinté) et aria-pressed.
-export function ToggleButton({ pressed, className = '', ...props }) {
-  return <button type="button" aria-pressed={pressed} className={`${keyClass()} ${className}`} {...props} />;
-}
-
 export function Field({ className = '', ...props }) {
   return <input className={`${FIELD} min-w-0 ${className}`} {...props} />;
 }
@@ -162,90 +151,36 @@ export function SyncFooter({ rows, href, label, now, note = '', className = 'mt-
   );
 }
 
-// Case d'un panneau dans la grille de l'accueil : fournit à <Panel> sa taille
-// (compact par défaut, `expanded` = contenu entier sur toute la largeur, `collapsed` = en-tête seul),
-// enregistrée dans home_layout.sizes (dashboard_settings) pour rester la même sur téléphone et PC.
-const SlotContext = createContext(null);
-
-export function HomeSlot({ id, layout, children }) {
-  const { pending, error, run } = useAction();
-  const [size, setOptimistic] = useOptimistic(layout.sizes[id] ?? 'compact');
-  const setSize = (next) =>
-    run(async () => {
-      setOptimistic(next);
-      const sizes = { ...layout.sizes, [id]: next };
-      if (next === 'compact') delete sizes[id];
-      // ponytail: écrit la disposition complète lue au rendu ; deux clics sur deux panneaux avant le
-      // rafraîchissement peuvent s'écraser. Passer à une fusion côté serveur si ça gêne.
-      return saveLayout({ ...layout, sizes });
-    });
-  return (
-    <div className={`min-w-0 ${size === 'expanded' ? 'md:col-span-full' : ''}`}>
-      <SlotContext value={{ size, setSize, pending }}>{children}</SlotContext>
-      <ErrorLine error={error} />
-    </div>
-  );
-}
-
 // Cadre de tous les panneaux : une carte blanche à 75 % (laisse voir le fond), titre en tête, corps
 // séparé par un filet. `state` = résultat { error, message } d'une lecture en échec : on l'affiche à la place du
-// contenu, jamais une liste vide. Dans une <HomeSlot>, l'en-tête porte les boutons Étendre/Réduire et
-// Replier/Déplier. `fill` : le panneau remplit la hauteur de sa case et son corps défile à l'intérieur
-// (page « tout sur un écran ») ; `bodyClassName` remplace le corps par défaut (marges, défilement).
+// contenu, jamais une liste vide. `fill` : le panneau remplit la hauteur de sa case et son corps défile à
+// l'intérieur (page « tout sur un écran ») ; `bodyClassName` remplace le corps par défaut (marges, défilement).
 export function Panel({ title, count, state, file, className = '', bodyClassName, fill = false, children }) {
-  const slot = useContext(SlotContext);
-  const size = slot?.size;
-  const toggle = (target) => slot.setSize(size === target ? 'compact' : target);
-  const small = 'min-w-7 min-h-6 px-1.5 text-xs leading-6';
-  const body =
-    bodyClassName ?? (fill ? 'min-h-0 flex-1 overflow-y-auto p-3' : `p-4 ${size === 'compact' ? 'max-h-80 overflow-y-auto' : ''}`);
+  const body = bodyClassName ?? (fill ? 'min-h-0 flex-1 overflow-y-auto p-3' : 'p-4');
   return (
-    <section className={`flex flex-col overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--ink)] ${fill ? 'min-h-0' : ''} ${className}`}>
+    <section className={`flex flex-col overflow-hidden ${CARD} ${fill ? 'min-h-0' : ''} ${className}`}>
       <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)]">
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {count != null && !state?.error && (
-          <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink-muted)]">
+          <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink)]">
             {count}
           </span>
         )}
-        {slot && (
-          <>
-            <IconButton
-              label={`${size === 'expanded' ? 'Réduire' : 'Étendre'} : ${title}`}
-              className={small}
-              disabled={slot.pending}
-              onClick={() => toggle('expanded')}
-            >
-              {size === 'expanded' ? 'Réduire' : 'Étendre'}
-            </IconButton>
-            <IconButton
-              label={`${size === 'collapsed' ? 'Déplier' : 'Replier'} : ${title}`}
-              aria-expanded={size !== 'collapsed'}
-              className={small}
-              disabled={slot.pending}
-              onClick={() => toggle('collapsed')}
-            >
-              {size === 'collapsed' ? 'Déplier' : 'Replier'}
-            </IconButton>
-          </>
-        )}
       </h2>
-      {size !== 'collapsed' && (
-        <div className={body}>
-          {state?.error === 'missing' ? (
-            <p className="rounded-lg border border-[var(--pending)] px-3 py-2 text-sm text-[var(--ink)]">
-              <span className="font-semibold">Table manquante : </span>exécuter <code>supabase/{file}</code>
-            </p>
-          ) : state?.error ? (
-            <p className="rounded-lg border border-[var(--late)] px-3 py-2 text-sm text-[var(--ink)]">
-              <span className="font-semibold text-[var(--late-text)]">Erreur : </span>
-              {state.message}
-            </p>
-          ) : (
-            children
-          )}
-        </div>
-      )}
+      <div className={body}>
+        {state?.error === 'missing' ? (
+          <p className="rounded-lg border border-[var(--pending)] px-3 py-2 text-sm text-[var(--ink)]">
+            <span className="font-semibold">Table manquante : </span>exécuter <code>supabase/{file}</code>
+          </p>
+        ) : state?.error ? (
+          <p className="rounded-lg border border-[var(--late)] px-3 py-2 text-sm text-[var(--ink)]">
+            <span className="font-semibold text-[var(--late-text)]">Erreur : </span>
+            {state.message}
+          </p>
+        ) : (
+          children
+        )}
+      </div>
     </section>
   );
 }

@@ -81,7 +81,7 @@ export default function NowBar({ events, categories, now: serverNow, rangerCount
       <div className="ml-auto flex shrink-0 items-center gap-5">
         <a
           href="#a-ranger"
-          className="flex items-baseline gap-2 rounded-lg px-1 text-[var(--glass-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+          className="flex min-h-8 items-center gap-2 rounded-lg px-1 text-[var(--glass-text)] [@media(pointer:coarse)]:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
           data-testid="now-ranger"
         >
           <span className={LABEL}>À ranger</span>

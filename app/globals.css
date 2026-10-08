@@ -12,6 +12,7 @@
        --ink          #1B1F2A   13,9
        --ink-muted    #596175    4,9   (le #6B7385 de la SPEC ne donne que 3,8:1 sur une carte translucide)
        --action       #3B6A9A    4,5   (texte blanc dessus : 5,6)
+       --action-ink   #2A4F78    6,8   (5,7 sur --action-soft, 5,9 sur --btn-fill : tout texte d'action sur fond teinté)
        --late-text    #A04228    5,1   (--late #C0664A sert aux filets et aux fonds, 3,2:1 en texte : interdit)
        --done         #5B6373    4,6
      Texte sur le verre (blanc 30 % sur --page, environ #B0BACB)
@@ -45,6 +46,7 @@
   --field-bg: rgba(255, 255, 255, 0.92); /* champs de saisie */
   --ink: #1b1f2a;
   --ink-muted: #596175;
+  --ink-muted-on-tint: #475066; /* --ink-muted sur une ligne sélectionnée (--action-soft : 4,2:1) : 5,4:1 */
   --line: rgba(27, 31, 42, 0.12);
   --line-strong: #737d90;
 
@@ -54,6 +56,10 @@
   --action-press: #2c5278;
   --action-text: #ffffff;
   --action-soft: rgba(59, 106, 154, 0.14);
+  /* Texte d'action sur un fond teinté (--action-soft, --card-inset, --btn-fill, ligne sélectionnée) : --action
+     (#3B6A9A) y tombe à 3,6 à 4,1:1, --action-ink (#2A4F78) y garde 5,4 à 6,2:1. --action reste pour les
+     fonds pleins, les filets et le texte posé directement sur une carte. */
+  --action-ink: #2a4f78;
   --btn-fill: rgba(27, 31, 42, 0.07);
   --btn-fill-hover: rgba(27, 31, 42, 0.12);
   --btn-fill-press: rgba(27, 31, 42, 0.18);
@@ -62,17 +68,14 @@
   --late: #c0664a;
   --late-text: #a04228;
   --late-soft: rgba(192, 102, 74, 0.14);
+  --late-ink: #7f321d; /* texte corail foncé sur fond teinté (bouton Supprimer sur --btn-fill, ligne sélectionnée) : --late-text y tombe à 3,8 à 4,1:1, celui-ci reste à 5,2:1 et plus */
   --pending: #3b6a9a; /* à traiter ou en cours : bleu acier, pas de troisième couleur */
-  --pending-soft: rgba(59, 106, 154, 0.12);
   --done: #5b6373; /* fait : gris, texte barré */
   --done-soft: rgba(91, 99, 115, 0.12);
+  --done-ink: #4a5163; /* texte d'un bloc fait (barré) : --done ne fait que 4,2:1 sur --done-soft, celui-ci 5,5 */
 
   /* Anneau de focus clavier. */
   --focus: #1e4e80;
-
-  /* Teintes de repli des catégories d'agenda (les blocs sont refaits à part). */
-  --plage: #6e7b45;
-  --tache: #3b6a9a;
 
   /* Blocs de l'agenda (SPEC section 3, façon Calendrier d'Apple) : filet de 3 px à gauche, fond pâle opaque,
      texte de la même teinte (7,8 / 6,7 / 7,8:1 sur leur fond). Cours et sport partagent l'olive. L'examen
