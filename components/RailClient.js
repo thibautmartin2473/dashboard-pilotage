@@ -148,7 +148,29 @@ function Mark({ day, className = 'size-10' }) {
 
 // Libellé qui apparaît quand le rail s'élargit (survol ou focus) ; toujours visible dans le tiroir.
 const LABEL_RAIL =
-  'whitespace-nowrap opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none';
+  'whitespace-nowrap opacity-0 transition-opacity duration-100 group-hover/rail:opacity-100 group-has-[:focus-visible]/rail:opacity-100 motion-reduce:transition-none';
+
+// Lien de section du Cockpit (« /#agenda ») : la page tient sur un écran, une ancre ne ferait rien.
+// Sur `/`, on amène la zone à l'écran (utile sur téléphone, où tout s'empile), on lui donne le focus
+// (À ranger : les touches V A C S P marchent tout de suite) et un anneau bref la désigne.
+function allerASection(event, href, pathname) {
+  if (!href.startsWith('/#') || pathname !== '/') return;
+  const zone = document.getElementById(href.slice(2));
+  if (!zone) return;
+  event.preventDefault();
+  const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  zone.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
+  if (!zone.hasAttribute('tabindex')) zone.setAttribute('tabindex', '-1');
+  zone.focus({ preventScroll: true });
+  if (!reduit) {
+    // L'anneau suit l'arrondi de la carte : #agenda et #mails sont des enveloppes sans arrondi.
+    const carte = getComputedStyle(zone).borderRadius === '0px' ? zone.firstElementChild ?? zone : zone;
+    carte.animate(
+      [{ boxShadow: '0 0 0 3px var(--focus)' }, { boxShadow: '0 0 0 3px var(--focus)', offset: 0.6 }, { boxShadow: '0 0 0 0 transparent' }],
+      { duration: 900, easing: 'ease-out' },
+    );
+  }
+}
 
 function Brand({ day, markClass, textClass, label = '' }) {
   return (
@@ -208,7 +230,13 @@ function Items({ tiles, pathname, onPick, touch = false, rail = false }) {
     const active = it.match ? it.match(pathname) : false;
     return (
       <li key={it.label}>
-        <Link href={it.href} onClick={onPick} aria-current={active ? 'page' : undefined} aria-label={it.label} title={rail ? it.label : undefined} className={row(active)}>
+        <Link
+          href={it.href}
+          onClick={(event) => {
+            allerASection(event, it.href, pathname);
+            onPick?.(event);
+          }}
+          aria-current={active ? 'page' : undefined} aria-label={it.label} title={rail ? it.label : undefined} className={row(active)}>
           <Icon id={it.icon} />
           <span className={`truncate ${labelClass}`}>{it.label}</span>
         </Link>
@@ -290,7 +318,7 @@ export default function RailClient({ projects, apps = [], day }) {
       <div className="sticky top-0 z-40 hidden h-dvh w-16 shrink-0 md:block">
         <aside
           aria-label="Navigation principale"
-          className="glass group/rail absolute inset-y-0 left-0 flex w-16 flex-col overflow-hidden border-y-0 border-l-0 transition-[width] duration-150 hover:w-56 focus-within:w-56 motion-reduce:transition-none"
+          className="glass group/rail absolute inset-y-0 left-0 flex w-16 flex-col overflow-hidden border-y-0 border-l-0 transition-[width] duration-100 hover:w-56 has-[:focus-visible]:w-56 motion-reduce:transition-none"
         >
           <Link href="/" className={`flex items-center gap-3 px-[14px] pt-5 pb-4 ${FOCUS}`} aria-label="Cadran, retour au Cockpit">
             <Brand day={day} markClass="size-9" textClass="text-[20px]" label={LABEL_RAIL} />
