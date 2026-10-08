@@ -33,11 +33,12 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
    simplification pour le favicon et l'icône, la version vivante (calculée sur la vraie journée)
    et la piste de couleur (bleu Martini, vert Aston éclairci ou giallo, proposées sur la page).
    Il tranche, puis on passe à la charte.
-**Prochaine action (mise en pause le 2026-10-07 au soir, fenêtre de tokens à 20 %)** : relancer
-l'agent du moodboard (brief : 16 à 20 interfaces réelles plébiscitées, au moins 6 familles
-visuelles dont du clair et de la couleur, capture, palette, typo, preuve ; page `/demo/references`
-avec boutons « J'aime » / « Pas pour moi » et récapitulatif copiable ; `MOODBOARD.md`). Il avait
-commencé (2 captures dans `public/demo/references/`), arrêté avant la page. Estimation : 350k.
+**État au 2026-10-08** : moodboard fait (`/demo/references`, `MOODBOARD.md`) ; votes « J'aime » 1, 3, 6, 7,
+13, 18, 19, 20 ; « Pas pour moi » 2, 4, 5, 8 à 12, 14 à 17. **Charte choisie : Cuir et bordeaux**
+(`/demo/chartes-cadran`, id `cadran-cuir`), **en un seul mode équilibré, ni clair ni sombre**.
+En cours : 3 niveaux d'équilibre de Cuir (`/demo/charte-cuir`, ids `cadran-cuir-1..3`, il en choisit
+un) et 3 systèmes de boutons dessinés dans cette charte (`/demo/composants-cuir` : Sellerie,
+Planche de bord, Édition). Ensuite : fonctionnalités (session D), puis mise en vrai (session E).
 
 2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
    Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
