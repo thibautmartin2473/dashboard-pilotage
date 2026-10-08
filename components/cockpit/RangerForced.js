@@ -1,13 +1,14 @@
 'use client';
 
-// Rangement forcé : à l'ouverture de l'accueil, un écran plein présente un par un les éléments « dus »
+// Rangement forcé : à l'ouverture de l'accueil, une feuille façon iOS (elle monte du bas, animation courte,
+// réduite à rien si prefers-reduced-motion) présente un par un les éléments « dus »
 // (en retard, bloc terminé, créés avant aujourd'hui, reports arrivés). Il n'a ni bouton fermer ni Échap :
 // il se ferme quand tout est traité (« Plus tard » compte comme traité). La file est figée au montage :
 // AutoRefresh relit la page toutes les 60 s sans jamais la réinitialiser. Jamais de blocage sans issue :
 // un élément déjà traité ailleurs est retiré de la file, et un geste qui échoue offre « Passer pour l'instant ».
 import { useEffect, useRef, useState } from 'react';
-import { ElsewherePicker, GestureKey, ItemMeta, SuggestionBox, TypeBadge, btnClass, primaryBtn } from './RangerParts';
-import { KeyCap, keyClass } from '../ui';
+import { ElsewherePicker, Gestures, ItemMeta, SuggestionBox, TypeBadge, btnClass, primaryBtn } from './RangerParts';
+import { keyClass } from '../ui';
 import { rangerApply, rangerUndo } from '@/app/ranger-actions';
 import { gesturesFor } from '@/lib/ranger';
 
@@ -200,28 +201,31 @@ function Dialog({ initial, options, ready, today, onClose }) {
   const stuckText = `${stuck} élément${stuck > 1 ? "s n'ont" : " n'a"} pas pu être rangé${stuck > 1 ? 's' : ''}, recharge la page`;
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-[var(--content-bg)] text-[var(--ink)]" data-testid="ranger-forced">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center text-[var(--ink)]" data-testid="ranger-forced">
+      {/* Voile : la page derrière reste visible mais inerte (pas de fermeture au clic : on range d'abord). */}
+      <div className="anim-fade absolute inset-0 bg-[var(--ink)]/35 backdrop-blur-[3px]" aria-hidden="true" />
       <div
         ref={box}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ranger-forced-title"
         tabIndex={-1}
-        className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8 outline-none sm:px-6"
+        className="anim-sheet relative flex max-h-[92dvh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-3xl border border-b-0 border-[var(--card-border)] bg-[var(--card-solid)] px-4 pb-8 pt-3 shadow-2xl outline-none sm:px-6"
       >
+        <div className="mx-auto h-1.5 w-10 shrink-0 rounded-full bg-[var(--line-strong)]/50" aria-hidden="true" />
         <header className="space-y-2">
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="ranger-forced-title" className="text-xl font-semibold tracking-tight">
               {finished ? (stuck ? 'Rangement terminé' : 'Tout est rangé') : 'Rangement du jour'}
             </h2>
             {!finished && (
-              <span className="tabular font-mono text-sm text-[var(--ink)]" data-testid="ranger-progress" aria-label={`Élément ${position} sur ${total}`}>
+              <span className="tabular text-sm text-[var(--ink-muted)]" data-testid="ranger-progress" aria-label={`Élément ${position} sur ${total}`}>
                 {`${position} / ${total}`}
               </span>
             )}
           </div>
-          <div className="h-1 overflow-hidden bg-[var(--line)]" role="presentation">
-            <div className="h-full bg-[var(--action)] transition-[width] duration-200 ease-out motion-reduce:transition-none" style={{ width: `${((total - live.length) / total) * 100}%` }} />
+          <div className="h-1 overflow-hidden rounded-full bg-[var(--line)]" role="presentation">
+            <div className="h-full rounded-full bg-[var(--action)] transition-[width] duration-200 ease-out motion-reduce:transition-none" style={{ width: `${((total - live.length) / total) * 100}%` }} />
           </div>
         </header>
 
@@ -239,7 +243,7 @@ function Dialog({ initial, options, ready, today, onClose }) {
               </p>
             )}
             {error && (
-              <p role="alert" className="text-sm text-[var(--late)]">
+              <p role="alert" className="text-sm text-[var(--late-text)]">
                 {error}
               </p>
             )}
@@ -247,18 +251,17 @@ function Dialog({ initial, options, ready, today, onClose }) {
               <button type="button" className={primaryBtn} onClick={onClose} data-testid="ranger-close">
                 Ouvrir le cockpit
               </button>
-              <button type="button" className={btnClass} disabled={!history.length || busy > 0} onClick={undo}>
-                <KeyCap>Z</KeyCap>
+              <button type="button" className={btnClass} disabled={!history.length || busy > 0} onClick={undo} title="Annuler le dernier geste (Z)" aria-keyshortcuts="Z">
                 Annuler le dernier geste
               </button>
             </div>
           </section>
         ) : current ? (
           <section className="space-y-3">
-            <div className="space-y-2 rounded-lg border border-[var(--line)] bg-[var(--content-surface)] p-4">
+            <div className="space-y-2 rounded-2xl bg-[var(--card-inset)] p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <TypeBadge item={current} />
-                {current.dueReason && <span className="font-mono text-xs font-semibold text-[var(--late)]">{current.dueReason}</span>}
+                {current.dueReason && <span className="text-xs font-semibold text-[var(--late-text)]">{current.dueReason}</span>}
               </div>
               <p className="text-xl font-semibold break-words">{current.title}</p>
               {current.detail && <p className="text-sm break-words text-[var(--ink-muted)]">{current.detail}</p>}
@@ -270,23 +273,17 @@ function Dialog({ initial, options, ready, today, onClose }) {
             {picker ? (
               <ElsewherePicker options={options} today={today} futureDays={ready} numbered onPick={(t) => handle('place', t)} onCancel={() => setPicker(false)} />
             ) : (
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Gestes">
-                <GestureKey kind="place" letter="V" disabled={!g.validate} onClick={() => handle('place')}>
-                  Valider
-                </GestureKey>
-                <GestureKey kind="elsewhere" letter="A" disabled={!g.elsewhere} onClick={() => setPicker(true)}>
-                  Affecter ailleurs
-                </GestureKey>
-                <GestureKey kind="done" letter="C" onClick={() => handle('done')}>
-                  {g.doneLabel}
-                </GestureKey>
-                <GestureKey kind="drop" letter="S" disabled={!g.drop} title={g.drop ? undefined : 'Demande supabase/ranger.sql'} onClick={() => handle('drop')}>
-                  Supprimer
-                </GestureKey>
-                <GestureKey kind="later" letter="P" disabled={!g.later} title={g.later ? 'Revient dimanche' : 'Demande supabase/ranger.sql'} onClick={() => handle('later')}>
-                  Plus tard
-                </GestureKey>
-              </div>
+              <Gestures
+                g={g}
+                label="Gestes"
+                on={{
+                  place: () => handle('place'),
+                  elsewhere: () => setPicker(true),
+                  done: () => handle('done'),
+                  drop: () => handle('drop'),
+                  later: () => handle('later'),
+                }}
+              />
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -295,8 +292,14 @@ function Dialog({ initial, options, ready, today, onClose }) {
                   {`Appliquer à la série (${group.length})`}
                 </button>
               )}
-              <button type="button" className={keyClass({ level: 'tertiary' })} disabled={!history.length || busy > 0} onClick={undo}>
-                <KeyCap>Z</KeyCap>
+              <button
+                type="button"
+                className={keyClass({ level: 'tertiary' })}
+                disabled={!history.length || busy > 0}
+                onClick={undo}
+                title="Annuler le dernier geste (Z)"
+                aria-keyshortcuts="Z"
+              >
                 Annuler le dernier geste
               </button>
             </div>
@@ -310,7 +313,7 @@ function Dialog({ initial, options, ready, today, onClose }) {
               </p>
             )}
             {error && (
-              <p role="alert" className="text-sm text-[var(--late)]">
+              <p role="alert" className="text-sm text-[var(--late-text)]">
                 {error}
               </p>
             )}

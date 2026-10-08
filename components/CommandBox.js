@@ -60,7 +60,7 @@ export default function CommandBox({ data, compact = false }) {
       )}
 
       {result && !result.ok && (
-        <div className="mt-2 rounded-[5px] border-l-2 border-[var(--pending)] bg-[var(--content-bg)] px-3 py-2 text-sm" data-testid="command-unclear">
+        <div className="mt-2 rounded-lg border-l-2 border-[var(--pending)] bg-[var(--card-inset)] px-3 py-2 text-sm" data-testid="command-unclear">
           <p className="break-words">
             <span className="font-semibold">À préciser : </span>
             {result.message}
@@ -114,10 +114,11 @@ export default function CommandBox({ data, compact = false }) {
     </>
   );
 
-  // Compact (accueil « tout sur un écran ») : une ligne en tête de colonne, l'aperçu s'ouvre dessous.
+  // Compact (fenêtre Commande, components/CommandPalette.js) : une ligne, l'aperçu s'ouvre dessous. La fenêtre
+  // fournit déjà la carte : pas de cadre ici.
   if (compact) {
     return (
-      <section aria-label="Commande" className="max-h-[50vh] min-h-0 shrink-0 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--content-surface)] p-2 text-[var(--ink)]" data-testid="command-line">
+      <section aria-label="Commande" className="max-h-[60vh] min-h-0 shrink-0 overflow-y-auto p-1 text-[var(--ink)]" data-testid="command-line">
         {body}
       </section>
     );

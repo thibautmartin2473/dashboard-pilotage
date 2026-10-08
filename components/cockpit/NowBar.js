@@ -1,13 +1,16 @@
 'use client';
 
-// Bandeau « Maintenant » (cadre cuir, jetons --frame-*) : le bloc en cours avec son temps restant, ou à
-// défaut le prochain bloc et son heure, le bloc suivant, le nombre d'éléments à ranger et l'heure de
-// Paris. Le serveur donne l'instant du rendu ; le client recalcule chaque minute (nowState, lib/home.js).
-// Chiffres et heures en police mono tabulaire. Aucune couleur seule : chaque état a son mot.
+// Bandeau « Maintenant » (verre translucide, texte sombre) : une ligne avec le bloc en cours et son temps
+// restant (ou, à défaut, le prochain bloc et son délai), le bloc visible qui suit, le nombre d'éléments à
+// ranger et l'heure de Paris. Le serveur donne l'instant du rendu ; le client recalcule chaque minute
+// (nowState, lib/home.js). Aucune couleur seule : chaque état a son mot. Un bouton ouvre la Commande
+// (Cmd+K ou Ctrl+K, components/CommandPalette.js) pour l'ouvrir aussi au doigt.
 import { useEffect, useState } from 'react';
+import { OPEN_COMMAND_EVENT } from '../CommandPalette';
+import { keyClass } from '../ui';
 import { formatRemaining, nowState, timeParis } from '@/lib/home';
 
-const LABEL = 'font-mono text-xs font-semibold tracking-wide uppercase text-[var(--frame-muted)]';
+const LABEL = 'text-xs font-semibold tracking-wide uppercase text-[var(--glass-muted)]';
 
 // Minute courante : se recale sur le début de chaque minute (jamais en retard de plus d'une seconde).
 function useMinuteClock(initial) {
@@ -26,14 +29,12 @@ function useMinuteClock(initial) {
 
 function Block({ label, block, tail }) {
   return (
-    <div className="min-w-0">
-      <p className={LABEL}>{label}</p>
-      <p className="flex min-w-0 items-baseline gap-2 text-base">
-        <span className="min-w-0 truncate font-medium" title={block.title}>
-          {block.title}
-        </span>
-        {tail && <span className="tabular shrink-0 font-mono text-sm text-[var(--frame-muted)]">{tail}</span>}
-      </p>
+    <div className="flex min-w-0 items-baseline gap-2">
+      <span className={`${LABEL} shrink-0`}>{label}</span>
+      <span className="min-w-0 truncate text-[15px] font-semibold" title={block.title}>
+        {block.title}
+      </span>
+      {tail && <span className="tabular shrink-0 text-sm text-[var(--glass-muted)]">{tail}</span>}
     </div>
   );
 }
@@ -55,43 +56,57 @@ export default function NowBar({ events, categories, now: serverNow, rangerCount
     follow = second && <Block label="Ensuite" block={second} tail={second.time} />;
   } else {
     main = (
-      <div>
-        <p className={LABEL}>{state.kind === 'done' ? 'Journée finie' : 'Aujourd’hui'}</p>
-        <p className="text-base font-medium">{state.kind === 'done' ? 'Plus aucun bloc aujourd’hui' : 'Aucun bloc prévu'}</p>
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className={`${LABEL} shrink-0`}>{state.kind === 'done' ? 'Journée finie' : 'Aujourd’hui'}</span>
+        <span className="truncate text-[15px] font-semibold">{state.kind === 'done' ? 'Plus aucun bloc aujourd’hui' : 'Aucun bloc prévu'}</span>
       </div>
     );
   }
 
   return (
     <header
-      className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-[var(--frame-border)] bg-[var(--frame-bg)] px-4 py-2 text-[var(--frame-text)] xl:h-14 xl:flex-nowrap xl:py-0"
+      className="glass flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl px-4 py-2 xl:h-14 xl:flex-nowrap xl:py-0"
       aria-label="Maintenant"
       data-testid="now-bar"
     >
       <h2 className="sr-only">Maintenant</h2>
-      <div className="min-w-0 flex-1 basis-60 xl:max-w-[34rem]" data-testid="now-main">
+      <div className="min-w-0 flex-1 basis-60 xl:max-w-[36rem]" data-testid="now-main">
         {main}
       </div>
       {follow && (
-        <div className="min-w-0 flex-1 basis-52 xl:max-w-[30rem] xl:border-l xl:border-[var(--frame-border)] xl:pl-6" data-testid="now-next">
+        <div className="min-w-0 flex-1 basis-52 xl:max-w-[32rem] xl:border-l xl:border-[var(--glass-border)] xl:pl-6" data-testid="now-next">
           {follow}
         </div>
       )}
-      <div className="ml-auto flex shrink-0 items-center gap-6">
+      <div className="ml-auto flex shrink-0 items-center gap-5">
         <a
           href="#a-ranger"
-          className="block rounded-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-on-frame)]"
+          className="flex items-baseline gap-2 rounded-lg px-1 text-[var(--glass-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
           data-testid="now-ranger"
         >
-          <span className={`${LABEL} block`}>À ranger</span>
-          <span className="tabular font-mono text-base font-semibold">
+          <span className={LABEL}>À ranger</span>
+          <span className="tabular text-[15px] font-semibold">
             {rangerCount}
-            {lateCount > 0 && <span className="ml-2 text-sm font-normal text-[var(--frame-muted)]">{`dont ${lateCount} en retard`}</span>}
+            {lateCount > 0 && <span className="ml-2 text-sm font-normal text-[var(--glass-muted)]">{`dont ${lateCount} en retard`}</span>}
           </span>
         </a>
-        <div className="text-right" data-testid="now-clock">
-          <span className={`${LABEL} block`}>Paris</span>
-          <time dateTime={new Date(now).toISOString()} className="tabular font-mono text-base font-semibold">
+        <button
+          type="button"
+          className={keyClass()}
+          title="Commande (Ctrl+K ou Cmd+K)"
+          aria-keyshortcuts="Control+K Meta+K"
+          aria-haspopup="dialog"
+          onClick={() => window.dispatchEvent(new Event(OPEN_COMMAND_EVENT))}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="size-4">
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m16 16 4 4" />
+          </svg>
+          Commande
+        </button>
+        <div className="flex items-baseline gap-2" data-testid="now-clock">
+          <span className={LABEL}>Paris</span>
+          <time dateTime={new Date(now).toISOString()} className="tabular text-[15px] font-semibold">
             {timeParis(new Date(now).toISOString())}
           </time>
         </div>

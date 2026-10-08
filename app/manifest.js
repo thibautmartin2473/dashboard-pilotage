@@ -6,8 +6,8 @@ export default function manifest() {
     description: "Où en est chacun de mes projets, et par où je reprends.",
     start_url: '/',
     display: 'standalone',
-    background_color: '#4a372f',
-    theme_color: '#4a372f',
+    background_color: '#8e9cb4',
+    theme_color: '#3b6a9a',
     icons: [
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: '/logo/cadran-icone-192.png', sizes: '192x192', type: 'image/png' },

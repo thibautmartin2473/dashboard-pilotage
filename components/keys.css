@@ -1,27 +1,25 @@
-/* Boutons « touche de terminal » de Cadran (papiers-ui.md, direction 3).
-   Une touche = fond tinté, sans ombre portée, 32 px de haut (44 px au doigt), rayon 5 px, lettre de
-   raccourci encadrée à gauche du libellé, trait de 2 px en bas pour le rôle. Trois niveaux seulement :
-   primaire (fond --action), secondaire (touche tintée), tertiaire (texte, tinte au survol).
-   Quatre états visibles (repos, survol, appui avec léger enfoncement, désactivé) + anneau --focus.
+/* Boutons de Cadran, façon Apple (papiers-ui.md : règles 5, 6, 7, 12).
+   Arrondis, sans ombre ni trait. Trois niveaux seulement : primaire (seule couleur pleine, bleu acier
+   --action), secondaire (gris clair), tertiaire (texte en bleu acier, fond au survol).
+   32 px de haut à la souris, 44 px au doigt. Quatre états visibles (repos, survol, appui en 40 ms,
+   désactivé) + anneau de focus --focus. Le raccourci clavier s'indique au survol (attribut title).
    Les couleurs viennent toutes des jetons de app/globals.css, jamais d'une valeur en dur.
    Même ordre des couches que Tailwind : les classes utilitaires gardent la main (espacement, largeur). */
 @layer theme, base, components, utilities;
 
 @layer components {
   .key {
-    --key-role: var(--line-strong);
-    --key-fill: color-mix(in srgb, var(--ink) 5%, var(--content-surface));
-    --key-fill-hover: color-mix(in srgb, var(--ink) 11%, var(--content-surface));
-    --key-fill-press: color-mix(in srgb, var(--ink) 17%, var(--content-surface));
+    --key-fill: var(--btn-fill);
+    --key-fill-hover: var(--btn-fill-hover);
+    --key-fill-press: var(--btn-fill-press);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     min-height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--line-strong);
-    border-bottom: 2px solid var(--key-role);
-    border-radius: 5px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
     background: var(--key-fill);
     color: var(--ink);
     font-size: 14px;
@@ -32,90 +30,70 @@
     user-select: none;
     touch-action: manipulation;
     transition:
-      background-color 140ms ease-out,
-      border-color 140ms ease-out,
-      transform 120ms ease-out,
-      color 140ms ease-out;
+      background-color 100ms ease-out,
+      color 100ms ease-out,
+      transform 80ms ease-out;
   }
   .key:hover:not(:disabled) {
     background: var(--key-fill-hover);
   }
-  /* Appui : réponse en 40 ms, la touche descend d'un pixel. */
+  /* Appui : réponse en 40 ms, le bouton se tasse légèrement. */
   .key:active:not(:disabled) {
     background: var(--key-fill-press);
-    transform: translateY(1px);
+    transform: scale(0.98);
     transition-duration: 40ms;
   }
   .key:focus-visible {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
-  [data-frame] .key:focus-visible,
-  .key[data-frame]:focus-visible {
-    outline-color: var(--focus-on-frame);
-  }
   .key:disabled,
   .key[aria-disabled='true'] {
     cursor: not-allowed;
     color: var(--ink-muted);
-    background: transparent;
-    border-color: var(--line);
-    border-bottom-color: var(--line);
-    opacity: 0.7;
+    background: var(--btn-fill);
+    opacity: 0.55;
   }
 
-  /* Niveau 1, primaire : fond d'action (brun foncé), jamais une teinte d'état. */
+  /* Niveau 1, primaire : la seule couleur pleine, bleu acier (texte blanc 5,6:1). */
   .key--primary {
-    --key-role: color-mix(in srgb, black 40%, var(--action));
     --key-fill: var(--action);
-    --key-fill-hover: color-mix(in srgb, var(--content-surface) 14%, var(--action));
-    --key-fill-press: color-mix(in srgb, black 22%, var(--action));
-    border-color: var(--action);
-    border-bottom-color: var(--key-role);
+    --key-fill-hover: var(--action-hover);
+    --key-fill-press: var(--action-press);
     color: var(--action-text);
     font-weight: 600;
   }
   .key--primary:disabled,
   .key--primary[aria-disabled='true'] {
-    color: var(--ink-muted);
-    background: transparent;
-    border-color: var(--line);
-    border-bottom-color: var(--line);
+    color: var(--action-text);
+    background: var(--action);
+    opacity: 0.45;
   }
 
-  /* Niveau 3, tertiaire : pas de fond au repos, la touche apparaît au survol et le libellé se souligne. */
+  /* Niveau 3, tertiaire : pas de fond au repos, texte en bleu acier, fond gris au survol. */
   .key--tertiary {
     --key-fill: transparent;
-    border-color: transparent;
-    border-bottom-color: transparent;
+    color: var(--action);
   }
-  .key--tertiary:hover:not(:disabled) {
-    border-color: var(--line);
-    border-bottom-color: var(--line-strong);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  .key--tertiary:disabled,
+  .key--tertiary[aria-disabled='true'] {
+    background: transparent;
+    color: var(--ink-muted);
   }
 
-  /* Rôle de la touche = couleur du trait du bas (état doublé par le libellé, règle 9). */
+  /* Ton destructif : texte corail foncé (le corail pâle ne ferait que 3,2:1), jamais un fond plein. */
   .key--late {
-    --key-role: var(--late);
+    color: var(--late-text);
   }
-  .key--pending {
-    --key-role: var(--pending);
-  }
-  .key--done {
-    --key-role: var(--done);
-  }
-  .key--action {
-    --key-role: var(--action);
+  .key--late:hover:not(:disabled) {
+    background: var(--late-soft);
   }
 
-  /* Bouton à bascule : enfoncé = fond d'action tinté et trait d'action. */
+  /* Bouton à bascule : enfoncé = fond bleu acier tinté et texte bleu acier. */
   .key[aria-pressed='true'] {
-    --key-role: var(--action);
-    --key-fill: color-mix(in srgb, var(--action) 16%, var(--content-surface));
-    border-color: var(--action);
-    border-bottom-color: var(--action);
+    --key-fill: var(--action-soft);
+    --key-fill-hover: var(--action-soft);
+    color: var(--action);
     font-weight: 600;
   }
 
@@ -123,23 +101,6 @@
   .key--icon {
     min-width: 32px;
     padding: 0 8px;
-  }
-
-  /* Lettre de raccourci, encadrée, à gauche du libellé. */
-  .key-cap {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 4px;
-    border: 1px solid currentColor;
-    border-radius: 3px;
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1;
-    opacity: 0.85;
   }
 
   @media (pointer: coarse) {

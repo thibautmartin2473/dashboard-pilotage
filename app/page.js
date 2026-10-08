@@ -1,6 +1,6 @@
 import AgendaPanel from '@/components/AgendaPanel';
 import AutoRefresh from '@/components/AutoRefresh';
-import CommandBox from '@/components/CommandBox';
+import CommandPalette from '@/components/CommandPalette';
 import MailsPanel from '@/components/MailsPanel';
 import NowBar from '@/components/cockpit/NowBar';
 import RangerColumn from '@/components/cockpit/RangerColumn';
@@ -15,10 +15,12 @@ import { supabaseConfigured } from '@/lib/supabase';
 export const dynamic = 'force-dynamic';
 
 // Le Cockpit « tout sur un écran » : sur grand écran (>= 1280 px) la page tient dans la fenêtre, chaque
-// zone défile à l'intérieur. Bandeau « Maintenant » en haut, puis l'agenda sur 5 jours pleine hauteur à
-// gauche et, à droite (24 rem), la Zone Commande en une ligne, « À ranger » et les deux boîtes mail.
-// Cinq zones de premier niveau au plus : Maintenant, Agenda, À ranger, Mails + la Commande (un outil).
-// Les Apps sont dans le rail. Sur téléphone et tablette, les zones s'empilent et la page défile.
+// zone défile à l'intérieur. Bandeau « Maintenant » en verre en haut, puis l'agenda sur 5 jours pleine
+// hauteur à gauche et, à droite (24 rem), « À ranger » en haut et les mails en bas (une seule liste).
+// Quatre zones de premier niveau : Maintenant, Agenda, À ranger, Mails. La Zone Commande n'est plus à
+// l'écran : fenêtre ouverte par Cmd+K ou Ctrl+K (components/CommandPalette.js). Les Apps sont dans le rail.
+// Sur téléphone et tablette, les zones s'empilent et la page défile. #cadran-fond est le fond animé
+// (Constellation s'y branche), derrière tout, avec des cartes à 75 % qui le laissent voir.
 export default async function HomePage() {
   const [projects, { tasks, ideas, events, mails, settings, notifications, done, ranger }] = await Promise.all([
     getAllProjects(),
@@ -65,8 +67,9 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-full flex-col xl:h-dvh xl:overflow-hidden">
+      <div id="cadran-fond" aria-hidden="true" className="fixed inset-0 -z-10" />
       <AutoRefresh />
-      <div id="cockpit-content" className="flex min-h-0 flex-1 flex-col">
+      <div id="cockpit-content" className="flex min-h-0 flex-1 flex-col gap-3 p-3">
         <NowBar
           events={events.data ?? []}
           categories={categories}
@@ -77,15 +80,15 @@ export default async function HomePage() {
         <h1 className="sr-only">Accueil</h1>
 
         {(!supabaseConfigured || problems.length > 0) && (
-          <div className="shrink-0 space-y-1 px-3 pt-3" role="status">
+          <div className="shrink-0 space-y-1" role="status">
             {!supabaseConfigured && (
-              <p className="border-l-2 border-[var(--pending)] bg-[var(--content-surface)] px-3 py-2 text-sm text-[var(--ink)]">
+              <p className="rounded-xl border-l-[3px] border-[var(--pending)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--ink)]">
                 <span className="font-semibold">Mode démo : </span>Supabase n&apos;est pas configuré (variables{' '}
                 <code>NEXT_PUBLIC_SUPABASE_URL</code>/<code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>). Les projets affichés sont des exemples.
               </p>
             )}
             {problems.length > 0 && (
-              <p className="border-l-2 border-[var(--late)] bg-[var(--content-surface)] px-3 py-2 text-sm text-[var(--ink)]">
+              <p className="rounded-xl border-l-[3px] border-[var(--late)] bg-[var(--card-bg)] px-3 py-2 text-sm text-[var(--ink)]">
                 <span className="font-semibold">Indisponible : </span>
                 {problems.join(' · ')}
               </p>
@@ -93,11 +96,8 @@ export default async function HomePage() {
           </div>
         )}
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 bg-[var(--content-bg)] p-3 xl:grid-cols-[minmax(0,1fr)_24rem] xl:grid-rows-[auto_minmax(0,3fr)_minmax(0,2fr)]">
-          <div className="min-w-0 xl:col-start-2 xl:row-start-1">
-            <CommandBox compact data={{ events: events.data ?? [], tasks: activeTasks }} />
-          </div>
-          <div id="agenda" className="min-h-0 min-w-0 xl:col-start-1 xl:row-span-3 xl:row-start-1">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div id="agenda" className="min-h-0 min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
             <AgendaPanel
               week={week}
               state={events}
@@ -108,7 +108,7 @@ export default async function HomePage() {
               categories={categories}
             />
           </div>
-          <div className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-2">
+          <div className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-1">
             <RangerColumn
               items={list.items}
               todayTasks={list.todayTasks}
@@ -117,13 +117,14 @@ export default async function HomePage() {
               today={today}
             />
           </div>
-          <div id="mails" className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-3">
+          <div id="mails" className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-2">
             <MailsPanel state={mails} now={now.getTime()} />
           </div>
         </div>
       </div>
 
       {/* Hors de #cockpit-content : le reste de la page devient inerte pendant le rangement forcé. */}
+      <CommandPalette data={{ events: events.data ?? [], tasks: activeTasks }} />
       <RangerForced items={list.dueItems} options={list.options} ready={ranger.ready} today={today} />
     </div>
   );

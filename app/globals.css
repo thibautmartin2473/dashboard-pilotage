@@ -1,86 +1,80 @@
 @import "tailwindcss";
 
-/* Charte « Cadran » : cadre cuir, contenu crème (choix de Thibaut, 2026-10-08).
-   Un seul mode, ni clair ni sombre : le rail, le bandeau « Maintenant » et les en-têtes de zone sont
-   en brun cuir (niveau 2) ; l'agenda, « À ranger », les mails et les formulaires sont en texte sombre
-   sur fond crème (polarité positive : texte lu plus vite, Piepenbrock 2013, Dobres 2016).
+/* Charte « Cadran » : fond bleu gris, barres en verre, cartes blanches à 75 % (choix de Thibaut, 2026-10-08,
+   SPEC.md section 2). Un seul mode, ni clair ni sombre. Le fond de page (--page) laisse la place à un fond
+   animé (#cadran-fond, Constellation) : les cartes sont translucides pour le laisser voir.
 
    Les jetons ci-dessous sont le CONTRAT des composants : on les consomme en classes arbitraires
-   (bg-[var(--content-surface)]), jamais en hexadécimal.
+   (bg-[var(--card-bg)]), jamais en hexadécimal.
 
-   Contrastes calculés (WCAG 2.x, rapport de luminance). Texte >= 4,5:1, 7:1 visé pour 12-13 px,
-   contour de bouton et de champ >= 3:1.
-     Contenu, sur --content-bg (#F3EBDD) / --content-surface (#FBF5EA)
-       --ink            #2A1F1A   13,6 / 14,8
-       --ink-muted      #54443A    7,8 /  8,5   (6,1 sur --line)
-       --line-strong    #8A7563    3,7 /  4,0   (contour des boutons et des champs)
-       --action         #3B2A22   11,5 / 12,6   (texte --action-text #FBF1E0 dessus : 12,2)
-       --late           #7C2236    8,3 /  9,1   (7,4 sur --late-soft)
-       --pending        #5C4200    7,9 /  8,7   (7,4 sur --pending-soft)
-       --done           #3A4B16    8,1 /  8,8   (7,5 sur --done-soft)
-       --focus          #1F4580    8,0 /  8,7
-       --plage          #3F5A7D    6,0 /  6,5
-       --tache          #2A6761    5,5 /  6,0
-     Cadre, sur --frame-bg (#4A372F) / --frame-surface (#584238)
-       --frame-text     #FBF1E0   10,0 / 8,3
-       --frame-muted    #E8D9C3    8,1 / 6,7
-       --frame-line     #B49A88    4,2 / 3,5     (contour utile dans le cadre)
-       --late-on-frame  #F4A9BA    6,0 / 5,0
-       --pending-on-frame #F5CA66  7,2 / 6,0
-       --done-on-frame  #9ADEB0    7,2 / 6,0
-   Règles de la charte : trois états seulement (bordeaux = retard ou conflit, laiton = à traiter ou en
-   cours, olive = fait), toujours doublés d'un mot ou d'une icône ; l'action (brun foncé) ne reprend
-   aucune teinte d'état ; aucun motif, couture ni pointillé. */
+   Contrastes calculés (WCAG 2.x), pire cas = carte à 75 % sur --page nu, soit environ #E3E6EC.
+     Texte sur carte
+       --ink          #1B1F2A   13,9
+       --ink-muted    #596175    4,9   (le #6B7385 de la SPEC ne donne que 3,8:1 sur une carte translucide)
+       --action       #3B6A9A    4,5   (texte blanc dessus : 5,6)
+       --late-text    #A04228    5,1   (--late #C0664A sert aux filets et aux fonds, 3,2:1 en texte : interdit)
+       --done         #5B6373    4,6
+     Texte sur le verre (blanc 30 % sur --page, environ #B0BACB)
+       --glass-text   #1B1F2A    8,5
+       --glass-muted  #2F3646    6,2
+     Contour de bouton ou de champ : --line-strong #737D90   3,3
+     Anneau de focus : --focus #1E4E80   3,0 sur --page, 8,4 sur carte.
+   Règles : trois niveaux de boutons au plus, une seule couleur pleine (--action), corail = retard ou
+   conflit, gris barré = fait, jamais de violet ni de couleur d'état sans mot ou icône. */
 @custom-variant dark (&:where(*));
 
 :root {
-  /* Cadre cuir (rail, bandeau « Maintenant », en-têtes de zone). */
-  --frame-bg: #4a372f;
-  --frame-surface: #584238;
-  --frame-deep: #3b2b25;
-  --frame-hover: #67503f;
-  --frame-text: #fbf1e0;
-  --frame-muted: #e8d9c3;
-  --frame-border: #7a5f52;
-  --frame-line: #b49a88;
+  /* Fond de page. */
+  --page: #8e9cb4;
 
-  /* Contenu crème (agenda, À ranger, mails, formulaires). */
-  --content-bg: #f3ebdd;
-  --content-surface: #fbf5ea;
-  --ink: #2a1f1a;
-  --ink-muted: #54443a;
-  --line: #d6c8ae;
-  --line-strong: #8a7563;
+  /* Verre : rail, bandeau « Maintenant », fenêtres (texte sombre dessus). */
+  --glass-bg: rgba(255, 255, 255, 0.3);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-hover: rgba(255, 255, 255, 0.38);
+  --glass-active: rgba(255, 255, 255, 0.58);
+  --glass-filter: blur(20px) saturate(140%);
+  --glass-text: #1b1f2a;
+  --glass-muted: #2f3646;
 
-  /* Action : bouton principal, brun foncé. */
-  --action: #3b2a22;
-  --action-text: #fbf1e0;
+  /* Cartes : agenda, À ranger, mails, formulaires. */
+  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-border: rgba(255, 255, 255, 0.6);
+  --card-solid: #f5f7fa; /* surcouches (menus, infobulles) : jamais translucides */
+  --card-inset: rgba(27, 31, 42, 0.05); /* zone en creux dans une carte (suggestion, formulaire) */
+  --field-bg: rgba(255, 255, 255, 0.92); /* champs de saisie */
+  --ink: #1b1f2a;
+  --ink-muted: #596175;
+  --line: rgba(27, 31, 42, 0.12);
+  --line-strong: #737d90;
 
-  /* États (sur crème), chacun doublé d'un mot ou d'une icône. */
-  --late: #7c2236;
-  --late-soft: #f4dada;
-  --pending: #5c4200;
-  --pending-soft: #f2e3be;
-  --done: #3a4b16;
-  --done-soft: #e1e8c8;
+  /* Action : bouton principal, bleu acier. Boutons secondaires : gris clair. */
+  --action: #3b6a9a;
+  --action-hover: #345f8b;
+  --action-press: #2c5278;
+  --action-text: #ffffff;
+  --action-soft: rgba(59, 106, 154, 0.14);
+  --btn-fill: rgba(27, 31, 42, 0.07);
+  --btn-fill-hover: rgba(27, 31, 42, 0.12);
+  --btn-fill-press: rgba(27, 31, 42, 0.18);
 
-  /* États sur le cadre cuir (les teintes de ci-dessus y seraient trop sombres). */
-  --late-on-frame: #f4a9ba;
-  --pending-on-frame: #f5ca66;
-  --done-on-frame: #9adeb0;
+  /* États, chacun doublé d'un mot ou d'une icône. */
+  --late: #c0664a;
+  --late-text: #a04228;
+  --late-soft: rgba(192, 102, 74, 0.14);
+  --pending: #3b6a9a; /* à traiter ou en cours : bleu acier, pas de troisième couleur */
+  --pending-soft: rgba(59, 106, 154, 0.12);
+  --done: #5b6373; /* fait : gris, texte barré */
+  --done-soft: rgba(91, 99, 115, 0.12);
 
-  /* Laiton du logo (aiguille et tâches de l'anneau) : une teinte de marque, pas un état. */
-  --brand-laiton: #e0bb70;
+  /* Anneau de focus clavier. */
+  --focus: #1e4e80;
 
-  /* Anneau de focus clavier : bleu encre sur crème, crème sur cuir. */
-  --focus: #1f4580;
-  --focus-on-frame: #fbf1e0;
+  /* Teintes de repli des catégories d'agenda (les blocs sont refaits à part). */
+  --plage: #6e7b45;
+  --tache: #3b6a9a;
 
-  /* Couleurs par défaut des deux types de l'agenda, distinctes des trois états. */
-  --plage: #3f5a7d;
-  --tache: #2a6761;
-
-  --background: var(--content-bg);
+  --background: var(--page);
   --foreground: var(--ink);
   color-scheme: light;
 }
@@ -88,82 +82,81 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --font-display: var(--font-caslon), "Iowan Old Style", Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  /* Même famille que le texte, chiffres tabulaires : plus de police à chasse fixe pour les heures. */
+  --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 
-  /* La rampe zinc ci-dessous EST le contenu crème : les composants écrits pour l'ancien thème sombre
-     (« bg-zinc-900 text-zinc-100 ») passent en crème sans être touchés. La rampe est inversée :
-     zinc-950 = fond de page, zinc-900 = surface d'un panneau, zinc-800 = filet, zinc-700 = contour
-     de bouton ou de champ (3:1), zinc-500/400 = texte secondaire, zinc-100 = texte fort (et fond
-     des boutons pleins, dont le texte zinc-900/950 devient crème). */
-  --color-white: #4a3a30; /* seul usage restant : survol d'un bouton plein (texte crème dessus) */
-  --color-black: #2a1f1a;
-  --color-zinc-950: #f3ebdd;
-  --color-zinc-900: #fbf5ea;
-  --color-zinc-800: #d6c8ae;
-  --color-zinc-700: #8a7563;
-  --color-zinc-600: #7a6657;
-  --color-zinc-500: #675548;
-  --color-zinc-400: #54443a;
-  --color-zinc-300: #3f3128;
-  --color-zinc-200: #33261f;
-  --color-zinc-100: #2a1f1a;
-  --color-zinc-50: #fbf5ea;
+  /* La rampe zinc ci-dessous EST la charte : les composants écrits pour l'ancien thème sombre
+     (« bg-zinc-900 text-zinc-100 ») passent en carte claire sans être touchés. Rampe inversée :
+     zinc-950 = creux dans une carte, zinc-900 = carte, zinc-800 = filet, zinc-700 = contour de
+     bouton ou de champ (3:1), zinc-500/400 = texte secondaire, zinc-100 = texte fort. */
+  --color-white: #363c4c; /* seul usage restant : survol d'un bouton plein (texte clair dessus) */
+  --color-black: #1b1f2a;
+  --color-zinc-950: rgba(27, 31, 42, 0.05);
+  --color-zinc-900: rgba(255, 255, 255, 0.75);
+  --color-zinc-800: rgba(27, 31, 42, 0.14);
+  --color-zinc-700: #737d90;
+  --color-zinc-600: #68728a;
+  --color-zinc-500: #596175;
+  --color-zinc-400: #4a5163;
+  --color-zinc-300: #363c4c;
+  --color-zinc-200: #2a2f3d;
+  --color-zinc-100: #1b1f2a;
+  --color-zinc-50: #ffffff;
 
-  /* Accent des composants existants : l'action (brun foncé), jamais une teinte d'état. */
-  --color-accent: #3b2a22;
-  --color-accent-soft: #decba6;
+  /* Accent des composants existants : l'action (bleu acier). */
+  --color-accent: #3b6a9a;
+  --color-accent-soft: #dce6f1;
 
-  /* États sur crème pour les composants existants : -300/-400/-600/-700/-800 pour le texte (sombre),
+  /* États pour les composants existants : -300/-400/-600/-700/-800 pour le texte (sombre),
      -950/-50/-100 pour les fonds (tintes claires), -500 pour un trait ou une pastille, -800/-900
-     pour un contour ou un fond atténué. Rouge = bordeaux (retard), ambre = laiton (à traiter),
-     vert et émeraude = olive (fait), bleu et ciel = bleu encre (information). */
-  --color-red-50: #f4dada;
-  --color-red-100: #f4dada;
-  --color-red-300: #7c2236;
-  --color-red-400: #7c2236;
-  --color-red-500: #a8324d;
-  --color-red-600: #7c2236;
-  --color-red-800: #d9a5aa;
-  --color-red-950: #f4dada;
-  --color-amber-50: #f2e3be;
-  --color-amber-100: #f2e3be;
-  --color-amber-300: #5c4200;
-  --color-amber-400: #5c4200;
-  --color-amber-500: #b88a1e;
-  --color-amber-700: #5c4200;
-  --color-amber-800: #d8be80;
-  --color-amber-900: #b88a1e;
-  --color-amber-950: #f2e3be;
-  --color-green-400: #3a4b16;
-  --color-green-600: #3a4b16;
-  --color-green-300: #3a4b16;
-  --color-green-950: #e1e8c8;
-  --color-green-700: #3a4b16;
-  --color-green-800: #3a4b16;
-  --color-green-100: #e1e8c8;
-  --color-emerald-200: #3a4b16;
-  --color-emerald-300: #3a4b16;
-  --color-emerald-700: #3a4b16;
-  --color-emerald-900: #6b8e23;
-  --color-emerald-950: #e1e8c8;
-  --color-emerald-100: #e1e8c8;
-  --color-blue-100: #dce6f2;
-  --color-blue-300: #1f4580;
-  --color-blue-700: #1f4580;
-  --color-blue-800: #1f4580;
-  --color-blue-950: #dce6f2;
-  --color-sky-100: #dce6f2;
-  --color-sky-300: #1f4580;
-  --color-sky-700: #1f4580;
-  --color-sky-900: #5b7fb0;
+     pour un contour ou un fond atténué. Rouge = corail (retard), ambre = bleu acier (à traiter),
+     vert et émeraude = gris (fait), bleu et ciel = bleu acier (information). */
+  --color-red-50: #f6e3dc;
+  --color-red-100: #f6e3dc;
+  --color-red-300: #a04228;
+  --color-red-400: #a04228;
+  --color-red-500: #c0664a;
+  --color-red-600: #a04228;
+  --color-red-800: #e3b5a6;
+  --color-red-950: #f6e3dc;
+  --color-amber-50: #dce6f1;
+  --color-amber-100: #dce6f1;
+  --color-amber-300: #2f5880;
+  --color-amber-400: #2f5880;
+  --color-amber-500: #3b6a9a;
+  --color-amber-700: #2f5880;
+  --color-amber-800: #afc3d9;
+  --color-amber-900: #3b6a9a;
+  --color-amber-950: #dce6f1;
+  --color-green-400: #4a5163;
+  --color-green-600: #4a5163;
+  --color-green-300: #4a5163;
+  --color-green-950: #e3e6ec;
+  --color-green-700: #4a5163;
+  --color-green-800: #4a5163;
+  --color-green-100: #e3e6ec;
+  --color-emerald-200: #4a5163;
+  --color-emerald-300: #4a5163;
+  --color-emerald-700: #4a5163;
+  --color-emerald-900: #8c95a6;
+  --color-emerald-950: #e3e6ec;
+  --color-emerald-100: #e3e6ec;
+  --color-blue-100: #dce6f1;
+  --color-blue-300: #2f5880;
+  --color-blue-700: #2f5880;
+  --color-blue-800: #2f5880;
+  --color-blue-950: #dce6f1;
+  --color-sky-100: #dce6f1;
+  --color-sky-300: #2f5880;
+  --color-sky-700: #2f5880;
+  --color-sky-900: #5b86b3;
 }
 
 body {
-  background: var(--background);
+  background: var(--page);
   color: var(--foreground);
-  font-family: var(--font-plex-sans), system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   line-height: 1.5;
 }
 
@@ -173,9 +166,54 @@ body {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
-  [data-frame] :focus-visible,
-  [data-frame]:focus-visible {
-    outline-color: var(--focus-on-frame);
+}
+
+/* Verre translucide (rail, bandeau « Maintenant », fenêtres) : blanc léger, filet blanc, flou. Le texte
+   dessus est sombre (--glass-text) : le blanc sur ce verre serait illisible. */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    color: var(--glass-text);
+  }
+  .glass-strong {
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    color: var(--glass-text);
+  }
+}
+
+/* Apparitions courtes (150 à 220 ms, sans rebond) : fond qui se voile, fenêtre qui se pose, feuille qui monte
+   du bas. prefers-reduced-motion les réduit à rien (règle en fin de fichier). */
+@keyframes cadran-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cadran-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+@keyframes cadran-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+@layer utilities {
+  .anim-fade {
+    animation: cadran-fade 150ms ease-out;
+  }
+  .anim-pop {
+    animation: cadran-pop 160ms ease-out;
+  }
+  .anim-sheet {
+    animation: cadran-sheet 220ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 }
 
@@ -185,7 +223,10 @@ body {
 }
 code,
 kbd,
-samp,
+samp {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
 .font-mono {
   font-variant-numeric: tabular-nums;
 }

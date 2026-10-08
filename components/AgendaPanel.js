@@ -78,7 +78,7 @@ function EventForm({ initial, today, categories, onDone }) {
 
   const type = form.all_day ? 'date' : 'datetime-local';
   return (
-    <form onSubmit={submit} className="mt-3 shrink-0 space-y-2 rounded-lg border border-[var(--line)] bg-[var(--content-bg)] p-3">
+    <form onSubmit={submit} className="mt-3 shrink-0 space-y-2 rounded-lg border border-[var(--line)] bg-[var(--card-inset)] p-3">
       <Field
         value={form.title}
         onChange={(e) => set({ title: e.target.value })}
@@ -172,7 +172,7 @@ function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, 
   const linked = linkedOf(event.id, ideas, tasks);
 
   return (
-    <div className="mt-3 max-h-[45%] shrink-0 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--content-bg)] p-3 text-sm" data-testid="event-detail">
+    <div className="mt-3 max-h-[45%] shrink-0 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--card-inset)] p-3 text-sm" data-testid="event-detail">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="break-words font-medium">{event.title}</p>
@@ -452,7 +452,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   if (week) {
     const height = hours * hourPx;
     const columns = `${GUTTER_REM}rem repeat(${week.days.length}, ${dayPx ? `${dayPx}px` : `${DAY_MIN_REM}rem`})`;
-    const gutter = 'sticky left-0 z-20 bg-[var(--content-surface)]';
+    const gutter = 'sticky left-0 z-20 bg-[var(--card-solid)]';
     const cell = 'border-l border-[var(--line)]';
     const open = (e) => {
       if (justDragged.current) return;
@@ -477,10 +477,10 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
               key={d.day}
               className={`${cell} sticky top-0 z-20 snap-start border-b border-[var(--line-strong)] px-1 py-1 text-sm font-semibold capitalize ${
                 d.isToday
-                  ? 'bg-[var(--content-bg)] text-[var(--ink)] shadow-[inset_0_-2px_0_var(--action)]'
+                  ? 'bg-[var(--card-solid)] text-[var(--ink)] shadow-[inset_0_-2px_0_var(--action)]'
                   : d.isPast
-                    ? 'bg-[var(--content-surface)] font-medium text-[var(--ink-muted)]'
-                    : 'bg-[var(--content-surface)]'
+                    ? 'bg-[var(--card-solid)] font-medium text-[var(--ink-muted)]'
+                    : 'bg-[var(--card-solid)]'
               }`}
             >
               {d.short}
@@ -496,7 +496,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                   key={e.id}
                   type="button"
                   onClick={() => open(e)}
-                  className="block w-full truncate rounded-[3px] border border-[var(--line)] bg-[var(--content-bg)] px-1 text-left text-xs"
+                  className="block w-full truncate rounded-[3px] border border-[var(--line)] bg-[var(--card-inset)] px-1 text-left text-xs"
                 >
                   {e.title}
                 </button>
@@ -514,7 +514,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     <span
                       key={t.id}
                       title={`${t.title} (fait à ${timeParis(t.done_at)})`}
-                      className="block truncate rounded-[3px] border-l-2 border-[var(--done)] bg-[var(--content-bg)] px-1 text-xs"
+                      className="block truncate rounded-[3px] border-l-2 border-[var(--done)] bg-[var(--card-inset)] px-1 text-xs"
                     >
                       <Tick /> {t.title}
                     </span>
@@ -560,7 +560,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'move')}
                     title={`${b.title} (${timeParis(b.starts_at)})`}
                     className={`group absolute cursor-grab touch-none select-none overflow-hidden rounded-[3px] border px-1 text-left text-xs leading-[1.2] text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--focus)] ${
-                      b.conflict ? 'border-2 border-[var(--late)] bg-[var(--content-surface)]' : ''
+                      b.conflict ? 'border-2 border-[var(--late)] bg-[var(--card-solid)]' : ''
                     } ${selectedId === b.id ? 'ring-2 ring-[var(--ink)]' : ''}`}
                     style={{
                       top: `${b.top}%`, height: `${b.height}%`, left: `${(b.col / b.cols) * 100}%`, width: `${100 / b.cols}%`,
@@ -606,7 +606,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     {linked.ideas.length > 0 && (
                       <div
                         role="tooltip"
-                        className="invisible absolute left-0 top-full z-40 mt-1 w-56 max-w-[80vw] rounded-[5px] border border-[var(--frame-border)] bg-[var(--frame-bg)] p-2 text-left text-sm leading-snug text-[var(--frame-text)] opacity-0 shadow-md transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100 motion-reduce:transition-none"
+                        className="invisible absolute left-0 top-full z-40 mt-1 w-56 max-w-[80vw] rounded-[5px] border border-[var(--line)] bg-[var(--card-solid)] p-2 text-left text-sm leading-snug text-[var(--ink)] opacity-0 shadow-md transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100 motion-reduce:transition-none"
                       >
                         {linked.ideas.map((n) => (
                           <p key={n.id} className="break-words">

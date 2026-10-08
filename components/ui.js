@@ -1,7 +1,7 @@
 'use client';
 
 // Briques d'interface partagées : tout le site les utilise, un relooking se fait
-// ici et nulle part ailleurs. Fonctionnel seulement (pas de style soigné).
+// ici et nulle part ailleurs. Boutons façon Apple (components/keys.css), cartes blanches à 75 %.
 
 import { createContext, useContext, useOptimistic, useState, useTransition } from 'react';
 import { saveLayout } from '@/app/edit-actions';
@@ -11,33 +11,38 @@ import './keys.css';
 
 // Champs : contour --line-strong (3:1), 32 px de haut (44 px au doigt), anneau de focus --focus.
 const FIELD =
-  'min-h-8 rounded-[5px] border border-[var(--line-strong)] bg-[var(--content-surface)] px-2 py-1 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)] [@media(pointer:coarse)]:min-h-11';
+  'min-h-8 rounded-lg border border-[var(--line-strong)] bg-[var(--field-bg)] px-2.5 py-1 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)] [@media(pointer:coarse)]:min-h-11';
 
 export const fieldClass = FIELD;
 export const mutedClass = 'tabular font-mono text-xs text-[var(--ink-muted)]';
 
-// Classes d'une « touche de terminal » (components/keys.css) pour les boutons qui ne passent pas par
-// <Button> (liste de blocs, ligne cliquable...). level : primary | secondary | tertiary ;
-// tone : neutral | action | late | pending | done (couleur du trait du bas, doublée par le libellé).
+// Classes d'un bouton (components/keys.css) pour ceux qui ne passent pas par <Button> (liste de blocs,
+// ligne cliquable...). level : primary | secondary | tertiary (trois niveaux au plus) ;
+// tone : neutral | late (texte corail foncé pour Supprimer ; les autres tons n'ont plus de style).
 export function keyClass({ level = 'secondary', tone = 'neutral', icon = false } = {}) {
   return [
     'key',
     level === 'primary' && 'key--primary',
     level === 'tertiary' && 'key--tertiary',
-    tone !== 'neutral' && `key--${tone}`,
+    tone === 'late' && 'key--late',
     icon && 'key--icon',
   ]
     .filter(Boolean)
     .join(' ');
 }
 
-// Lettre de raccourci encadrée, à gauche du libellé.
-export function KeyCap({ children }) {
-  return (
-    <kbd className="key-cap" aria-hidden="true">
-      {children}
-    </kbd>
-  );
+// Lettre de raccourci encadrée : retirée de l'affichage (le raccourci s'indique au survol, voir
+// shortcutTitle). Gardée comme composant vide pour ne casser aucun import.
+export function KeyCap() {
+  return null;
+}
+
+// Infobulle d'un bouton à raccourci clavier : « Valider (V) ». Un titre déjà posé (raison d'un bouton
+// désactivé) passe avant.
+export function shortcutTitle(label, kbd, title) {
+  if (title) return title;
+  if (!kbd) return undefined;
+  return label ? `${label} (${kbd})` : `Raccourci : ${kbd}`;
 }
 
 // Lance une Server Action : `pending` pendant l'appel, `error` si elle renvoie
@@ -58,19 +63,24 @@ export function useAction() {
 
 export function ErrorLine({ error }) {
   return error ? (
-    <p role="alert" className="text-sm text-[var(--late)]">
+    <p role="alert" className="text-sm text-[var(--late-text)]">
       <span className="font-semibold">Erreur : </span>
       {error}
     </p>
   ) : null;
 }
 
-// Bouton « touche de terminal ». `level` : primary (un par zone) | secondary | tertiary ;
-// `tone` : couleur du trait du bas (late pour supprimer, pending, done) ; `kbd` : lettre de raccourci.
-export function Button({ level = 'secondary', tone = 'neutral', kbd, className = '', type = 'button', children, ...props }) {
+// Bouton façon Apple. `level` : primary (un par zone) | secondary | tertiary ;
+// `tone` : late pour Supprimer ; `kbd` : lettre de raccourci, indiquée au survol (title) et aux lecteurs d'écran.
+export function Button({ level = 'secondary', tone = 'neutral', kbd, className = '', type = 'button', title, children, ...props }) {
   return (
-    <button type={type} className={`${keyClass({ level, tone })} ${className}`} {...props}>
-      {kbd && <KeyCap>{kbd}</KeyCap>}
+    <button
+      type={type}
+      className={`${keyClass({ level, tone })} ${className}`}
+      title={shortcutTitle(typeof children === 'string' ? children : '', kbd, title)}
+      aria-keyshortcuts={kbd}
+      {...props}
+    >
       {children}
     </button>
   );
@@ -91,7 +101,7 @@ export function IconButton({ label, children, level = 'secondary', tone = 'neutr
   );
 }
 
-// Bouton de filtre : état actif distinct (fond d'action tinté, trait d'action) et aria-pressed.
+// Bouton de filtre : état actif distinct (fond bleu acier tinté) et aria-pressed.
 export function ToggleButton({ pressed, className = '', ...props }) {
   return <button type="button" aria-pressed={pressed} className={`${keyClass()} ${className}`} {...props} />;
 }
@@ -177,8 +187,8 @@ export function HomeSlot({ id, layout, children }) {
   );
 }
 
-// Cadre de tous les panneaux : en-tête de zone en cuir (--frame-*), corps crème (--content-*), séparé
-// par un filet. `state` = résultat { error, message } d'une lecture en échec : on l'affiche à la place du
+// Cadre de tous les panneaux : une carte blanche à 75 % (laisse voir le fond), titre en tête, corps
+// séparé par un filet. `state` = résultat { error, message } d'une lecture en échec : on l'affiche à la place du
 // contenu, jamais une liste vide. Dans une <HomeSlot>, l'en-tête porte les boutons Étendre/Réduire et
 // Replier/Déplier. `fill` : le panneau remplit la hauteur de sa case et son corps défile à l'intérieur
 // (page « tout sur un écran ») ; `bodyClassName` remplace le corps par défaut (marges, défilement).
@@ -190,11 +200,11 @@ export function Panel({ title, count, state, file, className = '', bodyClassName
   const body =
     bodyClassName ?? (fill ? 'min-h-0 flex-1 overflow-y-auto p-3' : `p-4 ${size === 'compact' ? 'max-h-80 overflow-y-auto' : ''}`);
   return (
-    <section className={`flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--content-surface)] text-[var(--ink)] ${fill ? 'min-h-0' : ''} ${className}`}>
-      <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--frame-border)] bg-[var(--frame-bg)] px-4 py-2 text-sm font-semibold text-[var(--frame-text)]">
+    <section className={`flex flex-col overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--ink)] ${fill ? 'min-h-0' : ''} ${className}`}>
+      <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)]">
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {count != null && !state?.error && (
-          <span className="tabular rounded-full border border-[var(--frame-border)] bg-[var(--frame-surface)] px-2 py-0.5 font-mono text-xs font-normal text-[var(--frame-text)]">
+          <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink-muted)]">
             {count}
           </span>
         )}
@@ -223,12 +233,12 @@ export function Panel({ title, count, state, file, className = '', bodyClassName
       {size !== 'collapsed' && (
         <div className={body}>
           {state?.error === 'missing' ? (
-            <p className="rounded-[5px] border border-[var(--pending)] px-3 py-2 text-sm text-[var(--ink)]">
+            <p className="rounded-lg border border-[var(--pending)] px-3 py-2 text-sm text-[var(--ink)]">
               <span className="font-semibold">Table manquante : </span>exécuter <code>supabase/{file}</code>
             </p>
           ) : state?.error ? (
-            <p className="rounded-[5px] border border-[var(--late)] px-3 py-2 text-sm text-[var(--ink)]">
-              <span className="font-semibold text-[var(--late)]">Erreur : </span>
+            <p className="rounded-lg border border-[var(--late)] px-3 py-2 text-sm text-[var(--ink)]">
+              <span className="font-semibold text-[var(--late-text)]">Erreur : </span>
               {state.message}
             </p>
           ) : (

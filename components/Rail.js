@@ -40,7 +40,7 @@ async function loadDay(now) {
   return { plages, taches };
 }
 
-// Rail latéral : projets, apps et journée viennent de la base (lecture seule), le reste est dans le composant client.
+// Rail latéral : apps, projets (pour les carrés d'apps) et journée viennent de la base (lecture seule), le reste est dans le composant client.
 export default async function Rail() {
   // Trois lectures indépendantes : l'échec de l'une (table absente, clé manquante) ne vide pas les autres.
   const [projects, apps, day] = await Promise.all([

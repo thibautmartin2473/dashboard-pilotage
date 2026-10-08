@@ -1,42 +1,71 @@
 'use client';
 
-// Briques communes à la colonne « À ranger » et à l'écran de rangement forcé : boutons, ligne de
+// Briques communes à la colonne « À ranger » et à la feuille de rangement forcé : boutons de geste, ligne de
 // métadonnées, encadré de suggestion, sélecteur « Affecter ailleurs ». Aucune logique de données ici.
 import { useState } from 'react';
-import { KeyCap, fieldClass, keyClass } from '../ui';
+import { fieldClass, keyClass, shortcutTitle } from '../ui';
 import { frDay } from '@/lib/ranger';
 
-// Les cinq gestes de « À ranger » : toujours visibles, toujours dans le même ordre, lettre du raccourci
-// à gauche (V, A, C, S, P). Valider est le seul primaire ; le trait du bas porte le rôle de chaque geste.
+// Les cinq gestes de « À ranger » : toujours visibles sur l'élément sélectionné, toujours dans le même ordre.
+// Valider est le seul primaire ; Supprimer a le texte corail foncé. Le raccourci (V, A, C, S, P) s'indique au
+// survol (title) et aux lecteurs d'écran (aria-keyshortcuts), plus de lettre encadrée.
 export const btnClass = keyClass();
 export const primaryBtn = keyClass({ level: 'primary' });
-export const GESTURE_TONE = { place: 'action', elsewhere: 'neutral', done: 'done', drop: 'late', later: 'pending' };
+export const GESTURE_TONE = { place: 'neutral', elsewhere: 'neutral', done: 'neutral', drop: 'late', later: 'neutral' };
 
-// Un geste = une touche (lettre + libellé). `kind` : place | elsewhere | done | drop | later.
-export function GestureKey({ kind, letter, children, className = '', ...props }) {
+// Libellé affiché d'un geste « Cocher » : « Fait » (la logique garde son nom, lib/ranger.js).
+export const doneText = (label) => (label === 'Cocher' ? 'Fait' : label);
+
+// Un geste = un bouton. `kind` : place | elsewhere | done | drop | later.
+export function GestureKey({ kind, letter, children, className = '', title, ...props }) {
   return (
     <button
       type="button"
       className={`${keyClass({ level: kind === 'place' ? 'primary' : 'secondary', tone: GESTURE_TONE[kind] })} ${className}`}
       aria-keyshortcuts={letter}
+      title={shortcutTitle(typeof children === 'string' ? children : '', letter, title)}
       {...props}
     >
-      <KeyCap>{letter}</KeyCap>
       {children}
     </button>
   );
 }
 
-// Type d'élément : un mot, jamais la seule couleur. Les propositions des mails sont « à traiter » (laiton).
+// Les cinq gestes d'un élément, dans l'ordre fixe V A C S P. `g` = gesturesFor(item), `on` = { place, elsewhere,
+// done, drop, later }. Partagé par la colonne et la feuille de rangement forcé.
+export function Gestures({ g, on, label }) {
+  const sql = 'Demande supabase/ranger.sql';
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
+      <GestureKey kind="place" letter="V" disabled={!g.validate} onClick={on.place}>
+        Valider
+      </GestureKey>
+      <GestureKey kind="elsewhere" letter="A" disabled={!g.elsewhere} onClick={on.elsewhere}>
+        Affecter ailleurs
+      </GestureKey>
+      <GestureKey kind="done" letter="C" onClick={on.done}>
+        {doneText(g.doneLabel)}
+      </GestureKey>
+      <GestureKey kind="drop" letter="S" disabled={!g.drop} title={g.drop ? undefined : sql} onClick={on.drop}>
+        Supprimer
+      </GestureKey>
+      <GestureKey kind="later" letter="P" disabled={!g.later} title={g.later ? 'Revient dimanche' : sql} onClick={on.later}>
+        Plus tard
+      </GestureKey>
+    </div>
+  );
+}
+
+// Type d'élément : un mot, jamais la seule couleur. Les propositions des mails sont « à traiter » (bleu acier tinté).
 const TYPE_STYLE = {
-  task: 'border-[var(--line-strong)] text-[var(--ink)]',
-  idea: 'border-[var(--line-strong)] text-[var(--ink)]',
-  notification: 'border-[var(--pending)] text-[var(--ink)]',
+  task: 'bg-[var(--btn-fill)] text-[var(--ink)]',
+  idea: 'bg-[var(--btn-fill)] text-[var(--ink)]',
+  notification: 'bg-[var(--action-soft)] text-[var(--action)]',
 };
 
 export function TypeBadge({ item }) {
   return (
-    <span className={`rounded-[3px] border px-1.5 py-0.5 font-mono text-xs font-semibold tracking-wide uppercase ${TYPE_STYLE[item.kind]}`}>
+    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${TYPE_STYLE[item.kind]}`}>
       {item.typeLabel}
       {item.notifLabel ? ` : ${item.notifLabel.toLowerCase()}` : ''}
     </span>
@@ -49,7 +78,7 @@ export function ItemMeta({ item }) {
   bits.push(<span key="age">{`créé ${item.age <= 1 ? item.ageLabel : `il y a ${item.age} j`}`}</span>);
   if (item.late > 0) {
     bits.push(
-      <span key="due" className="font-semibold text-[var(--late)]">
+      <span key="due" className="font-semibold text-[var(--late-text)]">
         {`en retard de ${item.late} j (échéance ${frDay(item.due)})`}
       </span>
     );
@@ -65,7 +94,7 @@ export function ItemMeta({ item }) {
       </a>
     );
   return (
-    <p className="flex flex-wrap gap-x-2.5 gap-y-0.5 font-mono text-xs text-[var(--ink-muted)]" data-testid="ranger-meta">
+    <p className="tabular flex flex-wrap gap-x-2.5 gap-y-0.5 text-xs text-[var(--ink-muted)]" data-testid="ranger-meta">
       {bits}
     </p>
   );
@@ -75,10 +104,10 @@ export function SuggestionBox({ item, large = false }) {
   const s = item.suggestion;
   return (
     <div
-      className={`rounded-[5px] border-l-2 bg-[var(--content-bg)] ${large ? 'px-4 py-3' : 'px-3 py-2'} ${s.target ? 'border-[var(--action)]' : 'border-[var(--line-strong)]'}`}
+      className={`rounded-lg border-l-[3px] bg-[var(--card-inset)] ${large ? 'px-4 py-3' : 'px-3 py-2'} ${s.target ? 'border-[var(--action)]' : 'border-[var(--line-strong)]'}`}
       data-testid="ranger-suggestion"
     >
-      <div className="font-mono text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">{s.target ? 'Suggestion' : 'Pas de suggestion'}</div>
+      <div className="text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">{s.target ? 'Suggestion' : 'Pas de suggestion'}</div>
       <p className={`mt-1 break-words ${large ? 'text-base' : 'text-sm'} ${s.target ? 'text-[var(--ink)]' : 'text-[var(--ink-muted)]'}`}>{s.reason}</p>
     </div>
   );
@@ -89,16 +118,21 @@ export function SuggestionBox({ item, large = false }) {
 export function ElsewherePicker({ options, today, futureDays = true, numbered = false, onPick, onCancel }) {
   const [day, setDay] = useState('');
   return (
-    <div className="space-y-2 rounded-[5px] border border-[var(--line-strong)] bg-[var(--content-bg)] p-3" role="group" aria-label="Affecter ailleurs" data-testid="ranger-elsewhere">
-      <p className="font-mono text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">Affecter à</p>
+    <div className="space-y-2 rounded-xl bg-[var(--card-inset)] p-3" role="group" aria-label="Affecter ailleurs" data-testid="ranger-elsewhere">
+      <p className="text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">Affecter à</p>
       {options.length ? (
         <ul className="space-y-2">
           {options.map((o, i) => (
             <li key={o.eventId}>
-              <button type="button" onClick={() => onPick({ type: 'block', eventId: o.eventId })} className={`${btnClass} w-full justify-start whitespace-normal text-left`}>
-                {numbered && <KeyCap>{(i + 1) % 10}</KeyCap>}
+              <button
+                type="button"
+                onClick={() => onPick({ type: 'block', eventId: o.eventId })}
+                className={`${btnClass} w-full justify-start whitespace-normal text-left`}
+                title={numbered ? `${o.label} (${(i + 1) % 10})` : undefined}
+              >
+                {numbered && <span className="tabular w-4 shrink-0 text-xs text-[var(--ink-muted)]">{(i + 1) % 10}</span>}
                 <span className="min-w-0 flex-1 break-words">{o.label}</span>
-                {o.tasks > 0 && <span className="shrink-0 font-mono text-xs text-[var(--ink-muted)]">{`${o.tasks} tâche${o.tasks > 1 ? 's' : ''}`}</span>}
+                {o.tasks > 0 && <span className="tabular shrink-0 text-xs text-[var(--ink-muted)]">{`${o.tasks} tâche${o.tasks > 1 ? 's' : ''}`}</span>}
               </button>
             </li>
           ))}
