@@ -11,48 +11,57 @@ import { formatMailDate, latestMails } from '@/lib/home';
 // dans Gmail ; la colonne EDHEC n'affiche donc ni gras ni compteur de non lus.
 // Empilées sur téléphone. Lecture seule : on traite les mails dans Gmail (instantané `mail_items`).
 const MAILBOXES = [
-  { source: 'gmail', address: 'thibautmartin04@gmail.com' },
-  { source: 'edhec', address: 'thibaut.martin95429@edhec.com', readElsewhere: true },
+  { source: 'gmail', label: 'Gmail', address: 'thibautmartin04@gmail.com' },
+  { source: 'edhec', label: 'EDHEC', address: 'thibaut.martin95429@edhec.com', readElsewhere: true },
 ];
 
-function Mailbox({ address, mails, readElsewhere = false }) {
+function Mailbox({ label, address, mails, readElsewhere = false }) {
   const unread = readElsewhere ? 0 : mails.filter((m) => m.unread !== false).length;
   return (
-    <section aria-label={address} className="min-w-0" data-testid={`mailbox-${address}`}>
-      <h3 className="mb-1 flex flex-wrap items-baseline gap-x-2 border-b border-zinc-800 pb-1.5 text-sm font-semibold text-zinc-100">
-        <span className="min-w-0 break-all">{address}</span>
-        {readElsewhere ? (
-          <span className="font-mono text-[11px] font-normal text-zinc-400">lus dans Outlook</span>
-        ) : (
-          <span className="tabular rounded-full border border-zinc-700 bg-zinc-950 px-2 py-0.5 font-mono text-[11px] font-normal text-zinc-400" data-testid="unread-count">
-            {unread} non lu{unread > 1 ? 's' : ''}
-          </span>
-        )}
+    <section aria-label={address} className="flex min-h-0 min-w-0 flex-col" data-testid={`mailbox-${address}`}>
+      <h3 className="shrink-0 border-b border-[var(--line-strong)] pb-1.5">
+        <span className="flex items-baseline justify-between gap-2 text-sm font-semibold">
+          <span>{label}</span>
+          {readElsewhere ? (
+            <span className="font-mono text-xs font-normal text-[var(--ink-muted)]">lus dans Outlook</span>
+          ) : (
+            <span className="tabular font-mono text-xs font-normal text-[var(--ink-muted)]" data-testid="unread-count">
+              {unread} non lu{unread > 1 ? 's' : ''}
+            </span>
+          )}
+        </span>
+        <span className="block truncate text-xs text-[var(--ink-muted)]" title={address}>
+          {address}
+        </span>
       </h3>
       {mails.length ? (
-        <ul className="divide-y divide-zinc-800" data-testid="mail-list">
+        <ul className="min-h-0 flex-1 divide-y divide-[var(--line)] overflow-y-auto max-xl:max-h-80" data-testid="mail-list">
           {mails.map((m) => {
             const isUnread = !readElsewhere && m.unread !== false;
             return (
-              <li key={m.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5 text-sm">
-                <span className={`min-w-0 basis-36 truncate ${isUnread ? 'font-bold text-zinc-100' : 'font-medium text-zinc-400'}`}>
-                  {m.sender || 'Expéditeur inconnu'}
-                </span>
-                <span className={`min-w-0 flex-1 basis-48 break-words ${isUnread ? 'font-bold text-zinc-100' : 'text-zinc-400'}`}>
-                  {m.subject || '(sans objet)'}
-                </span>
-                <span className={`tabular-nums ${mutedClass}`}>{formatMailDate(m.received_at)}</span>
-                {m.link && (
-                  <a href={m.link} target="_blank" rel="noopener noreferrer" className="text-xs underline">
-                    Gmail
-                  </a>
-                )}
+              <li key={m.id} className="py-2 text-sm">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={`min-w-0 truncate ${isUnread ? 'font-bold' : 'font-medium text-[var(--ink-muted)]'}`}>
+                    {m.sender || 'Expéditeur inconnu'}
+                  </span>
+                  <span className={`shrink-0 ${mutedClass}`}>{formatMailDate(m.received_at)}</span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className={`line-clamp-2 min-w-0 break-words ${isUnread ? 'font-bold' : 'text-[var(--ink-muted)]'}`}>
+                    {m.subject || '(sans objet)'}
+                  </span>
+                  {m.link && (
+                    <a href={m.link} target="_blank" rel="noopener noreferrer" className="-my-1 inline-flex min-h-6 shrink-0 items-center py-1 text-xs underline" aria-label={`Ouvrir dans Gmail : ${m.subject || 'sans objet'}`}>
+                      Gmail
+                    </a>
+                  )}
+                </div>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="py-2 text-sm text-zinc-400">Aucun mail dans cette boîte.</p>
+        <p className="py-2 text-sm text-[var(--ink-muted)]">Aucun mail dans cette boîte.</p>
       )}
     </section>
   );
@@ -61,14 +70,13 @@ function Mailbox({ address, mails, readElsewhere = false }) {
 export default function MailsPanel({ state, now }) {
   const rows = state.data ?? [];
   return (
-    <Panel title="Mails" state={state} file="agenda.sql">
-      <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
-        {MAILBOXES.map(({ source, address, readElsewhere }) => (
-          <Mailbox key={source} address={address} readElsewhere={readElsewhere} mails={latestMails(rows, source)} />
+    <Panel title="Mails" state={state} file="agenda.sql" className="xl:h-full" bodyClassName="flex min-h-0 flex-1 flex-col gap-2 p-3">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+        {MAILBOXES.map(({ source, label, address, readElsewhere }) => (
+          <Mailbox key={source} label={label} address={address} readElsewhere={readElsewhere} mails={latestMails(rows, source)} />
         ))}
       </div>
-      <p className={`mt-2 ${mutedClass}`}>Lecture seule : les mails se traitent dans Gmail.</p>
-      {!state.error && <SyncFooter rows={rows} href="https://mail.google.com/" label="Ouvrir Gmail" now={now} />}
+      {!state.error && <SyncFooter rows={rows} href="https://mail.google.com/" label="Ouvrir Gmail" now={now} className="mt-0" note=" · lecture seule" />}
     </Panel>
   );
 }

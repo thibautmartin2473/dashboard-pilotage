@@ -36,5 +36,5 @@ export const config = {
   // Auth — doivent rester exclus, sinon son fetch() reçoit un 401 (bug
   // constaté le 2026-09-17). « Tour de Contrôle » figurait ici jusqu'au
   // 2026-09-21 : il a été supprimé, le site est le seul tableau de bord.
-  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico|privacy.html|terms.html).*)'],
+  matcher: ['/((?!api/cron|api/hooks|api/public|api/brain-notes|_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|logo/|manifest.webmanifest|privacy.html|terms.html).*)'],
 };

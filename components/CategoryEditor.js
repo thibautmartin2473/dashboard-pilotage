@@ -10,7 +10,7 @@ const DEFAULT_KEYS = ['11', '9', '6'];
 // Formulaire d'une catégorie (nom, couleur, type) : création (`category` absente) ou édition.
 function CategoryForm({ category, onDone }) {
   const { pending, error, run } = useAction();
-  const [form, setForm] = useState(category ?? { name: '', color: '#3b82f6', kind: 'plage' });
+  const [form, setForm] = useState(category ?? { name: '', color: '#3f5a7d', kind: 'plage' });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const submit = (e) => {
     e.preventDefault();

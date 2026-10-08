@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import Panel from './Panel';
-import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, mutedClass, useAction } from './ui';
+import { buildAppTiles, initials, tileStyle } from '@/lib/app-logos';
+import { Button, ConfirmDelete, ErrorLine, Field, Select, mutedClass, useAction } from './ui';
 import { addApp, addProject, deleteApp, moveApp, removeProject, renameProject, updateApp } from '@/app/edit-actions';
 
 const ProjectOptions = ({ projects }) => (
@@ -64,15 +65,15 @@ function AppRow({ app, projects, first, last }) {
           </div>
           <p className={`mt-0.5 truncate ${mutedClass}`}>{app.url}{app.project_slug ? ` · ${app.project_slug}` : ''}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1">
-            <IconButton label={`Monter : ${app.name}`} disabled={pending || first} onClick={() => run(() => moveApp(app.id, 'up'))}>
-              ↑
-            </IconButton>
-            <IconButton label={`Descendre : ${app.name}`} disabled={pending || last} onClick={() => run(() => moveApp(app.id, 'down'))}>
-              ↓
-            </IconButton>
-            <IconButton label={`Modifier : ${app.name}`} disabled={pending} onClick={() => setEditing(true)}>
-              ✎
-            </IconButton>
+            <Button level="tertiary" aria-label={`Monter : ${app.name}`} disabled={pending || first} onClick={() => run(() => moveApp(app.id, 'up'))}>
+              Monter
+            </Button>
+            <Button level="tertiary" aria-label={`Descendre : ${app.name}`} disabled={pending || last} onClick={() => run(() => moveApp(app.id, 'down'))}>
+              Descendre
+            </Button>
+            <Button level="tertiary" aria-label={`Modifier : ${app.name}`} disabled={pending} onClick={() => setEditing(true)}>
+              Modifier
+            </Button>
             <ConfirmDelete pending={pending} onConfirm={() => run(() => deleteApp(app.id))} label={`Supprimer : ${app.name}`} />
           </div>
           <ErrorLine error={error} />
@@ -121,12 +122,17 @@ function ProjectRow({ project }) {
             {project.name}
           </Link>
           <span className={mutedClass}>{project.slug}</span>
-          <IconButton label={`Renommer : ${project.name}`} disabled={pending} onClick={() => {
+          <Button
+            level="tertiary"
+            aria-label={`Renommer : ${project.name}`}
+            disabled={pending}
+            onClick={() => {
               setName(project.name);
               setRenaming(true);
-            }}>
-            ✎
-          </IconButton>
+            }}
+          >
+            Renommer
+          </Button>
           <ConfirmDelete
             pending={pending}
             question="Supprimer avec ses jalons, sessions et dépôts ?"
@@ -166,34 +172,18 @@ function AddProject() {
   );
 }
 
-// Initiales (1-2 lettres) pour la pastille d'un carré sans image.
-function initials(name) {
-  const words = String(name ?? '').trim().split(/\s+/).filter(Boolean);
-  return ((words[0]?.[0] ?? '') + (words[1]?.[0] ?? '')).toUpperCase() || '?';
-}
-
-const TILE_COLORS = [
-  'bg-sky-900 text-sky-200', 'bg-emerald-900 text-emerald-200', 'bg-amber-900 text-amber-200',
-  'bg-rose-900 text-rose-200', 'bg-violet-900 text-violet-200', 'bg-cyan-900 text-cyan-200',
-];
-
-function colorFor(key) {
-  let h = 0;
-  for (const c of String(key)) h = (h * 31 + c.charCodeAt(0)) % TILE_COLORS.length;
-  return TILE_COLORS[h];
-}
-
-// Logos des apps (public/logos/, copiés depuis leurs dépôts), par slug de projet ; sinon les initiales.
-const APP_LOGOS = { spircle: '/logos/spircle.svg', 'edhec-ai': '/logos/edhec-ai.png' };
-
 const STATUS_DOT = { blocked: 'bg-red-500', in_progress: 'bg-amber-500' };
+const STATUS_WORD = { blocked: 'Bloqué', in_progress: 'En cours' };
 
-// Un carré cliquable façon écran d'accueil : pastille colorée + nom, statut en pastille si notable.
+// Un carré cliquable façon écran d'accueil : pastille + nom, statut en pastille doublée d'un mot si notable.
 function Square({ href, external, name, status, logo }) {
   const dot = STATUS_DOT[status];
   const content = (
     <>
-      <span className={`relative flex size-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${logo ? '' : colorFor(name)}`}>
+      <span
+        className="relative flex size-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold"
+        style={logo ? undefined : tileStyle(name)}
+      >
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logo} alt="" width={40} height={40} className="size-10 rounded-2xl object-cover" />
@@ -202,16 +192,18 @@ function Square({ href, external, name, status, logo }) {
         )}
         {dot && <span className={`absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-zinc-900 ${dot}`} />}
       </span>
-      <span className="line-clamp-2 w-full break-words text-center text-[11px] leading-tight text-zinc-200">{name}</span>
+      <span className="line-clamp-2 w-full break-words text-center text-[12px] leading-tight text-zinc-200">{name}</span>
+      {dot && <span className="sr-only">{STATUS_WORD[status]}</span>}
     </>
   );
   const className = 'flex flex-col items-center gap-1.5 rounded-xl border border-zinc-800 p-2 text-center hover:border-[var(--color-accent)] hover:bg-zinc-800/60';
+  const title = dot ? `${name} (${STATUS_WORD[status]})` : name;
   return external ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+    <a href={href} target="_blank" rel="noopener noreferrer" title={title} className={className}>
       {content}
     </a>
   ) : (
-    <Link href={href} className={className}>
+    <Link href={href} title={title} className={className}>
       {content}
     </Link>
   );
@@ -219,24 +211,12 @@ function Square({ href, external, name, status, logo }) {
 
 // Mes apps : une grille de carrés (apps et projets fusionnés, un projet qui a une app liée
 // (app_links.project_slug) n'a qu'un seul carré, qui ouvre l'app). Bouton « Modifier » pour
-// retrouver l'édition complète (tuiles détaillées, ✎ ↑ ↓ ✕, formulaires d'ajout).
+// retrouver l'édition complète (tuiles détaillées, modifier, monter, descendre, supprimer, formulaires d'ajout).
 export default function AppsPanel({ apps, state, projects }) {
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
   const list = apps ?? [];
-  const bySlug = new Map(projects.map((p) => [p.slug, p]));
-
-  const used = new Set();
-  const tiles = list.map((a) => {
-    const project = bySlug.get(a.project_slug);
-    if (project) used.add(project.slug);
-    const external = /^https?:\/\//i.test(a.url);
-    return { key: `app:${a.id}`, name: a.name, href: a.url, external, status: project?.status, logo: APP_LOGOS[a.project_slug] };
-  });
-  for (const p of projects) {
-    if (used.has(p.slug)) continue;
-    tiles.push({ key: `project:${p.id}`, name: p.name, href: `/projects/${p.slug}`, external: false, status: p.status, logo: APP_LOGOS[p.slug] });
-  }
+  const tiles = buildAppTiles(list, projects);
 
   return (
     <Panel title="Mes apps" count={tiles.length} state={state} file="dashboard-edit.sql">

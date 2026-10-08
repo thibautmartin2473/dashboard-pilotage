@@ -7,14 +7,38 @@ import { createContext, useContext, useOptimistic, useState, useTransition } fro
 import { saveLayout } from '@/app/edit-actions';
 import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
+import './keys.css';
 
-const BUTTON =
-  'rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-2 text-sm font-medium text-zinc-100 hover:border-[var(--color-accent)] hover:bg-zinc-800 disabled:opacity-50';
+// Champs : contour --line-strong (3:1), 32 px de haut (44 px au doigt), anneau de focus --focus.
 const FIELD =
-  'rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-accent)]';
+  'min-h-8 rounded-[5px] border border-[var(--line-strong)] bg-[var(--content-surface)] px-2 py-1 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus)] [@media(pointer:coarse)]:min-h-11';
 
 export const fieldClass = FIELD;
-export const mutedClass = 'tabular font-mono text-[11px] text-zinc-400';
+export const mutedClass = 'tabular font-mono text-xs text-[var(--ink-muted)]';
+
+// Classes d'une « touche de terminal » (components/keys.css) pour les boutons qui ne passent pas par
+// <Button> (liste de blocs, ligne cliquable...). level : primary | secondary | tertiary ;
+// tone : neutral | action | late | pending | done (couleur du trait du bas, doublée par le libellé).
+export function keyClass({ level = 'secondary', tone = 'neutral', icon = false } = {}) {
+  return [
+    'key',
+    level === 'primary' && 'key--primary',
+    level === 'tertiary' && 'key--tertiary',
+    tone !== 'neutral' && `key--${tone}`,
+    icon && 'key--icon',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+// Lettre de raccourci encadrée, à gauche du libellé.
+export function KeyCap({ children }) {
+  return (
+    <kbd className="key-cap" aria-hidden="true">
+      {children}
+    </kbd>
+  );
+}
 
 // Lance une Server Action : `pending` pendant l'appel, `error` si elle renvoie
 // { error } ou lève. Jamais d'échec silencieux : l'erreur s'affiche avec <ErrorLine>.
@@ -34,24 +58,32 @@ export function useAction() {
 
 export function ErrorLine({ error }) {
   return error ? (
-    <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+    <p role="alert" className="text-sm text-[var(--late)]">
+      <span className="font-semibold">Erreur : </span>
       {error}
     </p>
   ) : null;
 }
 
-export function Button({ className = '', type = 'button', ...props }) {
-  return <button type={type} className={`${BUTTON} ${className}`} {...props} />;
+// Bouton « touche de terminal ». `level` : primary (un par zone) | secondary | tertiary ;
+// `tone` : couleur du trait du bas (late pour supprimer, pending, done) ; `kbd` : lettre de raccourci.
+export function Button({ level = 'secondary', tone = 'neutral', kbd, className = '', type = 'button', children, ...props }) {
+  return (
+    <button type={type} className={`${keyClass({ level, tone })} ${className}`} {...props}>
+      {kbd && <KeyCap>{kbd}</KeyCap>}
+      {children}
+    </button>
+  );
 }
 
 // Bouton d'action sur une ligne (modifier, monter, descendre...) : glyphe + libellé accessible.
-export function IconButton({ label, children, className = '', ...props }) {
+export function IconButton({ label, children, level = 'secondary', tone = 'neutral', className = '', ...props }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className={`${BUTTON} min-w-9 px-2 py-1 ${className}`}
+      className={`${keyClass({ level, tone, icon: true })} ${className}`}
       {...props}
     >
       {children}
@@ -59,16 +91,9 @@ export function IconButton({ label, children, className = '', ...props }) {
   );
 }
 
-// Bouton de filtre : état actif distinct et aria-pressed.
+// Bouton de filtre : état actif distinct (fond d'action tinté, trait d'action) et aria-pressed.
 export function ToggleButton({ pressed, className = '', ...props }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      className={`${BUTTON} ${pressed ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] font-semibold text-[var(--color-accent)]' : ''} ${className}`}
-      {...props}
-    />
-  );
+  return <button type="button" aria-pressed={pressed} className={`${keyClass()} ${className}`} {...props} />;
 }
 
 export function Field({ className = '', ...props }) {
@@ -89,17 +114,17 @@ export function ConfirmDelete({ onConfirm, pending, question = 'Supprimer ?', la
   const [asking, setAsking] = useState(false);
   if (!asking) {
     return (
-      <IconButton label={label} disabled={pending} onClick={() => setAsking(true)}>
-        ✕
-      </IconButton>
+      <Button tone="late" aria-label={label} disabled={pending} onClick={() => setAsking(true)}>
+        Supprimer
+      </Button>
     );
   }
   return (
-    <span className="inline-flex flex-wrap items-center gap-1 text-sm">
+    <span className="inline-flex flex-wrap items-center gap-2 text-sm">
       {question}
       <Button
         disabled={pending}
-        className="px-2 py-1"
+        tone="late"
         onClick={() => {
           setAsking(false);
           onConfirm();
@@ -107,7 +132,7 @@ export function ConfirmDelete({ onConfirm, pending, question = 'Supprimer ?', la
       >
         Oui
       </Button>
-      <Button disabled={pending} className="px-2 py-1" onClick={() => setAsking(false)}>
+      <Button disabled={pending} level="tertiary" onClick={() => setAsking(false)}>
         Non
       </Button>
     </span>
@@ -115,12 +140,12 @@ export function ConfirmDelete({ onConfirm, pending, question = 'Supprimer ?', la
 }
 
 // Pied de panneau des instantanés : l'âge des données, pour ne jamais les faire passer pour du direct.
-export function SyncFooter({ rows, href, label, now }) {
+export function SyncFooter({ rows, href, label, now, note = '', className = 'mt-3' }) {
   const synced = lastSync(rows);
   return (
-    <p className={`mt-3 flex flex-wrap items-baseline justify-between gap-x-3 ${mutedClass}`}>
-      <span>{synced ? `Mis à jour ${timeAgo(synced, now)}` : 'Aucune donnée synchronisée'}</span>
-      <a href={href} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+    <p className={`flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 ${className} ${mutedClass}`}>
+      <span>{`${synced ? `Mis à jour ${timeAgo(synced, now)}` : 'Aucune donnée synchronisée'}${note}`}</span>
+      <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-6 items-center underline hover:no-underline">
         {label}
       </a>
     </p>
@@ -152,20 +177,24 @@ export function HomeSlot({ id, layout, children }) {
   );
 }
 
-// Cadre de tous les panneaux. `state` = résultat { error, message } d'une lecture en
-// échec : on l'affiche à la place du contenu, jamais une liste vide. Dans une <HomeSlot>,
-// l'en-tête porte les boutons Étendre/Réduire et Replier/Déplier.
-export function Panel({ title, count, state, file, className = '', children }) {
+// Cadre de tous les panneaux : en-tête de zone en cuir (--frame-*), corps crème (--content-*), séparé
+// par un filet. `state` = résultat { error, message } d'une lecture en échec : on l'affiche à la place du
+// contenu, jamais une liste vide. Dans une <HomeSlot>, l'en-tête porte les boutons Étendre/Réduire et
+// Replier/Déplier. `fill` : le panneau remplit la hauteur de sa case et son corps défile à l'intérieur
+// (page « tout sur un écran ») ; `bodyClassName` remplace le corps par défaut (marges, défilement).
+export function Panel({ title, count, state, file, className = '', bodyClassName, fill = false, children }) {
   const slot = useContext(SlotContext);
   const size = slot?.size;
   const toggle = (target) => slot.setSize(size === target ? 'compact' : target);
-  const small = 'min-w-7 px-1.5 py-0 text-xs leading-6';
+  const small = 'min-w-7 min-h-6 px-1.5 text-xs leading-6';
+  const body =
+    bodyClassName ?? (fill ? 'min-h-0 flex-1 overflow-y-auto p-3' : `p-4 ${size === 'compact' ? 'max-h-80 overflow-y-auto' : ''}`);
   return (
-    <section className={`overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 ${className}`}>
-      <h2 className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2.5 text-sm font-semibold text-zinc-100">
+    <section className={`flex flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--content-surface)] text-[var(--ink)] ${fill ? 'min-h-0' : ''} ${className}`}>
+      <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--frame-border)] bg-[var(--frame-bg)] px-4 py-2 text-sm font-semibold text-[var(--frame-text)]">
         <span className="min-w-0 flex-1 truncate">{title}</span>
         {count != null && !state?.error && (
-          <span className="tabular rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 font-mono text-[11px] font-normal text-zinc-400">
+          <span className="tabular rounded-full border border-[var(--frame-border)] bg-[var(--frame-surface)] px-2 py-0.5 font-mono text-xs font-normal text-[var(--frame-text)]">
             {count}
           </span>
         )}
@@ -177,7 +206,7 @@ export function Panel({ title, count, state, file, className = '', children }) {
               disabled={slot.pending}
               onClick={() => toggle('expanded')}
             >
-              {size === 'expanded' ? '⤡' : '⤢'}
+              {size === 'expanded' ? 'Réduire' : 'Étendre'}
             </IconButton>
             <IconButton
               label={`${size === 'collapsed' ? 'Déplier' : 'Replier'} : ${title}`}
@@ -186,20 +215,21 @@ export function Panel({ title, count, state, file, className = '', children }) {
               disabled={slot.pending}
               onClick={() => toggle('collapsed')}
             >
-              {size === 'collapsed' ? '▸' : '▾'}
+              {size === 'collapsed' ? 'Déplier' : 'Replier'}
             </IconButton>
           </>
         )}
       </h2>
       {size !== 'collapsed' && (
-        <div className={`p-4 ${size === 'compact' ? 'max-h-80 overflow-y-auto' : ''}`}>
+        <div className={body}>
           {state?.error === 'missing' ? (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              Table manquante : exécuter <code>supabase/{file}</code>
+            <p className="rounded-[5px] border border-[var(--pending)] px-3 py-2 text-sm text-[var(--ink)]">
+              <span className="font-semibold">Table manquante : </span>exécuter <code>supabase/{file}</code>
             </p>
           ) : state?.error ? (
-            <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
-              Erreur : {state.message}
+            <p className="rounded-[5px] border border-[var(--late)] px-3 py-2 text-sm text-[var(--ink)]">
+              <span className="font-semibold text-[var(--late)]">Erreur : </span>
+              {state.message}
             </p>
           ) : (
             children

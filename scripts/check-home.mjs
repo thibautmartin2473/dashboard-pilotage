@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import {
   DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, buildWeek, categoryOf, clampOffset, doneByDay, describeWhen, eventForm, eventIdsOnDay, eventRow,
-  formatMailDate, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
-  reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
+  formatMailDate, formatRemaining, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
+  nowState, reorderUpdates, resolveCategories, resolveLayout, shiftEvent, slugify, snapMinutes, splitTasks, summarize, timeParis,
   todayEmptyMessage, todayEvents, todayLine, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
@@ -233,9 +233,9 @@ assert.equal(wk.conflicts, 1);
 // Catégorie personnalisée (kind 'tache') posée sur une plage : pas un conflit, comme les tâches
 // Google ; le bloc porte la bonne catégorie (nom/couleur) même pour une clé inconnue (repli OTHER_KEY).
 const withCustom = resolveCategories([
-  { key: '11', name: 'Cours EDHEC', color: '#ef4444', kind: 'plage' },
-  { key: OTHER_KEY, name: 'Autre événement', color: '#3b82f6', kind: 'plage' },
-  { key: '6', name: 'Tâche / travail', color: '#f59e0b', kind: 'tache' },
+  { key: '11', name: 'Cours EDHEC', color: '#3f5a7d', kind: 'plage' },
+  { key: OTHER_KEY, name: 'Autre événement', color: '#7a6a5c', kind: 'plage' },
+  { key: '6', name: 'Tâche / travail', color: '#2a6761', kind: 'tache' },
   { key: 'c-perso', name: 'Perso', color: '#22c55e', kind: 'tache' },
 ]);
 wk = buildWeek(
@@ -397,5 +397,65 @@ assert.equal(shiftEvent(plage, { mode: 'start', minutes: 120 }).starts_at, '2026
 assert.equal(shiftEvent({ starts_at: plage.starts_at, ends_at: null }, { mode: 'end', minutes: 15 }).ends_at, '2026-09-21T12:45:00.000Z'); // sans fin : 30 min
 // Changement d'heure (25 oct. 2026) : on garde l'heure murale, 14h reste 14h.
 assert.equal(shiftEvent({ starts_at: '2026-10-24T12:00:00Z', ends_at: '2026-10-24T13:00:00Z' }, { days: 1 }).starts_at, '2026-10-25T13:00:00.000Z');
+
+// --- Bandeau « Maintenant » : nowState ---
+{
+  const ev = (id, title, a, b, extra = {}) => ({ id, title, starts_at: a, ends_at: b, all_day: false, color_id: null, ...extra });
+  // 21 sept. 2026, Paris = UTC+2. Cours 9h-11h (07-09Z), travail 14h-16h (12-14Z), dîner 20h-21h (18-19Z).
+  const day = [
+    ev('c', 'Cours', '2026-09-21T07:00:00Z', '2026-09-21T09:00:00Z', { color_id: '11' }),
+    ev('w', 'Travail', '2026-09-21T12:00:00Z', '2026-09-21T14:00:00Z', { color_id: '6' }),
+    ev('d', 'Dîner', '2026-09-21T18:00:00Z', '2026-09-21T19:00:00Z'),
+    ev('j', 'Anniversaire', '2026-09-21T00:00:00Z', '2026-09-22T00:00:00Z', { all_day: true }), // jamais un bloc
+    ev('x', 'Demain', '2026-09-22T07:00:00Z', '2026-09-22T08:00:00Z'), // un autre jour : ni en cours ni à venir aujourd'hui
+  ];
+  // En cours : 9h30 Paris (07h30Z), 90 min restantes, puis deux blocs à venir.
+  let s = nowState(day, new Date('2026-09-21T07:30:00Z'));
+  assert.equal(s.kind, 'current');
+  assert.equal(s.current.title, 'Cours');
+  assert.equal(s.current.minutesLeft, 90);
+  assert.equal(s.current.time, '09h00');
+  assert.equal(s.current.endTime, '11h00');
+  assert.deepEqual(s.upcoming.map((b) => b.title), ['Travail', 'Dîner']);
+  // Entre deux blocs : 12h Paris (10h Z). Le prochain commence dans 120 min.
+  s = nowState(day, new Date('2026-09-21T10:00:00Z'));
+  assert.equal(s.kind, 'between');
+  assert.equal(s.current, null);
+  assert.deepEqual(s.upcoming.map((b) => `${b.time} ${b.title}`), ['14h00 Travail', '20h00 Dîner']);
+  assert.equal(s.upcoming[0].minutesUntil, 120);
+  assert.equal(s.upcoming[0].category.kind, 'tache');
+  // Début exact = en cours ; fin exacte = plus en cours.
+  assert.equal(nowState(day, new Date('2026-09-21T12:00:00Z')).current.title, 'Travail');
+  assert.equal(nowState(day, new Date('2026-09-21T09:00:00Z')).kind, 'between');
+  // Dernier bloc en cours : il n'y a plus de bloc à venir, mais la journée n'est pas finie.
+  s = nowState(day, new Date('2026-09-21T18:30:00Z'));
+  assert.equal(s.kind, 'current');
+  assert.deepEqual(s.upcoming, []);
+  // Journée finie : après le dernier bloc (23h Paris), et non « aucun bloc ».
+  s = nowState(day, new Date('2026-09-21T21:00:00Z'));
+  assert.equal(s.kind, 'done');
+  assert.equal(s.current, null);
+  assert.deepEqual(s.upcoming, []);
+  // Aucun bloc aujourd'hui : liste vide, ou seulement « toute la journée » et d'autres jours.
+  assert.equal(nowState([], new Date('2026-09-21T10:00:00Z')).kind, 'none');
+  assert.equal(nowState([day[3], day[4]], new Date('2026-09-21T10:00:00Z')).kind, 'none');
+  assert.equal(nowState(null, new Date('2026-09-21T10:00:00Z')).kind, 'none');
+  // Chevauchement : le bloc commencé le plus récemment l'emporte (la tâche posée dans le cours).
+  const overlap = [day[0], ev('t', 'Révisions', '2026-09-21T08:00:00Z', '2026-09-21T08:30:00Z', { color_id: '6' })];
+  assert.equal(nowState(overlap, new Date('2026-09-21T08:10:00Z')).current.title, 'Révisions');
+  // Sans heure de fin : dure 30 min.
+  const open = [ev('o', 'Appel', '2026-09-21T10:00:00Z', null)];
+  assert.equal(nowState(open, new Date('2026-09-21T10:10:00Z')).current.minutesLeft, 20);
+  assert.equal(nowState(open, new Date('2026-09-21T10:30:00Z')).kind, 'done');
+  // Bloc qui franchit minuit : toujours en cours le lendemain matin (Paris).
+  const night = [ev('n', 'Nuit', '2026-09-21T20:00:00Z', '2026-09-22T00:00:00Z')];
+  assert.equal(nowState(night, new Date('2026-09-21T22:30:00Z')).current.title, 'Nuit'); // 00h30 le 22 à Paris
+  // Jour de Paris : 23h30Z le 21 = 01h30 le 22 à Paris, l'événement du 22 (demain pour le 21) compte comme du jour.
+  assert.equal(nowState(day, new Date('2026-09-21T23:30:00Z')).upcoming[0].title, 'Demain');
+  assert.equal(formatRemaining(0), '0 min');
+  assert.equal(formatRemaining(45), '45 min');
+  assert.equal(formatRemaining(60), '1 h 00');
+  assert.equal(formatRemaining(125), '2 h 05');
+}
 
 console.log('check-home : OK');

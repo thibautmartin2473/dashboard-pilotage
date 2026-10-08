@@ -1,36 +1,44 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Libre_Caslon_Text } from "next/font/google";
 import Rail from "@/components/Rail";
 import "./globals.css";
 
-// Graphite : Geist pour le texte, Geist Mono pour les chiffres qui se comparent
-// en colonne (heures, compteurs, âges de synchro).
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Cadran : IBM Plex Sans pour toute l'interface, IBM Plex Mono pour les chiffres et les heures
+// (tabulaires), Libre Caslon Text uniquement dans le logotype « Cadran » (components/RailClient.js).
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
+const caslon = Libre_Caslon_Text({
+  variable: "--font-caslon",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 export const metadata = {
-  title: "Pilotage",
+  title: "Cadran",
   description: "Où en est chacun de mes projets, et par où je reprends.",
+  applicationName: "Cadran",
 };
 
-// Le tableau de bord est sombre : les contrôles natifs (date, heure, barres de
-// défilement) doivent suivre, sinon ils repassent en blanc sur fond sombre.
+// Un seul mode : cadre cuir, contenu crème. La couleur de la barre du navigateur est le cuir.
 export const viewport = {
-  colorScheme: "dark",
-  themeColor: "#202429",
+  colorScheme: "light",
+  themeColor: "#4a372f",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} ${caslon.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-zinc-950 md:flex-row">
         <Rail />
