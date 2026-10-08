@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   BLOCK_KINDS, DEFAULT_CATEGORIES, HOME_PANEL_IDS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, blockKind, blockLayer, blockTiming, blockUrgency, buildWeek, categoryOf, clampOffset, doneEventIds, describeWhen, eventForm, eventIdsOnDay, eventRow,
   formatMailDate, formatRemaining, isShortTask, isToConfirm, isMissingColumn, isMissingTable, isOverdue, isoToParisLocal, lastSync, latestMails, overlaps, parisToIso,
-  layoutBlocks, nowState, reorderUpdates, capKindEntries, resolveCategories, resolveKindEntries, resolveKindOverrides, resolveLayout, showBlockIcon, titleKind, shiftEvent, slugify, snapMinutes, splitTasks, timeParis,
+  layoutBlocks, titleClearance, blockWidthPx, isNarrow, hasAllDay, PLAGE_TITLE_PX, TASK_MIN_PX, nowState, reorderUpdates, capKindEntries, resolveCategories, resolveKindEntries, resolveKindOverrides, resolveLayout, showBlockIcon, titleKind, shiftEvent, slugify, snapMinutes, splitTasks, timeParis,
   todayEmptyMessage, todayEvents, todayParis,
 } from '../lib/home.js';
 import { timeAgo } from '../lib/format.js';
@@ -538,8 +538,8 @@ const lb = (id, layer, visStart, visEnd) => ({ id, layer, visStart, visEnd, col:
 // Une tâche posée sur une plage ne la pousse pas dans une colonne étroite : plage pleine, tâche par-dessus.
 let lay = layoutBlocks([lb('cours', 'plage', 540, 720), lb('tache', 'tache', 600, 660)]);
 assert.deepEqual(lay.map((b) => [b.col, b.cols, b.over]), [[0, 1, false], [0, 1, true]]);
-// Deux tâches qui se chevauchent sur une plage : côte à côte entre elles, la plage reste pleine.
-lay = layoutBlocks([lb('cours', 'plage', 540, 720), lb('t1', 'tache', 570, 660), lb('t2', 'tache', 600, 690)]);
+// Deux tâches qui commencent à moins de 30 min d'écart sur une plage : côte à côte entre elles, la plage reste pleine.
+lay = layoutBlocks([lb('cours', 'plage', 540, 720), lb('t1', 'tache', 570, 660), lb('t2', 'tache', 585, 690)]);
 assert.deepEqual(lay.map((b) => [b.col, b.cols, b.over]), [[0, 1, false], [0, 2, true], [1, 2, true]]);
 // Deux plages qui se chevauchent : côte à côte ; une tâche sans plage dessous n'est pas « posée dessus ».
 lay = layoutBlocks([lb('a', 'plage', 540, 660), lb('b', 'plage', 600, 720), lb('t', 'tache', 780, 840)]);
@@ -551,5 +551,50 @@ assert.deepEqual(lay.map((b) => b.over), [false, false]);
 wk = buildWeek([ev('c', at('09:00'), at('12:00'), { color_id: '11', title: 'Cours' }), ev('w', at('10:00'), at('11:00'), { color_id: '6', title: 'Session de travail' })], nowAgenda);
 assert.deepEqual(blocks(wk).map((b) => [b.id, b.layer, b.col, b.cols, b.over, b.conflict]), [['c', 'plage', 0, 1, false, false], ['w', 'tache', 0, 1, true, false]]);
 assert.equal(wk.conflicts, 0);
+
+// Escalier façon Calendrier : un second bloc qui commence 30 min ou plus après le premier se pose à droite, retrait de 40 %, par-dessus.
+lay = layoutBlocks([lb('t1', 'tache', 570, 660), lb('t2', 'tache', 600, 690)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.leftFrac, b.widthFrac]), [[0, 1, 0, 1], [0, 1, 0.4, 0.6]]);
+lay = layoutBlocks([lb('t1', 'tache', 570, 660), lb('t2', 'tache', 585, 690)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.leftFrac, b.widthFrac]), [[0, 2, 0, 0.5], [1, 2, 0.5, 0.5]]);
+// Trois marches : le retrait est plafonné (le dernier garde 40 % de largeur).
+lay = layoutBlocks([lb('t1', 'tache', 540, 700), lb('t2', 'tache', 580, 700), lb('t3', 'tache', 620, 700)]);
+assert.deepEqual(lay.map((b) => [Number(b.leftFrac.toFixed(2)), Number(b.widthFrac.toFixed(2))]), [[0, 1], [0.4, 0.6], [0.6, 0.4]]);
+// Les plages ne se posent jamais en escalier (colonnes comme avant).
+lay = layoutBlocks([lb('a', 'plage', 540, 660), lb('b', 'plage', 600, 720)]);
+assert.deepEqual(lay.map((b) => [b.col, b.cols, b.leftFrac, b.widthFrac]), [[0, 2, 0, 0.5], [1, 2, 0.5, 0.5]]);
+// Plage couverte par une tâche : `covered` (titre seul), pas une plage libre.
+lay = layoutBlocks([lb('a', 'plage', 540, 660), lb('b', 'plage', 700, 760), lb('t', 'tache', 570, 600)]);
+assert.deepEqual(lay.map((b) => b.covered), [true, false, false]);
+
+// Largeur dessinée et colonne étroite : (jour - retrait - 1 px) x part de colonne ; sous 90 px, icône et début de titre seulement.
+assert.equal(blockWidthPx(150, 8, { widthFrac: 1 }), 141);
+assert.equal(blockWidthPx(150, 8, { widthFrac: 0.5 }), 70.5);
+assert.equal(isNarrow(blockWidthPx(170, 8, { widthFrac: 0.5 })), true);
+assert.equal(isNarrow(blockWidthPx(200, 8, { widthFrac: 0.5 })), false);
+
+// Une tâche posée sur une plage ne recouvre jamais le titre de la plage (ligne réservée de 18 px).
+const clr = (tasks) => {
+  const day = layoutBlocks([lb('cours', 'plage', 540, 720), ...tasks]);
+  return day.filter((b) => b.layer === 'tache').map((b) => titleClearance(b, day, 36));
+};
+// 36 px / h : 18 px = 30 min. Tâche de 30 min à l'ouverture de la plage : 18 px de haut -> décalée de 18, 14 px mini.
+assert.deepEqual(clr([lb('t', 'tache', 540, 570)]), [{ dy: 18, heightPx: TASK_MIN_PX }]);
+// Tâche d'1 h (36 px) à l'ouverture : décalée sous le titre, hauteur réduite de 18.
+assert.deepEqual(clr([lb('t', 'tache', 540, 600)]), [{ dy: 18, heightPx: 18 }]);
+// Tâche qui démarre 15 min après l'ouverture (9 px) : seulement les 9 px manquants.
+assert.deepEqual(clr([lb('t', 'tache', 555, 660)]), [{ dy: 9, heightPx: 63 - 9 }]);
+// Tâche qui démarre sous la ligne de titre (30 min après) ou ailleurs : inchangée.
+assert.deepEqual(clr([lb('t', 'tache', 570, 630)]), [{ dy: 0, heightPx: 36 }]);
+assert.deepEqual(clr([lb('t', 'tache', 780, 840)]), [{ dy: 0, heightPx: 36 }]);
+// Une plage n'est jamais décalée ; sans tâche dessus (non couverte), rien ne bouge.
+const solo = layoutBlocks([lb('cours', 'plage', 540, 720)]);
+assert.deepEqual(titleClearance(solo[0], solo, 36), { dy: 0, heightPx: 108 });
+assert.equal(PLAGE_TITLE_PX, 18);
+
+// Ligne « Jour » de l'agenda : seulement si un des jours visibles a un événement en journée entière.
+assert.equal(hasAllDay([{ allDay: [] }, { allDay: [] }]), false);
+assert.equal(hasAllDay([{ allDay: [] }, { allDay: [{ id: 'x' }] }]), true);
+assert.equal(hasAllDay([]), false);
 
 console.log('check-home : OK');

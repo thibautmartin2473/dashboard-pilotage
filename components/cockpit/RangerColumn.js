@@ -21,6 +21,7 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
   const [limit, setLimit] = useState(PAGE);
   const [sel, setSel] = useState({ key: null, index: 0 }); // élément sélectionné (clé et rang, pour passer au suivant)
   const list = useRef(null);
+  const gestureRow = useRef(null); // rangée des cinq gestes de l'élément sélectionné
   const refocus = useRef(false); // rendre le focus à la ligne sélectionnée après un geste au clavier
 
   const act = (item, gesture, target) => {
@@ -49,6 +50,17 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
     refocus.current = false;
     [...(list.current?.querySelectorAll('[data-row]') ?? [])].find((n) => n.dataset.row === currentKey)?.focus();
   }, [currentKey]);
+
+  // Les cinq gestes restent visibles : quand la sélection change (ou que le sélecteur se referme), la colonne défile
+  // juste ce qu'il faut pour les montrer. Pas au montage : la page ne doit pas bouger à l'ouverture.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    gestureRow.current?.scrollIntoView({ block: 'nearest' });
+  }, [currentKey, picker]);
 
   const select = (item) => setSel({ key: item.key, index: shown.indexOf(item) });
   const run = (item, g, gesture) => {
@@ -171,12 +183,22 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
                 </button>
 
                 {selected && (
-                  <div className="space-y-2 px-2.5 pb-3 pt-1">
-                    <p className="text-sm font-medium break-words">{item.title}</p>
-                    {item.isDue && <p className="text-xs font-semibold text-[var(--late-text)]">{item.dueReason}</p>}
-                    {item.detail && <p className="text-sm break-words text-[var(--ink-muted)]">{item.detail}</p>}
-                    <ItemMeta item={item} />
-                    <SuggestionBox item={item} />
+                  <div className="space-y-1.5 px-2.5 pb-2.5 pt-0.5">
+                    <p className="line-clamp-2 text-sm font-medium break-words" title={item.title}>
+                      {item.title}
+                    </p>
+                    {item.isDue && (
+                      <p className="truncate text-xs font-semibold text-[var(--late-text)]" title={item.dueReason}>
+                        {item.dueReason}
+                      </p>
+                    )}
+                    {item.detail && (
+                      <p className="line-clamp-2 text-sm break-words text-[var(--ink-muted)]" title={item.detail}>
+                        {item.detail}
+                      </p>
+                    )}
+                    <ItemMeta item={item} compact />
+                    <SuggestionBox item={item} compact />
                     {picker === item.key ? (
                       <ElsewherePicker
                         options={options}
@@ -187,6 +209,7 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
                       />
                     ) : (
                       <Gestures
+                        ref={gestureRow}
                         g={g}
                         label={`Gestes : ${short(item.title)}`}
                         on={{

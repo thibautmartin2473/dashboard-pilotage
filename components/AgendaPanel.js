@@ -10,7 +10,8 @@ import { completeTask } from '@/app/actions';
 import { deleteEvent, moveEvent, saveEvent, saveKindOverride } from '@/app/edit-actions';
 import {
   BLOCK_KINDS, BLOCK_KIND_LABELS, OTHER_KEY, TIMELINE_DAYS, WEEK_OFFSET_MAX, WEEK_OFFSET_MIN, blockKind, blockTiming, blockUrgency, buildWeek,
-  clampOffset, describeWhen, doneEventIds, eventForm, isToConfirm, shiftEvent, showBlockIcon, snapMinutes, timeParis, todayParis,
+  blockWidthPx, clampOffset, describeWhen, doneEventIds, eventForm, hasAllDay, isNarrow, isToConfirm, shiftEvent, showBlockIcon, snapMinutes, timeParis,
+  titleClearance, todayParis,
 } from '@/lib/home';
 
 const HOUR_PX_MIN = 36; // hauteur minimale d'une heure dans la grille (téléphone, petite fenêtre)
@@ -444,6 +445,10 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   const doneIds = useMemo(() => doneEventIds(done, openTasks ?? tasks), [done, openTasks, tasks]);
   const todayStr = todayParis(new Date(now));
   const hours = week ? week.hourEnd - week.hourStart : 0;
+  // Jours visibles dans la bande (titre de la frise, message « aucun événement »), et ligne « Jour » (journées
+  // entières) montrée seulement si l'un d'eux en a une : sinon elle ne prend pas de place.
+  const shown = week ? week.days.slice(offset - WEEK_OFFSET_MIN, offset - WEEK_OFFSET_MIN + visible) : [];
+  const showAllDay = hasAllDay(shown);
 
   // Défilement : largeur d'une colonne de jour, mesurée sur la première.
   const colWidth = () => scrollRef.current?.querySelector('[data-testid^="day-"]')?.offsetWidth || 1;
@@ -491,7 +496,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasGrid, hours]);
+  }, [hasGrid, hours, showAllDay]);
   // Défilement vertical (zone à hauteur fixe) : à l'ouverture, la bande « maintenant » au tiers de la zone.
   const scrolledY = useRef(false);
   useLayoutEffect(() => {
@@ -587,8 +592,6 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     window.addEventListener('pointercancel', end);
   };
 
-  // Jours visibles dans la bande (titre de la frise, message « aucun événement »).
-  const shown = week ? week.days.slice(offset - WEEK_OFFSET_MIN, offset - WEEK_OFFSET_MIN + visible) : [];
   // Date proposée à l'ajout : aujourd'hui, ou le premier jour affiché s'il est plus loin.
   const firstShown = shown[0]?.day;
   const today = firstShown && firstShown > todayStr ? firstShown : todayStr;
@@ -635,8 +638,8 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
             </div>
           ))}
 
-          <div className={`${gutter} text-xs ${mutedClass}`}>Jour</div>
-          {week.days.map((d) => (
+          {showAllDay && <div className={`${gutter} text-xs ${mutedClass}`}>Jour</div>}
+          {showAllDay && week.days.map((d) => (
             <div key={d.day} className={`${cell} min-h-6 space-y-0.5 p-0.5`}>
               {d.allDay.slice(0, ROW_CHIPS).map((e) => (
                 <button
@@ -656,8 +659,8 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
 
           <div className={`${gutter} relative`} style={{ height }} data-testid="agenda-hours">
             {Array.from({ length: hours }, (_, i) => (
-              <span key={i} className={`absolute right-1 -translate-y-1/2 ${mutedClass}`} style={{ top: i * hourPx }}>
-                {i > 0 && `${week.hourStart + i}h`}
+              <span key={i} className={`absolute right-1 ${i > 0 ? '-translate-y-1/2' : 'translate-y-0.5'} ${mutedClass}`} style={{ top: i * hourPx }}>
+                {`${week.hourStart + i}h`}
               </span>
             ))}
           </div>
@@ -686,7 +689,12 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
               )}
               {d.blocks.map((b) => {
                 const linked = linkedOf(b.id, ideas, tasks);
-                const px = ((b.visEnd - b.visStart) / 60) * hourPx; // hauteur dessinée du bloc
+                // Une tâche qui démarre sur la ligne de titre de sa plage est décalée dessous (titleClearance).
+                const clear = titleClearance(b, d.blocks, hourPx);
+                const px = clear.heightPx; // hauteur dessinée du bloc
+                const inset = b.over ? TASK_INSET_PX : 1;
+                const narrow = isNarrow(blockWidthPx(dayPx ?? DAY_MIN_REM * 16, inset, b)); // colonne de chevauchement étroite
+                const simple = b.covered || narrow; // plage sous des tâches, ou colonne étroite : une ligne, icône et titre
                 const timing = blockTiming(b, now);
                 const urgency = blockUrgency(linked.tasks, b, todayStr, now);
                 const isDone = b.layer === 'tache' && doneIds.has(b.id);
@@ -710,13 +718,12 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                 ].filter(Boolean);
                 const showWords = states.filter((w) => w !== 'passé');
                 const room = Math.max(0, Math.min(3, Math.floor((px - 34) / TASK_LINE_PX)));
-                const taskLines = linked.tasks.slice(0, room);
+                const taskLines = simple ? [] : linked.tasks.slice(0, room);
                 // Poignées sur le vrai début / la vraie fin seulement (pas sur la suite d'un événement de nuit,
                 // ni sur un bord tronqué hors de la plage 8 h - 22 h).
                 const ownStart = !b.clippedTop && (b.startMin > 0 || timeParis(b.starts_at) === '00h00');
                 const ownEnd = !b.clippedBottom && b.endMin < 1440;
                 const handle = 'absolute inset-x-0 h-1.5 cursor-ns-resize';
-                const inset = b.over ? TASK_INSET_PX : 1;
                 const span = `(100% - ${inset + 1}px)`;
                 const range = b.ends_at ? `${timeParis(b.starts_at)}-${timeParis(b.ends_at)}` : timeParis(b.starts_at);
                 const label = `${b.title} (${timeParis(b.starts_at)})${states.length ? ` : ${states.join(', ')}` : ''}${
@@ -728,6 +735,10 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                 const fillMix = past ? (b.layer === 'tache' ? PAST_FILL_TASK : PAST_FILL) : 100;
                 const paleSolid = past && tone.solid;
                 const fillColor = toConfirm ? 'transparent' : isDone ? 'var(--done-soft)' : paleSolid ? fade(tone.fill, PAST_SOLID_FILL) : fade(tone.fill, fillMix);
+                // Une tâche posée sur une plage a toujours un fond opaque (teinte de son type sur --card-solid) : le texte de la plage ne transparaît pas.
+                const fill = b.layer === 'tache'
+                  ? { backgroundColor: 'var(--card-solid)', backgroundImage: `linear-gradient(${fillColor}, ${fillColor})` }
+                  : { background: fillColor };
                 const inkColor = toConfirm ? 'var(--ink)' : isDone ? 'var(--done-ink)' : paleSolid ? 'var(--ink)' : tone.ink;
                 const border = pastille
                   ? { border: `1.5px solid ${fade(urgency.late ? 'var(--late)' : 'var(--action)', ruleMix)}` }
@@ -739,8 +750,8 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     key={b.id}
                     className={`group absolute hover:z-30 focus-within:z-30 ${b.layer === 'tache' ? 'z-[5]' : 'z-[1]'}`}
                     style={{
-                      top: `${b.top}%`, height: `${b.height}%`,
-                      left: `calc(${inset}px + ${span} * ${b.col / b.cols})`, width: `calc(${span} / ${b.cols})`,
+                      top: clear.dy ? `calc(${b.top}% + ${clear.dy}px)` : `${b.top}%`, height: clear.dy ? `${px}px` : `${b.height}%`,
+                      left: `calc(${inset}px + ${span} * ${b.leftFrac})`, width: `calc(${span} * ${b.widthFrac})`,
                     }}
                   >
                     <button
@@ -752,7 +763,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                         pastille ? 'rounded-[10px]' : 'rounded-[5px]'
                       } ${isDone ? 'line-through' : ''}`}
                       style={{
-                        background: fillColor,
+                        ...fill,
                         color: inkColor,
                         ...border,
                         ...(shadows && { boxShadow: shadows }),
@@ -777,6 +788,14 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                           data-testid="handle-end"
                         />
                       )}
+                      {simple ? (
+                        <span className="flex h-full min-h-0 items-start gap-1 px-1.5 py-0.5" data-testid="block-simple">
+                          {urgency.urgent && <BlockIcon kind="urgent" className="mt-px" />}
+                          {showBlockIcon(b) && <BlockIcon kind={b.kind} className="mt-px" />}
+                          <span className="min-w-0 flex-1 truncate font-medium">{b.title}</span>
+                          <span className="sr-only">{showWords.join(', ')}</span>
+                        </span>
+                      ) : (
                       <span className="flex h-full min-h-0 flex-col px-1.5 py-0.5">
                         {b.clippedTop && <span className="block text-[10px] leading-3 opacity-80">avant {week.hourStart} h</span>}
                         <span className="flex items-start gap-1">
@@ -813,6 +832,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                         )}
                         {b.clippedBottom && <span className="mt-auto block text-[10px] leading-3 opacity-80">après {week.hourEnd} h</span>}
                       </span>
+                      )}
                     </button>
                     {linked.ideas.length > 0 && (
                       <div

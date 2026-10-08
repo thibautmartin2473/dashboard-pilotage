@@ -33,10 +33,10 @@ export function GestureKey({ kind, letter, children, className = '', title, ...p
 
 // Les cinq gestes d'un élément, dans l'ordre fixe V A C S P. `g` = gesturesFor(item), `on` = { place, elsewhere,
 // done, drop, later }. Partagé par la colonne et la feuille de rangement forcé.
-export function Gestures({ g, on, label }) {
+export function Gestures({ g, on, label, ref }) {
   const sql = 'Demande supabase/ranger.sql';
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label={label}>
+    <div ref={ref} className="flex flex-wrap gap-2" role="group" aria-label={label}>
       <GestureKey kind="place" letter="V" disabled={!g.validate} onClick={on.place}>
         Valider
       </GestureKey>
@@ -72,8 +72,31 @@ export function TypeBadge({ item }) {
   );
 }
 
+// Version compacte (colonne « À ranger », élément sélectionné) : UNE ligne tronquée (échéance, projet ; l'âge si rien
+// d'autre), le lien du mail à part ; le détail complet, bloc d'origine compris, est dans le title.
+function CompactMeta({ item }) {
+  const age = `créé ${item.age <= 1 ? item.ageLabel : `il y a ${item.age} j`}`;
+  const due = item.late > 0 ? `en retard de ${item.late} j (échéance ${frDay(item.due)})` : item.due ? `échéance ${frDay(item.due)}` : '';
+  const project = item.projectName ? `projet ${item.projectName}` : '';
+  const line = [due, project].filter(Boolean).join(' · ') || age;
+  const full = [age, due, item.origin && `bloc d'origine : ${item.origin}`, project].filter(Boolean).join(' · ');
+  return (
+    <div className="tabular flex items-center gap-2.5 text-xs text-[var(--ink-muted)]" data-testid="ranger-meta">
+      <p className={`min-w-0 flex-1 truncate ${item.late > 0 ? 'font-semibold text-[var(--late-text)]' : ''}`} title={full}>
+        {line}
+      </p>
+      {item.mailLink && (
+        <a href={item.mailLink} target="_blank" rel="noopener noreferrer" className="shrink-0 underline hover:no-underline">
+          mail
+        </a>
+      )}
+    </div>
+  );
+}
+
 // Âge, échéance, bloc d'origine et projet d'un élément, sur une ligne qui passe à la ligne.
-export function ItemMeta({ item }) {
+export function ItemMeta({ item, compact = false }) {
+  if (compact) return <CompactMeta item={item} />;
   const bits = [];
   bits.push(<span key="age">{`créé ${item.age <= 1 ? item.ageLabel : `il y a ${item.age} j`}`}</span>);
   if (item.late > 0) {
@@ -100,8 +123,22 @@ export function ItemMeta({ item }) {
   );
 }
 
-export function SuggestionBox({ item, large = false }) {
+export function SuggestionBox({ item, large = false, compact = false }) {
   const s = item.suggestion;
+  if (compact) {
+    return (
+      <div
+        className={`rounded-lg border-l-[3px] bg-[var(--card-inset)] px-2.5 py-1.5 ${s.target ? 'border-[var(--action)]' : 'border-[var(--line-strong)]'}`}
+        data-testid="ranger-suggestion"
+        title={s.reason}
+      >
+        <p className={`line-clamp-2 break-words text-sm ${s.target ? 'text-[var(--ink)]' : 'text-[var(--ink-muted)]'}`}>
+          <span className="mr-1.5 text-xs font-semibold tracking-wide text-[var(--ink-muted)] uppercase">{s.target ? 'Suggestion' : 'Pas de suggestion'}</span>
+          {s.reason}
+        </p>
+      </div>
+    );
+  }
   return (
     <div
       className={`rounded-lg border-l-[3px] bg-[var(--card-inset)] ${large ? 'px-4 py-3' : 'px-3 py-2'} ${s.target ? 'border-[var(--action)]' : 'border-[var(--line-strong)]'}`}
