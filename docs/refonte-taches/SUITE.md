@@ -62,8 +62,10 @@ cours et sport olive #6E7B45, examens bordeaux plein #7A1E2C, rendez-vous cuir #
 dans la police de l'interface ; 3A police Apple (Roboto à comparer) ; 4 rail en icônes, élargi avec
 libellés au survol ; 5B bandeau avec le prochain bloc ; 6 autre chose qu'un trait (à choisir) ; 9B gestes
 toujours visibles sur l'élément choisi ; 10A rangement forcé en feuille iOS ; 12A icônes, pastille, urgent
-en icône ; 15B une liste de mails avec étiquette EDHEC ; 16 téléphone à voir. Restent 3 (police), 6, 7, 8,
-11, 16, puis reprise de la PR #30.
+en icône ; 15B une liste de mails avec étiquette EDHEC ; 16 téléphone à voir. Suite : 3A police Apple (Segoe sur Windows) ;
+6C bande teintée sur l'heure en cours ; 7A 5 jours glissants ; 8A 8 h à 22 h ; 11 reclassement automatique ;
+16A Cockpit empilé sur téléphone ; Constellation en fond d'écran estompé, clic pour y naviguer (variante à
+valider). Puis reprise de la PR #30.
 
 **Constellation (demande de la session « Mods sur Claude », contrat accepté le 2026-10-08)** : à intégrer
 dans la reprise de la PR #30. Table `vault_graph` (une ligne, `id text primary key` = 'vault', `nodes jsonb`
