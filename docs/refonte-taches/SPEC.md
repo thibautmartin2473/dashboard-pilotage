@@ -96,6 +96,15 @@ confondue avec un bouton.
   par celles ci-dessus. **Prévenir la session « Mods sur Claude » par message** quand la route est en ligne et
   la table créée (le plugin Obsidian `constellation-cockpit` est prêt mais désactivé).
 
+**Mise à jour du 2026-10-08 (validée par Thibaut avec la session « Mods sur Claude », prime sur les couleurs
+ci-dessus pour le graphe)** : chaque noeud porte un champ `type` (Hub, Fiche, Cours et cas, Outil Claude, Note, PDF,
+Image, Save Instagram), calculé par le plugin et conservé par la route. **Couleurs du graphe : uniquement des
+dégradés de bleu et de gris, pas de vert** ; couleur du point = type, couleur du lien = thème (dossier déduit de
+`path`) ; olive, cuir et bordeaux exclus du graphe. Le composant du kit est déjà dans ces couleurs : **ne pas les
+remplacer**. Vue plein écran sur `#1E2433` ; en fond derrière le Cockpit, garder la page `#8E9CB4` et poser le graphe
+du kit par-dessus avec ses couleurs (vérifier au rendu la lisibilité sous les cartes à 75 %). Même charte « cadran »
+appliquée au graphe Obsidian.
+
 ## 8. Après le look : fonctionnalités, en lots
 
 Ordre : lot 2 = 5 (date de début), 13 (saisie naturelle et durée), 7 (traçabilité de ce que Claude pose) ;
