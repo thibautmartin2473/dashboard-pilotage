@@ -58,8 +58,12 @@ corail doux #C0664A, fait barré gris, un seul mode, pas de violet. **Agenda (20
 courte, urgent), icône au trait par type, états par la forme (en cours anneau, passé transparent, fait
 barré gris, retard filet corail, à confirmer vide, déplacé flèche, conflit anneau corail) ; couleurs :
 cours et sport olive #6E7B45, examens bordeaux plein #7A1E2C, rendez-vous cuir #A0714A, prépa gris bleu
-#8E9CB4, tâches bleu acier #3B6A9A. Reste à valider : quelques points ouverts (voir le chat), puis reprise
-de la PR #30.
+#8E9CB4, tâches bleu acier #3B6A9A. **Alignement (2026-10-08)** : 1C logo blanc sur bleu acier ; 2A logotype
+dans la police de l'interface ; 3A police Apple (Roboto à comparer) ; 4 rail en icônes, élargi avec
+libellés au survol ; 5B bandeau avec le prochain bloc ; 6 autre chose qu'un trait (à choisir) ; 9B gestes
+toujours visibles sur l'élément choisi ; 10A rangement forcé en feuille iOS ; 12A icônes, pastille, urgent
+en icône ; 15B une liste de mails avec étiquette EDHEC ; 16 téléphone à voir. Restent 3 (police), 6, 7, 8,
+11, 16, puis reprise de la PR #30.
 
 **Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
 Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
