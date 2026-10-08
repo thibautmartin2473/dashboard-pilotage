@@ -42,8 +42,11 @@ tu valides, 5 date de début, 7 traçabilité, 8 glisser et report groupé, 12 h
 flexible, 13 saisie naturelle et durée (numéros de `FONCTIONNALITES.md`) ; écartées 1, 6, 9, 10, 11.
 **Boutons** : Sellerie rejetée (« des pointillés partout j'aime pas »). Nouveau cap : « un dashboard
 pro financier qui fait tech », le plus efficace et instinctif, pas le plus original, appuyé sur la
-recherche académique en interfaces (`recherche/papiers-ui.md`, en cours). Ensuite : esquisses de
-boutons dans ce cap, puis mise en vrai (session E).
+recherche académique en interfaces (`recherche/papiers-ui.md`, en cours). **Choix finaux (2026-10-08)** : charte appliquée en « cadre cuir, contenu crème » (rail, bandeau
+et en-têtes en brun cuir niveau 2 ; agenda, À ranger et mails en texte sombre sur crème) ; boutons
+« touche de terminal » (lettre encadrée devant, fond tinté, trait d'état de 2 px, 32 px de haut) ; les
+15 règles de `recherche/papiers-ui.md` s'appliquent. **Tous les choix de design sont faits : reste la
+mise en vrai (session E), en lots avec une PR chacun.**
 
 2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
    Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
