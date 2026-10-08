@@ -5,6 +5,7 @@
 // Affecter ailleurs, Fait, Supprimer, Plus tard) ; au clavier, flèches pour choisir et V A C S P pour agir.
 // Mise à jour optimiste : l'élément disparaît tout de suite et revient si le serveur refuse.
 import { useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
+import { FocusTitle } from '../ui';
 import { ElsewherePicker, Gestures, ItemMeta, SuggestionBox, TypeBadge, btnClass } from './RangerParts';
 import { rangerApply } from '@/app/ranger-actions';
 import { gesturesFor } from '@/lib/ranger';
@@ -13,7 +14,9 @@ const PAGE = 40; // éléments rendus d'un coup (le reste derrière « Afficher 
 const NONE = new Set();
 const short = (t) => (t.length > 50 ? `${t.slice(0, 49)}...` : t);
 
-export default function RangerColumn({ items, todayTasks, options, ready, today }) {
+// `focusHref` : sur le Cockpit, le titre mène à la vue plein écran ; sans lui (vue /a-ranger), la colonne est
+// centrée, large (56 rem au plus) et la page défile sur téléphone.
+export default function RangerColumn({ items, todayTasks, options, ready, today, focusHref }) {
   const [gone, addGone] = useOptimistic(NONE, (set, keys) => new Set([...set, ...keys]));
   const [, start] = useTransition();
   const [error, setError] = useState(null);
@@ -107,10 +110,12 @@ export default function RangerColumn({ items, todayTasks, options, ready, today 
     <aside
       id="a-ranger"
       aria-label="À ranger"
-      className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--ink)] max-xl:max-h-[32rem] xl:h-full"
+      className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--ink)] xl:h-full ${
+        focusHref ? 'max-xl:max-h-[32rem]' : 'mx-auto w-full max-w-[56rem]'
+      }`}
     >
       <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4 py-2 text-sm font-semibold">
-        <span className="min-w-0 flex-1 truncate">À ranger</span>
+        <span className="min-w-0 flex-1 truncate">{focusHref ? <FocusTitle href={focusHref}>À ranger</FocusTitle> : 'À ranger'}</span>
         <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink)]" data-testid="ranger-count">
           {visible.length}
         </span>

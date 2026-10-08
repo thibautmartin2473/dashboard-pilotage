@@ -3,6 +3,7 @@
 // Briques d'interface partagées : tout le site les utilise, un relooking se fait
 // ici et nulle part ailleurs. Boutons façon Apple (components/keys.css), cartes blanches à 75 %.
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { lastSync } from '@/lib/home';
 import { timeAgo } from '@/lib/format';
@@ -155,12 +156,25 @@ export function SyncFooter({ rows, href, label, now, note = '', className = 'mt-
 // séparé par un filet. `state` = résultat { error, message } d'une lecture en échec : on l'affiche à la place du
 // contenu, jamais une liste vide. `fill` : le panneau remplit la hauteur de sa case et son corps défile à
 // l'intérieur (page « tout sur un écran ») ; `bodyClassName` remplace le corps par défaut (marges, défilement).
-export function Panel({ title, count, state, file, className = '', bodyClassName, fill = false, children }) {
+// Titre d'une zone du Cockpit : lien discret vers sa vue plein écran (/agenda, /a-ranger, /mails).
+export function FocusTitle({ href, children }) {
+  return (
+    <Link
+      href={href}
+      title="Ouvrir en plein écran"
+      className="rounded-md hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function Panel({ title, titleHref, count, state, file, className = '', bodyClassName, fill = false, children }) {
   const body = bodyClassName ?? (fill ? 'min-h-0 flex-1 overflow-y-auto p-3' : 'p-4');
   return (
     <section className={`flex flex-col overflow-hidden ${CARD} ${fill ? 'min-h-0' : ''} ${className}`}>
       <h2 className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--ink)]">
-        <span className="min-w-0 flex-1 truncate">{title}</span>
+        <span className="min-w-0 flex-1 truncate">{titleHref ? <FocusTitle href={titleHref}>{title}</FocusTitle> : title}</span>
         {count != null && !state?.error && (
           <span className="tabular rounded-full bg-[var(--btn-fill)] px-2 py-0.5 text-xs font-normal text-[var(--ink)]">
             {count}
