@@ -16,9 +16,10 @@ import {
 
 const HOUR_PX_MIN = 36; // hauteur minimale d'une heure dans la grille (téléphone, petite fenêtre)
 const HOUR_PX_MAX = 72; // plafond quand l'agenda remplit un grand écran (page « tout sur un écran »)
-const VISIBLE_DAYS = 5; // jours visibles d'un coup (J à J+4) : une colonne = un cinquième de la bande
+const VISIBLE_DAYS = 5; // jours visibles d'un coup par défaut (J à J+4) : une colonne = un cinquième de la bande (prop `visibleDays`, 7 sur /agenda)
 const DAY_MIN_REM = 6.5; // largeur minimale d'une colonne (défilement horizontal sur téléphone)
 const GUTTER_REM = 3;
+const BLOCK_GAP_PX = 2; // retrait vertical en haut et en bas de chaque bloc : interstice visible entre deux blocs enchaînés
 const DRAG_PX = 5; // en deçà, un appui reste un clic (ouvre le détail)
 const NO_OVERRIDES = {}; // identité stable : la frise n'est pas recalculée sans aperçu en cours
 // Bandeau « Jour » (journées entières) : 2 éléments par case puis « +N » (liste au survol).
@@ -387,10 +388,10 @@ function AddMenu({ disabled, onAdd, onCategories }) {
 // ou aux flèches, avec un aimant sur chaque jour. Heures fixes de 8 h à 22 h. Blocs façon Calendrier
 // d'Apple (type, icône, états : voir lib/home.js blockKind et la section « Agenda » de CLAUDE.md), les
 // tâches posées par-dessus leur plage. La colonne des heures reste fixe.
-export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, openTasks, done, categories, kindOverrides = NO_OVERRIDES }) {
+export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, openTasks, done, categories, kindOverrides = NO_OVERRIDES, visibleDays = VISIBLE_DAYS, focusHref }) {
   const [selectedId, setSelectedId] = useState(null);
   const [offset, setOffset] = useState(0); // premier jour visible, en jours depuis aujourd'hui
-  const [visible, setVisible] = useState(VISIBLE_DAYS); // nombre de colonnes entières visibles
+  const [visible, setVisible] = useState(visibleDays); // nombre de colonnes entières visibles
   const scrollRef = useRef(null);
   const [aligned, setAligned] = useState(false); // bande masquée tant qu'elle n'est pas calée sur aujourd'hui
   const [hourPx, setHourPx] = useState(HOUR_PX_MIN); // hauteur d'une heure : remplit la zone sur grand écran
@@ -450,8 +451,10 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
   const shown = week ? week.days.slice(offset - WEEK_OFFSET_MIN, offset - WEEK_OFFSET_MIN + visible) : [];
   const showAllDay = hasAllDay(shown);
 
-  // Défilement : largeur d'une colonne de jour, mesurée sur la première.
-  const colWidth = () => scrollRef.current?.querySelector('[data-testid^="day-"]')?.offsetWidth || 1;
+  // Défilement : largeur d'une colonne de jour, mesurée sur la première. Largeur EXACTE (fractionnaire) : `offsetWidth`
+  // l'arrondit à l'entier, et l'écart se multiplie par le rang du jour (35 jours de passé = 14 px à 152,6 px par
+  // jour), ce qui calait « Aujourd'hui » sous la gouttière des heures (cause du défaut du 2026-10-08).
+  const colWidth = () => scrollRef.current?.querySelector('[data-testid^="day-"]')?.getBoundingClientRect().width || 1;
   // Cible d'un défilement animé en cours : deux clics rapides sur une flèche s'additionnent au lieu
   // de repartir d'une position intermédiaire. Effacée à l'arrivée ou dès un geste à la main.
   const targetRef = useRef(null);
@@ -484,7 +487,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     const measure = () => {
       const gutterPx = el.querySelector('[data-testid="agenda-gutter"]').offsetWidth;
       const minPx = (gutterPx / GUTTER_REM) * DAY_MIN_REM;
-      setDayPx(Math.max(minPx, (el.clientWidth - gutterPx) / VISIBLE_DAYS));
+      setDayPx(Math.max(minPx, (el.clientWidth - gutterPx) / visibleDays));
       // Grand écran : la zone a une hauteur fixe, les heures la remplissent (sinon 36 px, la page défile).
       const hoursCell = el.querySelector('[data-testid="agenda-hours"]');
       if (hours && hoursCell && window.matchMedia('(min-width: 1280px)').matches) {
@@ -496,7 +499,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasGrid, hours, showAllDay]);
+  }, [hasGrid, hours, showAllDay, visibleDays]);
   // Défilement vertical (zone à hauteur fixe) : à l'ouverture, la bande « maintenant » au tiers de la zone.
   const scrolledY = useRef(false);
   useLayoutEffect(() => {
@@ -617,7 +620,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
         onWheel={handTakesOver}
         onTouchStart={handTakesOver}
         className="cursor-grab snap-x snap-mandatory overflow-x-auto xl:min-h-0 xl:flex-1 xl:overflow-y-auto"
-        style={{ scrollPaddingLeft: `${GUTTER_REM}rem`, visibility: aligned ? 'visible' : 'hidden' }}
+        style={{ scrollPaddingInlineStart:`${GUTTER_REM}rem`, visibility: aligned ? 'visible' : 'hidden' }}
         data-testid="agenda-scroll"
       >
         <div className="grid w-max select-none" style={{ gridTemplateColumns: columns }}>
@@ -705,7 +708,12 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                 const shadows = [
                   ...(ringColor ? [ring(ringColor)] : []),
                   ...(selectedId === b.id ? [ringColor ? '0 0 0 5px var(--ink)' : '0 0 0 2px var(--ink)'] : []),
+                  // Contour clair d'1 px autour des blocs pleins (travail, examen) : deux blocs enchaînés ne forment pas une seule masse.
+                  ...(tone.solid ? ['0 0 0 1px var(--card-solid)'] : []),
                 ].join(', ');
+                // Retrait vertical (interstice entre deux blocs consécutifs), en haut et en bas : 2 px, 1 px sous 24 px de
+                // haut, aucun sous 14 px. Il ne décale pas l'heure lue au-delà d'une minute et demie.
+                const vgap = px >= 24 ? BLOCK_GAP_PX : px >= 14 ? 1 : 0;
                 // États : toujours un mot (ici, dans le title et pour les lecteurs d'écran), pas seulement une couleur.
                 const states = [
                   b.conflict && 'conflit',
@@ -750,7 +758,8 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                     key={b.id}
                     className={`group absolute hover:z-30 focus-within:z-30 ${b.layer === 'tache' ? 'z-[5]' : 'z-[1]'}`}
                     style={{
-                      top: clear.dy ? `calc(${b.top}% + ${clear.dy}px)` : `${b.top}%`, height: clear.dy ? `${px}px` : `${b.height}%`,
+                      top: `calc(${b.top}% + ${clear.dy + vgap}px)`,
+                      height: clear.dy ? `${px - 2 * vgap}px` : `calc(${b.height}% - ${2 * vgap}px)`,
                       left: `calc(${inset}px + ${span} * ${b.leftFrac})`, width: `calc(${span} * ${b.widthFrac})`,
                     }}
                   >
@@ -760,7 +769,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
                       onPointerDown={(ev) => startDrag(ev, b, dayIndex, 'move')}
                       title={label}
                       className={`relative block h-full w-full cursor-grab touch-none select-none overflow-hidden text-left text-xs leading-[1.2] focus-visible:outline-2 focus-visible:outline-[var(--focus)] ${
-                        pastille ? 'rounded-[10px]' : 'rounded-[5px]'
+                        pastille ? 'rounded-[10px]' : 'rounded-[7px]'
                       } ${isDone ? 'line-through' : ''}`}
                       style={{
                         ...fill,
@@ -858,7 +867,7 @@ export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks
 
   const noEvents = shown.length > 0 && shown.every((d) => !d.allDay.length && !d.blocks.length && !d.before.length && !d.after.length);
   return (
-    <Panel title="Agenda" state={state} file="agenda.sql" fill className="xl:h-full" bodyClassName="flex min-h-0 flex-1 flex-col p-3">
+    <Panel title="Agenda" titleHref={focusHref} state={state} file="agenda.sql" fill className="xl:h-full" bodyClassName="flex min-h-0 flex-1 flex-col p-3">
       <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         {shown.length > 0 ? (
           <WeekNav offset={offset} go={go} step={step} first={shown[0].short} last={shown.at(-1).short} visible={visible} />

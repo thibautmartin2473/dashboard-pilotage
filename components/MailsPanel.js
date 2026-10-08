@@ -22,14 +22,26 @@ function shortDate(iso, now) {
   return new Date(iso).toLocaleDateString('fr-FR', { timeZone: PARIS, day: '2-digit', month: '2-digit' });
 }
 
-function MailRow({ mail, now }) {
+// `wide` (vue /mails) : colonnes alignées d'une ligne à l'autre (expéditeur à largeur fixe, objet, étiquette EDHEC
+// dans sa propre colonne, heure) ; sinon la ligne compacte du Cockpit.
+function MailRow({ mail, now, wide }) {
   const edhec = mail.source === 'edhec';
   const unread = !edhec && mail.unread !== false;
   const sender = mail.sender || 'Expéditeur inconnu';
   const subject = mail.subject || '(sans objet)';
-  const content = (
+  const badge = <span className="shrink-0 rounded-md bg-[var(--action-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--action-ink)]">EDHEC</span>;
+  const content = wide ? (
     <>
-      {edhec && <span className="shrink-0 rounded-md bg-[var(--action-soft)] px-1.5 py-0.5 text-xs font-medium text-[var(--action-ink)]">EDHEC</span>}
+      <span className={`w-40 shrink-0 truncate text-sm sm:w-56 ${unread ? 'font-semibold' : 'font-medium text-[var(--ink-muted)]'}`}>{sender}</span>
+      <span className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold' : 'text-[var(--ink-muted)]'}`}>{subject}</span>
+      <span className="flex w-14 shrink-0 justify-end">{edhec && badge}</span>
+      <span className="tabular w-14 shrink-0 text-right text-xs text-[var(--ink-muted)]" title={formatMailDate(mail.received_at)}>
+        {shortDate(mail.received_at, now)}
+      </span>
+    </>
+  ) : (
+    <>
+      {edhec && badge}
       <span className={`max-w-[38%] shrink-0 truncate text-sm ${unread ? 'font-semibold' : 'font-medium text-[var(--ink-muted)]'}`}>{sender}</span>
       <span className={`min-w-0 flex-1 truncate text-sm ${unread ? 'font-semibold' : 'text-[var(--ink-muted)]'}`}>{subject}</span>
       <span className="tabular shrink-0 text-xs text-[var(--ink-muted)]" title={formatMailDate(mail.received_at)}>
@@ -37,7 +49,7 @@ function MailRow({ mail, now }) {
       </span>
     </>
   );
-  const row = 'flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-1.5 [@media(pointer:coarse)]:min-h-11';
+  const row = `flex min-h-10 items-center ${wide ? 'gap-3' : 'gap-2'} rounded-xl px-2.5 py-1.5 [@media(pointer:coarse)]:min-h-11`;
   return mail.link ? (
     <a
       href={mail.link}
@@ -54,17 +66,17 @@ function MailRow({ mail, now }) {
   );
 }
 
-export default function MailsPanel({ state, now }) {
+export default function MailsPanel({ state, now, focusHref, wide = false }) {
   const rows = state.data ?? [];
   const mails = latestMails(rows);
   const unreadGmail = mails.filter((m) => (m.source ?? 'gmail') === 'gmail' && m.unread !== false).length;
   return (
-    <Panel title="Mails" state={state} file="agenda.sql" className="xl:h-full" bodyClassName="flex min-h-0 flex-1 flex-col gap-2 p-2">
+    <Panel title="Mails" titleHref={focusHref} state={state} file="agenda.sql" className="xl:h-full" bodyClassName="flex min-h-0 flex-1 flex-col gap-2 p-2">
       {mails.length ? (
-        <ul className="min-h-0 flex-1 overflow-y-auto max-xl:max-h-80" data-testid="mail-list">
+        <ul className={`min-h-0 flex-1 overflow-y-auto ${wide ? '' : 'max-xl:max-h-80'}`} data-testid="mail-list">
           {mails.map((m) => (
             <li key={m.id}>
-              <MailRow mail={m} now={now} />
+              <MailRow mail={m} now={now} wide={wide} />
             </li>
           ))}
         </ul>

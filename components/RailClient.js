@@ -79,9 +79,9 @@ function Icon({ id, className = 'size-5' }) {
 
 const MAIN = [
   { href: '/', label: 'Cockpit', icon: 'cockpit', match: (p) => p === '/' },
-  { href: '/#a-ranger', label: 'À ranger', icon: 'ranger' },
-  { href: '/#agenda', label: 'Agenda', icon: 'agenda' },
-  { href: '/#mails', label: 'Mails', icon: 'mails' },
+  { href: '/a-ranger', label: 'À ranger', icon: 'ranger', match: (p) => p.startsWith('/a-ranger') },
+  { href: '/agenda', label: 'Agenda', icon: 'agenda', match: (p) => p.startsWith('/agenda') },
+  { href: '/mails', label: 'Mails', icon: 'mails', match: (p) => p.startsWith('/mails') },
   { href: '/brain', label: 'Idées', icon: 'idees', match: (p) => p.startsWith('/brain') },
   { href: '/constellation', label: 'Constellation', icon: 'constellation', match: (p) => p.startsWith('/constellation') },
 ];
@@ -150,28 +150,6 @@ function Mark({ day, className = 'size-10' }) {
 const LABEL_RAIL =
   'whitespace-nowrap opacity-0 transition-opacity duration-100 group-hover/rail:opacity-100 group-has-[:focus-visible]/rail:opacity-100 motion-reduce:transition-none';
 
-// Lien de section du Cockpit (« /#agenda ») : la page tient sur un écran, une ancre ne ferait rien.
-// Sur `/`, on amène la zone à l'écran (utile sur téléphone, où tout s'empile), on lui donne le focus
-// (À ranger : les touches V A C S P marchent tout de suite) et un anneau bref la désigne.
-function allerASection(event, href, pathname) {
-  if (!href.startsWith('/#') || pathname !== '/') return;
-  const zone = document.getElementById(href.slice(2));
-  if (!zone) return;
-  event.preventDefault();
-  const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  zone.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
-  if (!zone.hasAttribute('tabindex')) zone.setAttribute('tabindex', '-1');
-  zone.focus({ preventScroll: true });
-  if (!reduit) {
-    // L'anneau suit l'arrondi de la carte : #agenda et #mails sont des enveloppes sans arrondi.
-    const carte = getComputedStyle(zone).borderRadius === '0px' ? zone.firstElementChild ?? zone : zone;
-    carte.animate(
-      [{ boxShadow: '0 0 0 3px var(--focus)' }, { boxShadow: '0 0 0 3px var(--focus)', offset: 0.6 }, { boxShadow: '0 0 0 0 transparent' }],
-      { duration: 900, easing: 'ease-out' },
-    );
-  }
-}
-
 function Brand({ day, markClass, textClass, label = '' }) {
   return (
     <>
@@ -232,10 +210,7 @@ function Items({ tiles, pathname, onPick, touch = false, rail = false }) {
       <li key={it.label}>
         <Link
           href={it.href}
-          onClick={(event) => {
-            allerASection(event, it.href, pathname);
-            onPick?.(event);
-          }}
+          onClick={onPick}
           aria-current={active ? 'page' : undefined} aria-label={it.label} title={rail ? it.label : undefined} className={row(active)}>
           <Icon id={it.icon} />
           <span className={`truncate ${labelClass}`}>{it.label}</span>
