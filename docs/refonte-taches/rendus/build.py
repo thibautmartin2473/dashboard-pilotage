@@ -59,7 +59,17 @@ xs = 60 + pos[:, 0] * (W - 120); ys = 40 + pos[:, 1] * (H - 80)
 dk = deg[keep]
 groups = [notes[names[o]].split(os.sep)[0] for o in keep]
 lines = ''.join(f'<line x1="{xs[a]:.0f}" y1="{ys[a]:.0f}" x2="{xs[b]:.0f}" y2="{ys[b]:.0f}"/>' for a, b in L)
-dots = ''.join(f'<circle cx="{xs[i]:.0f}" cy="{ys[i]:.0f}" r="{1.6 + min(dk[i], 40) ** 0.5 * 0.9:.1f}"/>' for i in range(n))
-svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice"><g stroke="#EEF2F8" stroke-width="0.6">{lines}</g><g fill="#F6F8FC">{dots}</g></svg>'
+def col(rel):
+    parts = rel.split(os.sep)
+    top = parts[0]; sub = parts[1] if len(parts) > 1 else ''
+    if top.startswith('02'):
+        return {'Finance': '#7A1E2C', 'Design': '#A0714A', 'Perso': '#6E7B45'}.get(sub, '#2E557D')
+    if top.startswith('01'):
+        return '#3B6A9A'
+    if top.startswith('03'):
+        return '#4E5C78'
+    return '#5A6478'
+dots = ''.join(f'<circle cx="{xs[i]:.0f}" cy="{ys[i]:.0f}" r="{1.8 + min(dk[i], 40) ** 0.5 * 1.0:.1f}" fill="{col(notes[names[keep[i]]])}"/>' for i in range(n))
+svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid slice"><g stroke="#4E5C78" stroke-width="0.6" stroke-opacity="0.55">{lines}</g><g>{dots}</g></svg>'
 open(os.path.join(OUT, 'graph.svg'), 'w', encoding='utf-8').write(svg)
 print(json.dumps({'notes': N, 'avec_liens': n, 'liens': len(links)}))

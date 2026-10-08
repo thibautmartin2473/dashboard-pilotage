@@ -67,11 +67,14 @@ body{font:13px -apple-system,"Segoe UI",system-ui,sans-serif;color:#1B1F2A;backg
 </div>
 <div id="full"><img src="graph.svg" alt=""><div style="position:fixed;top:16px;left:16px;background:rgba(255,255,255,.15);color:#E6ECF5;border-radius:8px;padding:6px 12px">Retour au Cockpit</div><div style="position:fixed;bottom:20px;right:20px;background:#fff;border-radius:10px;padding:8px 12px">Financial Modeling, 6 liens</div></div>
 <script>
-const m = new URLSearchParams(location.search).get('mode') || 'A';
-const op = { A: 0.16, B: 0.38, C: 0.55 }[m];
-if (m === 'C') { document.querySelectorAll('.card').forEach(c => { c.style.background = 'rgba(255,255,255,.84)'; c.style.backdropFilter = 'blur(2px)'; }); }
-document.getElementById('tag').textContent = m === 'F' ? 'Plein écran (au clic)' : 'Option ' + m + ({A:' : très estompé',B:' : léger',C:' : cartes translucides'}[m]);
-if (m === 'F') { document.getElementById('full').style.display = 'block'; }
-else { document.getElementById('bg').style.opacity = op; }
+const m = new URLSearchParams(location.search).get('mode') || '1';
+const cfg = { '1': [0.75, 'cartes à 75 %'], '2': [0.6, 'cartes à 60 %'], '3': [0.45, 'cartes à 45 %'] };
+const tag = document.getElementById('tag');
+if (m === 'F') { document.getElementById('full').style.display = 'block'; document.getElementById('full').style.background = '#8E9CB4'; tag.textContent = 'Plein écran (au clic)'; }
+else {
+  const [a, label] = cfg[m]; tag.textContent = 'Option ' + m + ' : ' + label;
+  document.getElementById('bg').style.opacity = 0.9;
+  document.querySelectorAll('.card').forEach(c => { c.style.background = 'rgba(255,255,255,' + a + ')'; c.style.backdropFilter = 'blur(1.5px)'; });
+}
 </script>
 </body></html>
