@@ -48,6 +48,14 @@ et en-têtes en brun cuir niveau 2 ; agenda, À ranger et mails en texte sombre 
 15 règles de `recherche/papiers-ui.md` s'appliquent. **Tous les choix de design sont faits : reste la
 mise en vrai (session E), en lots avec une PR chacun.**
 
+**Revirement du 2026-10-08 au soir** : le lot 1 réalisé (PR #30, non mergée) est jugé « trop chargé et pas
+assez intuitif ». Nouveau cap : même organisation (rail, agenda 5 jours, colonne À ranger puis mails,
+bandeau Maintenant, tout sur un écran), **épurée à la manière d'Apple** (présentation, navigation,
+boutons) et **nouvelle charte de couleurs** : fond bleu gris #8E9CB4, verre sur les barres avec texte
+sombre, cartes blanches opaques, plage gris perle #F1F2F4, tâche et accent bleu acier #3B6A9A, retard
+corail doux #C0664A, fait barré gris, un seul mode, pas de violet. Reste à valider : les 13 points
+d'épuration (esquisse de l'écran entier), puis reprise de la PR #30.
+
 **Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
 Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
 estimés. Reste : lot 2 (fonctions 5, 13, 7, environ 0,5 M), lot 3 (2, 3, 8, environ 0,8 M), lot 4 (4, 12,
