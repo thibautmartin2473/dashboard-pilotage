@@ -762,8 +762,11 @@
   color-scheme: dark;
 }
 
-/* ---------- B. Cuir et bordeaux : sombre éditorial chaud, bordeaux, cuir, olive, crème ---------- */
-.studio[data-charte='cadran-cuir'] {
+/* ---------- B. Cuir et bordeaux : UN seul mode, brun moyen chaud (ni clair ni sombre), en trois niveaux d'équilibre.
+   cadran-cuir = niveau 2 (recommandé, le contrat des composants) ; cadran-cuir-1 (plus profond) et -3 (plus clair).
+   Texte crème partout : entre Y 0,12 et 0,22 de luminance de surface, ni la crème ni l'encre n'atteignent 4,5:1,
+   la zone médiane utilisable va donc de Y 0,04 à 0,10. ---------- */
+.studio[data-charte^='cadran-cuir'] {
   --font-display: var(--f-caslon), 'Iowan Old Style', Georgia, serif;
   --font-body: var(--f-plex), system-ui, sans-serif;
   --font-mono: var(--f-plex-mono), ui-monospace, monospace;
@@ -782,56 +785,115 @@
   --ctl-h: 30px;
   font-variant-numeric: tabular-nums;
   scrollbar-width: thin;
-}
-.studio[data-charte='cadran-cuir'][data-mode='dark'] {
-  --bg: #1a1210;
-  --surface: #241915;
-  --surface-2: #2e211c;
-  --border: #3b2b24;
-  --border-strong: #85685a;
-  --text: #f1e7d6;
-  --text-muted: #c9b6a6;
-  --text-faint: #b09e8e;
-  --accent: #dd8496;
-  --accent-soft: #3d1c27;
-  --accent-contrast: #2a0d14;
-  --danger: #f0705a;
-  --warning: #e0b050;
-  --success: #8fc08a;
-  --cat-cours: #c0c985;
-  --cat-tache: #d39a5e;
-  --cat-autre: #b79c86;
-  --surface-0: #150e0c;
-  --accent-solid: #8a2d44;
-  --on-accent: #fbf0e2;
-  --laiton: #c9a15b;
-  --shadow: inset 0 0 0 1px rgb(255 235 210 / 0.025);
   color-scheme: dark;
 }
-.studio[data-charte='cadran-cuir'][data-mode='light'] {
-  --bg: #f3ebdd;
-  --surface: #faf5ea;
-  --surface-2: #e9dfcc;
-  --border: #ddd0ba;
-  --border-strong: #8f7f68;
-  --text: #2a1b16;
-  --text-muted: #5e4d43;
-  --text-faint: #6d5b4e;
-  --accent: #7a2338;
-  --accent-soft: #ebd3d3;
-  --accent-contrast: #fbf0e2;
-  --danger: #b23a12;
-  --warning: #855500;
-  --success: #3e6f45;
-  --cat-cours: #55541c;
-  --cat-tache: #9a5a25;
-  --cat-autre: #6e5a4a;
-  --surface-0: #ece2d0;
-  --accent-solid: #7a2338;
-  --on-accent: #fbf0e2;
-  --laiton: #8a6a28;
-  --shadow: 0 1px 0 rgb(60 30 20 / 0.05);
-  color-scheme: light;
+/* Niveau 1, le plus profond : brun cacao, surfaces cuir sombre, bordeaux plein plus clair que la surface. */
+.studio[data-charte='cadran-cuir-1'] {
+  --bg: #3b2b25;
+  --surface: #4a372f;
+  --surface-2: #58443a;
+  --surface-0: #2f221d;
+  --hover: #58443a;
+  --border: #6a5247;
+  --border-strong: #a48a7a;
+  --text: #f8eedc;
+  --text-muted: #e0d0ba;
+  --text-faint: #d2c0a9;
+  --accent: #f2a8bc;
+  --accent-soft: color-mix(in srgb, #a3324d 38%, #4a372f);
+  --accent-contrast: #fff6e8;
+  --accent-solid: #a3324d;
+  --accent-line: #f2a8bc;
+  --on-accent: #fff6e8;
+  --danger: #ff8672;
+  --warning: #f2c35a;
+  --success: #8fd4a6;
+  --cat-cours: #c3cd72;
+  --cat-tache: #ecab55;
+  --cat-autre: #c9b3c0;
+  --laiton: #d8b26a;
+  --shadow: 0 1px 0 rgb(255 235 210 / 0.05), 0 2px 8px rgb(20 8 4 / 0.28);
+}
+/* Niveau 2, équilibré (recommandé) : id principal, celui sur lequel s'appuient les composants. */
+.studio[data-charte='cadran-cuir'] {
+  --bg: #4a372f;
+  --surface: #584238;
+  --surface-2: #67503f;
+  --surface-0: #3b2b25;
+  --hover: #67503f;
+  --border: #7a5f52;
+  --border-strong: #b49a88;
+  --text: #fbf1e0;
+  --text-muted: #e8d9c3;
+  --text-faint: #e0cfb8;
+  --accent: #f7b8c8;
+  --accent-soft: color-mix(in srgb, #a63450 38%, #584238);
+  --accent-contrast: #fff6e8;
+  --accent-solid: #a63450;
+  --accent-line: #f7b8c8;
+  --on-accent: #fff6e8;
+  --danger: #ff9b85;
+  --warning: #f5ca66;
+  --success: #9adeb0;
+  --cat-cours: #ccd67c;
+  --cat-tache: #f2b05c;
+  --cat-autre: #d2bccb;
+  --laiton: #e0bb70;
+  --shadow: 0 1px 0 rgb(255 235 210 / 0.05), 0 2px 8px rgb(20 8 4 / 0.28);
+}
+/* Niveau 2, alias de cadran-cuir (mêmes valeurs). */
+.studio[data-charte='cadran-cuir-2'] {
+  --bg: #4a372f;
+  --surface: #584238;
+  --surface-2: #67503f;
+  --surface-0: #3b2b25;
+  --hover: #67503f;
+  --border: #7a5f52;
+  --border-strong: #b49a88;
+  --text: #fbf1e0;
+  --text-muted: #e8d9c3;
+  --text-faint: #e0cfb8;
+  --accent: #f7b8c8;
+  --accent-soft: color-mix(in srgb, #a63450 38%, #584238);
+  --accent-contrast: #fff6e8;
+  --accent-solid: #a63450;
+  --accent-line: #f7b8c8;
+  --on-accent: #fff6e8;
+  --danger: #ff9b85;
+  --warning: #f5ca66;
+  --success: #9adeb0;
+  --cat-cours: #ccd67c;
+  --cat-tache: #f2b05c;
+  --cat-autre: #d2bccb;
+  --laiton: #e0bb70;
+  --shadow: 0 1px 0 rgb(255 235 210 / 0.05), 0 2px 8px rgb(20 8 4 / 0.28);
+}
+/* Niveau 3, le plus clair tenable avec du texte crème : brun café au lait, bordeaux plein plus sombre que la surface. */
+.studio[data-charte='cadran-cuir-3'] {
+  --bg: #59443a;
+  --surface: #675145;
+  --surface-2: #765e51;
+  --surface-0: #483730;
+  --hover: #765e51;
+  --border: #8b7162;
+  --border-strong: #cdb3a1;
+  --text: #fffaf0;
+  --text-muted: #f6e9d5;
+  --text-faint: #efdfc8;
+  --accent: #ffc9d6;
+  --accent-soft: color-mix(in srgb, #86213b 38%, #675145);
+  --accent-contrast: #fff6e8;
+  --accent-solid: #86213b;
+  --accent-line: #ffc9d6;
+  --on-accent: #fff6e8;
+  --danger: #ffbca9;
+  --warning: #fbd57a;
+  --success: #aeeac3;
+  --cat-cours: #d6e08c;
+  --cat-tache: #fcc678;
+  --cat-autre: #e2cdd9;
+  --laiton: #f0cc82;
+  --shadow: 0 1px 0 rgb(255 235 210 / 0.05), 0 2px 8px rgb(20 8 4 / 0.28);
 }
 
 /* ---------- C. Noir, blanc et voyant : contraste franc, un seul rouge de signal, points et grille ---------- */

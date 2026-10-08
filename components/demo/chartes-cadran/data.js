@@ -47,7 +47,7 @@ export const CHARTES_CADRAN = [
       'Bordeaux, cuir, olive et brun ont tous une chroma basse sur un fond bas : l’agenda se lit moins d’un coup d’œil que sur A ou D. Plage (olive) et tâche (cuir) se séparent surtout par la luminosité, et le retard (vermillon) frôle le cuir en teinte.',
       'Libre Caslon à 14 px et 400 est fin sur écran sombre ; il faut le garder pour les titres et jamais pour du corps de texte.',
       'La surpiqûre et le signet frôlent le skeuomorphisme : à garder très discrets, sinon on bascule dans le rétro décoratif que tu n’as pas retenu (Playdate, Teenage Engineering).',
-      'Le mode clair de B ressemble beaucoup au clair de A : si tu gardes les deux, tu as une charte, pas deux.',
+      'Mise à jour 2026-10-08 : B n’a plus de mode clair ni sombre, c’est un seul brun moyen en trois niveaux (voir /demo/charte-cuir) ; les deux modes de cette page y affichent désormais les mêmes couleurs.',
     ],
   },
   {
