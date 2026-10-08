@@ -1,0 +1,125 @@
+/* Boutons de Cadran, façon Apple (papiers-ui.md : règles 5, 6, 7, 12).
+   Arrondis, sans ombre ni trait. Trois niveaux seulement : primaire (seule couleur pleine, bleu acier
+   --action), secondaire (gris clair), tertiaire (texte en bleu acier, fond au survol).
+   32 px de haut à la souris, 44 px au doigt. Quatre états visibles (repos, survol, appui en 40 ms,
+   désactivé) + anneau de focus --focus. Le raccourci clavier s'indique au survol (attribut title).
+   Les couleurs viennent toutes des jetons de app/globals.css, jamais d'une valeur en dur.
+   Même ordre des couches que Tailwind : les classes utilitaires gardent la main (espacement, largeur). */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .key {
+    --key-fill: var(--btn-fill);
+    --key-fill-hover: var(--btn-fill-hover);
+    --key-fill-press: var(--btn-fill-press);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--key-fill);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition:
+      background-color 100ms ease-out,
+      color 100ms ease-out,
+      transform 80ms ease-out;
+  }
+  .key:hover:not(:disabled) {
+    background: var(--key-fill-hover);
+  }
+  /* Appui : réponse en 40 ms, le bouton se tasse légèrement. */
+  .key:active:not(:disabled) {
+    background: var(--key-fill-press);
+    transform: scale(0.98);
+    transition-duration: 40ms;
+  }
+  .key:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .key:disabled,
+  .key[aria-disabled='true'] {
+    cursor: not-allowed;
+    color: var(--ink-muted);
+    background: var(--btn-fill);
+    opacity: 0.55;
+  }
+
+  /* Niveau 1, primaire : la seule couleur pleine, bleu acier (texte blanc 5,6:1). */
+  .key--primary {
+    --key-fill: var(--action);
+    --key-fill-hover: var(--action-hover);
+    --key-fill-press: var(--action-press);
+    color: var(--action-text);
+    font-weight: 600;
+  }
+  .key--primary:disabled,
+  .key--primary[aria-disabled='true'] {
+    color: var(--action-text);
+    background: var(--action);
+    opacity: 0.45;
+  }
+
+  /* Niveau 3, tertiaire : pas de fond au repos, texte en bleu acier foncé (--action-ink : 6,8:1 sur carte,
+     5,4:1 au survol, 4,7:1 à l'appui), fond gris au survol. */
+  .key--tertiary {
+    --key-fill: transparent;
+    color: var(--action-ink);
+  }
+  .key--tertiary:disabled,
+  .key--tertiary[aria-disabled='true'] {
+    background: transparent;
+    color: var(--ink-muted);
+  }
+
+  /* Ton destructif : texte corail foncé (le corail pâle ne ferait que 3,2:1), jamais un fond plein. --late-ink
+     plutôt que --late-text : le bouton gris (--btn-fill) et le creux d'une carte font tomber --late-text à 4,1:1. */
+  .key--late {
+    color: var(--late-ink);
+  }
+  .key--late:hover:not(:disabled) {
+    background: var(--late-soft);
+  }
+
+  /* Bouton à bascule : enfoncé = fond bleu acier tinté et texte bleu acier. */
+  .key[aria-pressed='true'] {
+    --key-fill: var(--action-soft);
+    --key-fill-hover: var(--action-soft);
+    color: var(--action-ink);
+    font-weight: 600;
+  }
+
+  /* Bouton d'icône ou de glyphe (modifier, monter, descendre...). */
+  .key--icon {
+    min-width: 32px;
+    padding: 0 8px;
+  }
+
+  @media (pointer: coarse) {
+    .key {
+      min-height: 44px;
+    }
+    .key--icon {
+      min-width: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .key {
+      transition: none;
+    }
+    .key:active:not(:disabled) {
+      transform: none;
+    }
+  }
+}

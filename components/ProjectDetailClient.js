@@ -7,6 +7,7 @@ import CopyCommand from './CopyCommand';
 import { getProjectBySlug, projectStatus } from '@/lib/data';
 import { useRealtimeRefresh } from '@/lib/useRealtimeRefresh';
 import { timeAgo, formatDuration } from '@/lib/format';
+import { cardClass } from './card';
 
 export default function ProjectDetailClient({ initialProject }) {
   const [project, setProject] = useState(initialProject);
@@ -34,12 +35,12 @@ export default function ProjectDetailClient({ initialProject }) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <div className="flex items-start justify-between gap-2">
+      <div className={`${cardClass} flex items-start justify-between gap-2`}>
         <h1 className="text-2xl font-semibold">{project.name}</h1>
         <StatusBadge status={status} />
       </div>
 
-      <section className="mt-6">
+      <section className={`${cardClass} mt-4`}>
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Reprendre</h2>
         <div className="mt-2">
           <CopyCommand command={resumeCommand} />
@@ -51,14 +52,14 @@ export default function ProjectDetailClient({ initialProject }) {
         )}
       </section>
 
-      <section className="mt-8">
+      <section className={`${cardClass} mt-4`}>
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Jalons</h2>
-        <div className="mt-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="mt-2">
           <MilestoneChecklist projectId={project.id} milestones={project.milestones} />
         </div>
       </section>
 
-      <section className="mt-8">
+      <section className={`${cardClass} mt-4`}>
         <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Historique des sessions</h2>
         <ol className="mt-2 space-y-3">
           {project.sessions.length === 0 && (

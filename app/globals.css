@@ -1,66 +1,263 @@
 @import "tailwindcss";
 
-/* Thème « Cockpit » : le tableau de bord est sombre par défaut, sur PC comme sur
-   mobile. Le variant `dark:` est donc toujours actif — les composants gardent
-   leurs paires `bg-white dark:bg-zinc-950` telles quelles et c'est la branche
-   sombre qui s'applique. Un relooking se fait ici : la rampe zinc ci-dessous
-   EST la palette du cockpit, personne ne la redéfinit ailleurs. */
+/* Charte « Cadran » : fond bleu gris, barres en verre, cartes blanches à 75 % (choix de Thibaut, 2026-10-08,
+   SPEC.md section 2). Un seul mode, ni clair ni sombre. Le fond de page (--page) laisse la place à un fond
+   animé (#cadran-fond, Constellation) : les cartes sont translucides pour le laisser voir.
+
+   Les jetons ci-dessous sont le CONTRAT des composants : on les consomme en classes arbitraires
+   (bg-[var(--card-bg)]), jamais en hexadécimal.
+
+   Contrastes calculés (WCAG 2.x), pire cas = carte à 75 % sur --page nu, soit environ #E3E6EC.
+     Texte sur carte
+       --ink          #1B1F2A   13,9
+       --ink-muted    #596175    4,9   (le #6B7385 de la SPEC ne donne que 3,8:1 sur une carte translucide)
+       --action       #3B6A9A    4,5   (texte blanc dessus : 5,6)
+       --action-ink   #2A4F78    6,8   (5,7 sur --action-soft, 5,9 sur --btn-fill : tout texte d'action sur fond teinté)
+       --late-text    #A04228    5,1   (--late #C0664A sert aux filets et aux fonds, 3,2:1 en texte : interdit)
+       --done         #5B6373    4,6
+     Texte sur le verre (blanc 30 % sur --page, environ #B0BACB)
+       --glass-text   #1B1F2A    8,5
+       --glass-muted  #2F3646    6,2
+     Contour de bouton ou de champ : --line-strong #737D90   3,3
+     Anneau de focus : --focus #1E4E80   3,0 sur --page, 8,4 sur carte.
+   Règles : trois niveaux de boutons au plus, une seule couleur pleine (--action), corail = retard ou
+   conflit, gris barré = fait, jamais de violet ni de couleur d'état sans mot ou icône. */
 @custom-variant dark (&:where(*));
+
+:root {
+  /* Fond de page. */
+  --page: #8e9cb4;
+
+  /* Verre : rail, bandeau « Maintenant », fenêtres (texte sombre dessus). */
+  --glass-bg: rgba(255, 255, 255, 0.3);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-hover: rgba(255, 255, 255, 0.38);
+  --glass-active: rgba(255, 255, 255, 0.58);
+  --glass-filter: blur(20px) saturate(140%);
+  --glass-text: #1b1f2a;
+  --glass-muted: #2f3646;
+
+  /* Cartes : agenda, À ranger, mails, formulaires. */
+  --card-bg: rgba(255, 255, 255, 0.75);
+  --card-border: rgba(255, 255, 255, 0.6);
+  --card-solid: #f5f7fa; /* surcouches (menus, infobulles) : jamais translucides */
+  --card-inset: rgba(27, 31, 42, 0.05); /* zone en creux dans une carte (suggestion, formulaire) */
+  --field-bg: rgba(255, 255, 255, 0.92); /* champs de saisie */
+  --ink: #1b1f2a;
+  --ink-muted: #596175;
+  --ink-muted-on-tint: #475066; /* --ink-muted sur une ligne sélectionnée (--action-soft : 4,2:1) : 5,4:1 */
+  --line: rgba(27, 31, 42, 0.12);
+  --line-strong: #737d90;
+
+  /* Action : bouton principal, bleu acier. Boutons secondaires : gris clair. */
+  --action: #3b6a9a;
+  --action-hover: #345f8b;
+  --action-press: #2c5278;
+  --action-text: #ffffff;
+  --action-soft: rgba(59, 106, 154, 0.14);
+  /* Texte d'action sur un fond teinté (--action-soft, --card-inset, --btn-fill, ligne sélectionnée) : --action
+     (#3B6A9A) y tombe à 3,6 à 4,1:1, --action-ink (#2A4F78) y garde 5,4 à 6,2:1. --action reste pour les
+     fonds pleins, les filets et le texte posé directement sur une carte. */
+  --action-ink: #2a4f78;
+  --btn-fill: rgba(27, 31, 42, 0.07);
+  --btn-fill-hover: rgba(27, 31, 42, 0.12);
+  --btn-fill-press: rgba(27, 31, 42, 0.18);
+
+  /* États, chacun doublé d'un mot ou d'une icône. */
+  --late: #c0664a;
+  --late-text: #a04228;
+  --late-soft: rgba(192, 102, 74, 0.14);
+  --late-ink: #7f321d; /* texte corail foncé sur fond teinté (bouton Supprimer sur --btn-fill, ligne sélectionnée) : --late-text y tombe à 3,8 à 4,1:1, celui-ci reste à 5,2:1 et plus */
+  --pending: #3b6a9a; /* à traiter ou en cours : bleu acier, pas de troisième couleur */
+  --done: #5b6373; /* fait : gris, texte barré */
+  --done-soft: rgba(91, 99, 115, 0.12);
+  --done-ink: #4a5163; /* texte d'un bloc fait (barré) : --done ne fait que 4,2:1 sur --done-soft, celui-ci 5,5 */
+
+  /* Anneau de focus clavier. */
+  --focus: #1e4e80;
+
+  /* Blocs de l'agenda (SPEC section 3, façon Calendrier d'Apple) : filet de 3 px à gauche, fond pâle opaque,
+     texte de la même teinte (7,8 / 6,7 / 7,8:1 sur leur fond). Cours et sport partagent l'olive. L'examen
+     est un bordeaux plein (texte blanc 10,3:1). La prépa de la SPEC (#8e9cb4) ne donne que 2,2:1 en filet sur
+     une carte : filet foncé à #6c7c99 (3,4:1), texte #3c4a66. Tâches : --action (bleu acier). */
+  --bloc-cours: #6e7b45;
+  --bloc-cours-fond: #e7ebdd;
+  --bloc-cours-texte: #3f4a22;
+  --bloc-examen: #7a1e2c;
+  --bloc-examen-texte: #ffffff;
+  --bloc-rdv: #a0714a;
+  --bloc-rdv-fond: #efe2d3;
+  --bloc-rdv-texte: #6a4426;
+  --bloc-prepa: #6c7c99;
+  --bloc-prepa-fond: #eef0f3;
+  --bloc-prepa-texte: #3c4a66;
+
+  --background: var(--page);
+  --foreground: var(--ink);
+  color-scheme: light;
+}
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  /* Même famille que le texte, chiffres tabulaires : plus de police à chasse fixe pour les heures. */
+  --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 
-  /* Surfaces et texte : zinc-950 = fond de page, zinc-900 = surface d'un
-     panneau, zinc-800/700 = bordures, zinc-400 = texte secondaire,
-     zinc-100 = texte fort (et fond des boutons actifs). */
-  --color-black: #202429;
-  --color-zinc-950: #202429;
-  --color-zinc-900: #2c313a;
-  --color-zinc-800: #3d434d;
-  --color-zinc-700: #4a515c;
-  --color-zinc-600: #5d6572;
-  --color-zinc-500: #a3abb8;
-  --color-zinc-400: #aeb6c2;
-  --color-zinc-300: #c9cfd8;
-  --color-zinc-200: #dadee5;
-  --color-zinc-100: #e6e9ee;
-  --color-zinc-50: #2c313a;
+  /* La rampe zinc ci-dessous EST la charte : les composants écrits pour l'ancien thème sombre
+     (« bg-zinc-900 text-zinc-100 ») passent en carte claire sans être touchés. Rampe inversée :
+     zinc-950 = creux dans une carte, zinc-900 = carte, zinc-800 = filet, zinc-700 = contour de
+     bouton ou de champ (3:1), zinc-500/400 = texte secondaire, zinc-100 = texte fort. */
+  --color-white: #363c4c; /* seul usage restant : survol d'un bouton plein (texte clair dessus) */
+  --color-black: #1b1f2a;
+  --color-zinc-950: rgba(27, 31, 42, 0.05);
+  --color-zinc-900: rgba(255, 255, 255, 0.75);
+  --color-zinc-800: rgba(27, 31, 42, 0.14);
+  --color-zinc-700: #737d90;
+  --color-zinc-600: #68728a;
+  --color-zinc-500: #596175;
+  --color-zinc-400: #4a5163;
+  --color-zinc-300: #363c4c;
+  --color-zinc-200: #2a2f3d;
+  --color-zinc-100: #1b1f2a;
+  --color-zinc-50: #ffffff;
 
-  /* Accent et états. Les composants s'en servent via les rampes red/amber/green
-     (leurs variantes -400 pour le texte, -950 pour les fonds). */
-  --color-accent: #7aa2ff;
-  --color-accent-soft: #2d3858;
-  --color-red-300: #ff8279;
-  --color-red-400: #ff8279;
-  --color-red-600: #ff8279;
-  --color-red-800: #4a2620;
-  --color-red-950: #2a1512;
-  --color-red-50: #2a1512;
-  --color-amber-300: #4a3a18;
-  --color-amber-400: #e0a33e;
-  --color-amber-800: #4a3a18;
-  --color-amber-950: #2a2110;
-  --color-amber-50: #2a2110;
-  --color-green-400: #35c793;
-  --color-green-600: #35c793;
-}
+  /* Accent des composants existants : l'action (bleu acier). */
+  --color-accent: #3b6a9a;
+  --color-accent-soft: #dce6f1;
 
-:root {
-  --background: #202429;
-  --foreground: #e6e9ee;
-  color-scheme: dark;
+  /* États pour les composants existants : -300/-400/-600/-700/-800 pour le texte (sombre),
+     -950/-50/-100 pour les fonds (tintes claires), -500 pour un trait ou une pastille, -800/-900
+     pour un contour ou un fond atténué. Rouge = corail (retard), ambre = bleu acier (à traiter),
+     vert et émeraude = gris (fait), bleu et ciel = bleu acier (information). */
+  --color-red-50: #f6e3dc;
+  --color-red-100: #f6e3dc;
+  --color-red-300: #a04228;
+  --color-red-400: #a04228;
+  --color-red-500: #c0664a;
+  --color-red-600: #a04228;
+  --color-red-800: #e3b5a6;
+  --color-red-950: #f6e3dc;
+  --color-amber-50: #dce6f1;
+  --color-amber-100: #dce6f1;
+  --color-amber-300: #2f5880;
+  --color-amber-400: #2f5880;
+  --color-amber-500: #3b6a9a;
+  --color-amber-700: #2f5880;
+  --color-amber-800: #afc3d9;
+  --color-amber-900: #3b6a9a;
+  --color-amber-950: #dce6f1;
+  --color-green-400: #4a5163;
+  --color-green-600: #4a5163;
+  --color-green-300: #4a5163;
+  --color-green-950: #e3e6ec;
+  --color-green-700: #4a5163;
+  --color-green-800: #4a5163;
+  --color-green-100: #e3e6ec;
+  --color-emerald-200: #4a5163;
+  --color-emerald-300: #4a5163;
+  --color-emerald-700: #4a5163;
+  --color-emerald-900: #8c95a6;
+  --color-emerald-950: #e3e6ec;
+  --color-emerald-100: #e3e6ec;
+  --color-blue-100: #dce6f1;
+  --color-blue-300: #2f5880;
+  --color-blue-700: #2f5880;
+  --color-blue-800: #2f5880;
+  --color-blue-950: #dce6f1;
+  --color-sky-100: #dce6f1;
+  --color-sky-300: #2f5880;
+  --color-sky-700: #2f5880;
+  --color-sky-900: #5b86b3;
 }
 
 body {
-  background: var(--background);
+  background: var(--page);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+/* Anneau de focus clavier par défaut (les composants qui posent le leur le gardent). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+
+/* Verre translucide (rail, bandeau « Maintenant », fenêtres) : blanc léger, filet blanc, flou. Le texte
+   dessus est sombre (--glass-text) : le blanc sur ce verre serait illisible. */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    color: var(--glass-text);
+  }
+  .glass-strong {
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    color: var(--glass-text);
+  }
+}
+
+/* Apparitions courtes (150 à 220 ms, sans rebond) : fond qui se voile, fenêtre qui se pose, feuille qui monte
+   du bas. prefers-reduced-motion les réduit à rien (règle en fin de fichier). */
+@keyframes cadran-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cadran-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+@keyframes cadran-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+@layer utilities {
+  .anim-fade {
+    animation: cadran-fade 150ms ease-out;
+  }
+  .anim-pop {
+    animation: cadran-pop 160ms ease-out;
+  }
+  .anim-sheet {
+    animation: cadran-sheet 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }
 
 /* Les nombres du cockpit s'alignent en colonne (tuiles, heures, compteurs). */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+code,
+kbd,
+samp {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Réduire les animations quand le système le demande. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

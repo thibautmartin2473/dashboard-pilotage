@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, ConfirmDelete, ErrorLine, Field, IconButton, Select, useAction } from './ui';
 import { deleteCategory, moveCategory, saveCategory } from '@/app/edit-actions';
+import { DEFAULT_CATEGORIES } from '@/lib/home';
 
 const KIND_LABEL = { plage: 'Plage horaire', tache: 'Tâche / travail' };
 const DEFAULT_KEYS = ['11', '9', '6'];
@@ -10,7 +11,7 @@ const DEFAULT_KEYS = ['11', '9', '6'];
 // Formulaire d'une catégorie (nom, couleur, type) : création (`category` absente) ou édition.
 function CategoryForm({ category, onDone }) {
   const { pending, error, run } = useAction();
-  const [form, setForm] = useState(category ?? { name: '', color: '#3b82f6', kind: 'plage' });
+  const [form, setForm] = useState(category ?? { name: '', color: DEFAULT_CATEGORIES[0].color, kind: 'plage' });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const submit = (e) => {
     e.preventDefault();
@@ -71,9 +72,9 @@ export function CategoryPicker({ value, categories, onChange }) {
             </option>
           ))}
         </Select>
-        <button type="button" className="text-xs underline" onClick={() => setEditing((o) => !o)}>
+        <Button level="tertiary" className="px-2 text-xs underline" onClick={() => setEditing((o) => !o)}>
           modifier la catégorie
-        </button>
+        </Button>
       </div>
       {editing && <CategoryForm category={current} onDone={() => setEditing(false)} />}
     </div>
@@ -83,24 +84,38 @@ export function CategoryPicker({ value, categories, onChange }) {
 // « Catégories » : créer, renommer, recolorer, réordonner et supprimer (dashboard_settings, clé
 // agenda_categories). Les 3 catégories Google (rouge/bleu/orange) ne se suppriment pas : elles
 // portent les colorId poussés par scripts/push-agenda.mjs.
-export default function CategoryEditor({ categories }) {
-  const [open, setOpen] = useState(false);
+// Seul : bouton « Catégories » qui déplie la liste. Piloté (`open` fourni, ex. par le menu « + » de l'agenda) :
+// pas de bouton, la liste s'affiche selon `open` et se ferme par `onClose`.
+export default function CategoryEditor({ categories, open: controlledOpen, onClose }) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : innerOpen;
   const [editingKey, setEditingKey] = useState(null); // clé en édition, 'new', ou null
   const { pending, error, run } = useAction();
 
   return (
-    <div>
-      <Button aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        Catégories
-      </Button>
+    <div className={controlled ? 'shrink-0' : ''}>
+      {!controlled && (
+        <Button aria-expanded={open} onClick={() => setInnerOpen((o) => !o)}>
+          Catégories
+        </Button>
+      )}
       {open && (
         <div
-          className="mt-2 rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950"
+          className={`rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-950 ${controlled ? 'mt-3 max-h-[40%] overflow-y-auto' : 'mt-2'}`}
           data-testid="category-editor"
         >
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            La couleur reste sur ce tableau de bord : rien n&apos;est écrit dans Google Agenda.
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              La couleur reste sur ce tableau de bord : rien n&apos;est écrit dans Google Agenda. Les blocs de l&apos;agenda
+              suivent leur type (cours, examen, rendez-vous...), pas la couleur de la catégorie.
+            </p>
+            {controlled && (
+              <Button level="tertiary" onClick={() => onClose?.()}>
+                Fermer
+              </Button>
+            )}
+          </div>
           <ul className="mt-1 divide-y divide-zinc-100 dark:divide-zinc-900">
             {categories.map((c, i) => (
               <li key={c.key} className="py-1.5">

@@ -5,8 +5,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { applyPositions, deleteProject, moveRow, must, nextPosition, rows, rowsNotDropped, touch } from '@/lib/db-ops';
 import { MILESTONE_STATUSES } from '@/lib/constants';
 import {
-  BUCKETS, CATEGORY_KINDS, DEFAULT_CATEGORIES, MAIL_SOURCES, OTHER_KEY, eventIdsOnDay, eventRow, isMissingColumn,
-  isMissingTable, reorderUpdates, resolveCategories, resolveLayout, slugify, splitTasks, todayParis,
+  BLOCK_KINDS, BUCKETS, CATEGORY_KINDS, DEFAULT_CATEGORIES, OTHER_KEY, eventIdsOnDay, eventRow, isMissingColumn,
+  isMissingTable, reorderUpdates, capKindEntries, resolveCategories, resolveKindEntries, slugify, splitTasks, todayParis,
 } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
 
@@ -338,17 +338,6 @@ async function saveSetting(db, key, value) {
   if (error) throw error;
 }
 
-export async function saveLayout(layout) {
-  return run((db) => saveSetting(db, 'home_layout', resolveLayout(layout)));
-}
-
-export async function setMailFilter(value) {
-  return run((db) => {
-    must(value === 'all' || MAIL_SOURCES.includes(value), 'Filtre invalide');
-    return saveSetting(db, 'mail_filter', value);
-  });
-}
-
 // ---- Catégories d'agenda (dashboard_settings, clé « agenda_categories ») ----
 // Les 3 catégories par défaut (color_id Google '11'/'9'/'6') se renomment et se recolorent mais ne
 // se suppriment pas ; leur clé reste la source de vérité pour scripts/push-agenda.mjs.
@@ -388,5 +377,27 @@ export async function moveCategory(key, direction) {
     const next = [...categories];
     [next[i], next[j]] = [next[j], next[i]];
     await saveSetting(db, 'agenda_categories', next);
+  });
+}
+
+// ---- Type d'un bloc de l'agenda (dashboard_settings, clé « agenda_kind_overrides ») ----
+// Le type d'un bloc (cours, sport, examen, rendez-vous, prépa, travail, courte) se déduit de sa catégorie
+// et de son titre (blockKind, lib/home.js). Le menu « Type » du détail enregistre ici une surcharge
+// { [id de l'événement]: { kind, at } } qui l'emporte (at = date d'écriture en ms ; l'ancien format
+// { [id]: type } reste lu) ; aucune table ni colonne en plus. kind vide = retour à l'automatique.
+// Lecture-modification-écriture comme saveCategory ; au plus KIND_OVERRIDES_MAX entrées : les plus
+// anciennes par `at` partent d'abord (un bloc passé n'a plus besoin de sa surcharge), jamais celle qu'on écrit.
+// (L'ordre des clés d'un jsonb ne reflète pas celui des écritures : d'où `at`.)
+const KIND_OVERRIDES_MAX = 500;
+
+export async function saveKindOverride({ eventId, kind }) {
+  return run(async (db) => {
+    eventId = text(eventId, 'Événement', 300);
+    must(!kind || BLOCK_KINDS.includes(kind), 'Type invalide');
+    const [row] = await rows(db.from('dashboard_settings').select('value').eq('key', 'agenda_kind_overrides'));
+    const entries = resolveKindEntries(row?.value);
+    delete entries[eventId];
+    if (kind) entries[eventId] = { kind, at: Date.now() };
+    await saveSetting(db, 'agenda_kind_overrides', capKindEntries(entries, eventId, KIND_OVERRIDES_MAX));
   });
 }

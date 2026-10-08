@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { Panel } from './ui';
 
 const STATUS_LABELS = { new: 'nouvelle', triaged: 'rangée', done: 'faite' };
+// Pastilles sur la carte, texte --ink (11:1 et plus) : le mot de statut porte le sens, la teinte l'accompagne.
 const STATUS_COLORS = {
-  new: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  triaged: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-  done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  new: 'bg-[var(--action-soft)] text-[var(--ink)]',
+  triaged: 'bg-[var(--btn-fill)] text-[var(--ink)]',
+  done: 'bg-[var(--done-soft)] text-[var(--ink)]',
 };
 
 export default function BrainNotesClient({ initialNotes }) {
@@ -36,7 +38,7 @@ export default function BrainNotesClient({ initialNotes }) {
   }
 
   return (
-    <div className="space-y-6">
+    <Panel title="Idées" count={notes.length} bodyClassName="space-y-6 p-4">
       <form onSubmit={handleSubmit} className="space-y-2">
         <textarea
           value={content}
@@ -78,6 +80,6 @@ export default function BrainNotesClient({ initialNotes }) {
           <li className="text-sm text-zinc-400">Aucune idée pour l&apos;instant.</li>
         )}
       </ul>
-    </div>
+    </Panel>
   );
 }

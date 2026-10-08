@@ -1,20 +1,18 @@
 'use client';
 
-// Rangement forcé : à l'ouverture de l'accueil, un écran plein présente un par un les éléments « dus »
+// Rangement forcé : à l'ouverture de l'accueil, une feuille façon iOS (elle monte du bas, animation courte,
+// réduite à rien si prefers-reduced-motion) présente un par un les éléments « dus »
 // (en retard, bloc terminé, créés avant aujourd'hui, reports arrivés). Il n'a ni bouton fermer ni Échap :
 // il se ferme quand tout est traité (« Plus tard » compte comme traité). La file est figée au montage :
 // AutoRefresh relit la page toutes les 60 s sans jamais la réinitialiser. Jamais de blocage sans issue :
 // un élément déjà traité ailleurs est retiré de la file, et un geste qui échoue offre « Passer pour l'instant ».
 import { useEffect, useRef, useState } from 'react';
-import { ElsewherePicker, ItemMeta, SuggestionBox, TypeBadge, btnClass, primaryBtn } from './RangerParts';
+import { ElsewherePicker, Gestures, ItemMeta, SuggestionBox, TypeBadge, btnClass, primaryBtn } from './RangerParts';
+import { keyClass } from '../ui';
 import { rangerApply, rangerUndo } from '@/app/ranger-actions';
 import { gesturesFor } from '@/lib/ranger';
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-function Key({ children }) {
-  return <kbd className="ml-1.5 rounded border border-zinc-600 px-1 font-mono text-[10px] text-zinc-300">{children}</kbd>;
-}
 
 function Dialog({ initial, options, ready, today, onClose }) {
   const [byKey] = useState(() => new Map(initial.map((i) => [i.key, i])));
@@ -192,6 +190,14 @@ function Dialog({ initial, options, ready, today, onClose }) {
     return () => {
       if (page) page.inert = false;
       document.body.style.overflow = overflow;
+      // La feuille disparaît avec le focus dedans : on le rend à la première ligne de « À ranger », sinon au
+      // contenu principal (rendu focalisable le temps du focus).
+      const active = document.activeElement;
+      if (active && active !== document.body) return;
+      const target = document.querySelector('#a-ranger [data-row]') ?? page;
+      if (!target) return;
+      if (!target.matches('button, a, input, [tabindex]')) target.tabIndex = -1;
+      target.focus();
     };
   }, []);
   const currentKey = current?.key;
@@ -203,46 +209,49 @@ function Dialog({ initial, options, ready, today, onClose }) {
   const stuckText = `${stuck} élément${stuck > 1 ? "s n'ont" : " n'a"} pas pu être rangé${stuck > 1 ? 's' : ''}, recharge la page`;
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto bg-zinc-950" data-testid="ranger-forced">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center text-[var(--ink)]" data-testid="ranger-forced">
+      {/* Voile : la page derrière reste visible mais inerte (pas de fermeture au clic : on range d'abord). */}
+      <div className="anim-fade absolute inset-0 bg-[var(--ink)]/35 backdrop-blur-[3px]" aria-hidden="true" />
       <div
         ref={box}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ranger-forced-title"
         tabIndex={-1}
-        className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8 outline-none sm:px-6"
+        className="anim-sheet relative flex max-h-[92dvh] w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-t-3xl border border-b-0 border-[var(--card-border)] bg-[var(--card-solid)] px-4 pb-8 pt-3 shadow-2xl outline-none sm:px-6"
       >
+        <div className="mx-auto h-1.5 w-10 shrink-0 rounded-full bg-[var(--line-strong)]/50" aria-hidden="true" />
         <header className="space-y-2">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 id="ranger-forced-title" className="text-lg font-bold tracking-tight text-zinc-100">
+            <h2 id="ranger-forced-title" className="text-xl font-semibold tracking-tight">
               {finished ? (stuck ? 'Rangement terminé' : 'Tout est rangé') : 'Rangement du jour'}
             </h2>
             {!finished && (
-              <span className="tabular font-mono text-sm text-zinc-300" data-testid="ranger-progress" aria-label={`Élément ${position} sur ${total}`}>
+              <span className="tabular text-sm text-[var(--ink-muted)]" data-testid="ranger-progress" aria-label={`Élément ${position} sur ${total}`}>
                 {`${position} / ${total}`}
               </span>
             )}
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800" role="presentation">
-            <div className="h-full bg-[var(--color-accent)] transition-all" style={{ width: `${((total - live.length) / total) * 100}%` }} />
+          <div className="h-1 overflow-hidden rounded-full bg-[var(--line)]" role="presentation">
+            <div className="h-full rounded-full bg-[var(--action)] transition-[width] duration-200 ease-out motion-reduce:transition-none" style={{ width: `${((total - live.length) / total) * 100}%` }} />
           </div>
         </header>
 
         {finished ? (
           <section className="space-y-4">
-            <p className="text-sm text-zinc-300">{`${history.reduce((n, h) => n + h.keys.length, 0)} élément(s) traité(s).${stuck ? '' : " Rien ne reste d'avant aujourd'hui."}`}</p>
+            <p className="text-base">{`${history.reduce((n, h) => n + h.keys.length, 0)} élément(s) traité(s).${stuck ? '' : " Rien ne reste d'avant aujourd'hui."}`}</p>
             {stuck > 0 && (
-              <p role="alert" className="text-sm text-amber-400" data-testid="ranger-stuck">
+              <p role="alert" className="text-sm font-medium text-[var(--ink)]" data-testid="ranger-stuck">
                 {stuckText}
               </p>
             )}
             {notice && (
-              <p role="status" className="text-xs text-zinc-300">
+              <p role="status" className="text-sm text-[var(--ink-muted)]">
                 {notice}
               </p>
             )}
             {error && (
-              <p role="alert" className="text-xs text-red-400">
+              <p role="alert" className="text-sm text-[var(--late-text)]">
                 {error}
               </p>
             )}
@@ -250,20 +259,20 @@ function Dialog({ initial, options, ready, today, onClose }) {
               <button type="button" className={primaryBtn} onClick={onClose} data-testid="ranger-close">
                 Ouvrir le cockpit
               </button>
-              <button type="button" className={btnClass} disabled={!history.length || busy > 0} onClick={undo}>
-                Annuler le dernier geste <Key>Z</Key>
+              <button type="button" className={btnClass} disabled={!history.length || busy > 0} onClick={undo} title="Annuler le dernier geste (Z)" aria-keyshortcuts="Z">
+                Annuler le dernier geste
               </button>
             </div>
           </section>
         ) : current ? (
           <section className="space-y-3">
-            <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+            <div className="space-y-2 rounded-2xl bg-[var(--card-inset)] p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <TypeBadge item={current} />
-                {current.dueReason && <span className="font-mono text-[11px] text-amber-400">{current.dueReason}</span>}
+                {current.dueReason && <span className="text-xs font-semibold text-[var(--late-text)]">{current.dueReason}</span>}
               </div>
-              <p className="text-lg font-semibold break-words text-zinc-100">{current.title}</p>
-              {current.detail && <p className="text-sm break-words text-zinc-400">{current.detail}</p>}
+              <p className="text-xl font-semibold break-words">{current.title}</p>
+              {current.detail && <p className="text-sm break-words text-[var(--ink-muted)]">{current.detail}</p>}
               <ItemMeta item={current} />
             </div>
 
@@ -272,46 +281,47 @@ function Dialog({ initial, options, ready, today, onClose }) {
             {picker ? (
               <ElsewherePicker options={options} today={today} futureDays={ready} numbered onPick={(t) => handle('place', t)} onCancel={() => setPicker(false)} />
             ) : (
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className={primaryBtn} disabled={!g.validate} onClick={() => handle('place')}>
-                  Valider <Key>V</Key>
-                </button>
-                <button type="button" className={btnClass} disabled={!g.elsewhere} onClick={() => setPicker(true)}>
-                  Affecter ailleurs <Key>A</Key>
-                </button>
-                <button type="button" className={btnClass} onClick={() => handle('done')}>
-                  {g.doneLabel} <Key>C</Key>
-                </button>
-                <button type="button" className={btnClass} disabled={!g.drop} title={g.drop ? undefined : 'Demande supabase/ranger.sql'} onClick={() => handle('drop')}>
-                  Supprimer <Key>S</Key>
-                </button>
-                <button type="button" className={btnClass} disabled={!g.later} title={g.later ? 'Revient dimanche' : 'Demande supabase/ranger.sql'} onClick={() => handle('later')}>
-                  Plus tard <Key>P</Key>
-                </button>
-              </div>
+              <Gestures
+                g={g}
+                label="Gestes"
+                on={{
+                  place: () => handle('place'),
+                  elsewhere: () => setPicker(true),
+                  done: () => handle('done'),
+                  drop: () => handle('drop'),
+                  later: () => handle('later'),
+                }}
+              />
             )}
 
             <div className="flex flex-wrap items-center gap-2">
               {group.length > 1 && (
-                <button type="button" aria-pressed={series} className={`${btnClass} ${series ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : ''}`} onClick={() => setSeries((s) => !s)}>
+                <button type="button" aria-pressed={series} className={btnClass} onClick={() => setSeries((s) => !s)}>
                   {`Appliquer à la série (${group.length})`}
                 </button>
               )}
-              <button type="button" className={btnClass} disabled={!history.length || busy > 0} onClick={undo}>
-                Annuler le dernier geste <Key>Z</Key>
+              <button
+                type="button"
+                className={keyClass({ level: 'tertiary' })}
+                disabled={!history.length || busy > 0}
+                onClick={undo}
+                title="Annuler le dernier geste (Z)"
+                aria-keyshortcuts="Z"
+              >
+                Annuler le dernier geste
               </button>
             </div>
             {series && group.length > 1 && (
-              <p className="text-xs text-[var(--color-accent)]">{`Le prochain geste s'applique aux ${group.length} éléments de cette série.`}</p>
+              <p className="text-sm text-[var(--ink)]">{`Le prochain geste s'applique aux ${group.length} éléments de cette série.`}</p>
             )}
-            {!ready && <p className="text-[11px] text-amber-400">Supprimer et Plus tard demandent supabase/ranger.sql.</p>}
+            {!ready && <p className="text-xs text-[var(--ink-muted)]">Supprimer et Plus tard demandent supabase/ranger.sql.</p>}
             {notice && (
-              <p role="status" className="text-xs text-zinc-300" data-testid="ranger-notice">
+              <p role="status" className="text-sm text-[var(--ink-muted)]" data-testid="ranger-notice">
                 {notice}
               </p>
             )}
             {error && (
-              <p role="alert" className="text-xs text-red-400">
+              <p role="alert" className="text-sm text-[var(--late-text)]">
                 {error}
               </p>
             )}
@@ -320,10 +330,10 @@ function Dialog({ initial, options, ready, today, onClose }) {
                 {"Passer pour l'instant"}
               </button>
             )}
-            <p className="text-[11px] text-zinc-400">Plus tard compte comme traité. Cet écran se ferme quand tout est rangé.</p>
+            <p className="text-xs text-[var(--ink-muted)]">Plus tard compte comme traité. Cet écran se ferme quand tout est rangé.</p>
           </section>
         ) : (
-          <p className="text-sm text-zinc-400" role="status">
+          <p className="text-sm text-[var(--ink-muted)]" role="status">
             Enregistrement en cours...
           </p>
         )}
