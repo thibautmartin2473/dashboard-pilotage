@@ -53,8 +53,13 @@ assez intuitif ». Nouveau cap : même organisation (rail, agenda 5 jours, colon
 bandeau Maintenant, tout sur un écran), **épurée à la manière d'Apple** (présentation, navigation,
 boutons) et **nouvelle charte de couleurs** : fond bleu gris #8E9CB4, verre sur les barres avec texte
 sombre, cartes blanches opaques, plage gris perle #F1F2F4, tâche et accent bleu acier #3B6A9A, retard
-corail doux #C0664A, fait barré gris, un seul mode, pas de violet. Reste à valider : les 13 points
-d'épuration (esquisse de l'écran entier), puis reprise de la PR #30.
+corail doux #C0664A, fait barré gris, un seul mode, pas de violet. **Agenda (2026-10-08)** : typologie 6 plages
+(cours, examen ou test, rendez-vous, prépa encadrée, sport, journée entière) et 3 tâches (travail de fond,
+courte, urgent), icône au trait par type, états par la forme (en cours anneau, passé transparent, fait
+barré gris, retard filet corail, à confirmer vide, déplacé flèche, conflit anneau corail) ; couleurs :
+cours et sport olive #6E7B45, examens bordeaux plein #7A1E2C, rendez-vous cuir #A0714A, prépa gris bleu
+#8E9CB4, tâches bleu acier #3B6A9A. Reste à valider : quelques points ouverts (voir le chat), puis reprise
+de la PR #30.
 
 **Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
 Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
