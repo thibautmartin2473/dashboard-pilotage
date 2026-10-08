@@ -37,7 +37,13 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
 13, 18, 19, 20 ; « Pas pour moi » 2, 4, 5, 8 à 12, 14 à 17. **Charte choisie : Cuir et bordeaux**
 (`/demo/chartes-cadran`, id `cadran-cuir`), **en un seul mode équilibré, ni clair ni sombre**.
 Niveau d'équilibre choisi : **2, brun cuir** (id `cadran-cuir`). **Organisation choisie (2026-10-08) : « tout sur un écran » + bandeau « Maintenant »** (esquisse 2 : rail avec apps en icônes, agenda 5 jours pleine hauteur, colonne droite partagée À ranger en haut et mails Gmail | EDHEC compacts en bas, sans défilement ; bandeau fin au-dessus de l'agenda : tâche en cours, temps restant, prochain bloc, nombre à ranger). En cours et 3 systèmes de boutons dessinés dans cette charte (`/demo/composants-cuir` : Sellerie,
-Planche de bord, Édition). Ensuite : fonctionnalités (session D), puis mise en vrai (session E).
+Planche de bord, Édition). **Fonctionnalités choisies (2026-10-08)** : 2 budget de temps, 3 journée à plafond, 4 Claude propose et
+tu valides, 5 date de début, 7 traçabilité, 8 glisser et report groupé, 12 habitudes à fenêtre
+flexible, 13 saisie naturelle et durée (numéros de `FONCTIONNALITES.md`) ; écartées 1, 6, 9, 10, 11.
+**Boutons** : Sellerie rejetée (« des pointillés partout j'aime pas »). Nouveau cap : « un dashboard
+pro financier qui fait tech », le plus efficace et instinctif, pas le plus original, appuyé sur la
+recherche académique en interfaces (`recherche/papiers-ui.md`, en cours). Ensuite : esquisses de
+boutons dans ce cap, puis mise en vrai (session E).
 
 2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
    Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
