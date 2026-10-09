@@ -34,6 +34,15 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
 
 ## Les sessions suivantes (une catégorie par session)
 
+**Prochaine session (point du 2026-10-09)** : Cadran est en production (PR #30 à #35 mergées). Deux lots
+restent proposés, NON lancés (Thibaut a dit stop le 2026-10-09) : second lot de fluidité (données
+chargées par vue, agenda autour de la date affichée, environ 250k) et lot 2 des fonctionnalités de la
+SPEC (date de début, saisie naturelle avec durée, traçabilité de ce que Claude pose).
+- **Choix à faire avec Thibaut : les notifications de Cadran** (toasts) : Sonner (bibliothèque,
+  accessible, 14,5 ko) ou version maison (2 ko, rendu exact). Reco de la base de design : maison pour
+  Cadran. À montrer en visuel, côte à côte, avant de construire.
+- **Validé : couleurs des séries de graphiques** : `#244A73`, bordeaux, corail, gris bleu.
+
 1. **Session A, affiner le logo choisi (l'anneau horaire)** : sa faille est le 16 px (il ne reste
    qu'une couronne coupée) et il se vide les jours sans événement. Proposer 3 variantes de
    simplification pour le favicon et l'icône, la version vivante (calculée sur la vraie journée)
