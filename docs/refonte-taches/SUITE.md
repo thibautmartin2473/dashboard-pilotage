@@ -1,0 +1,157 @@
+# Refonte du design de Cadran : où on en est et la suite, session par session
+
+**Vision (Thibaut, 2026-10-08)** : « le but est de rendre Obsidian obsolète, car on le vibecode nous-mêmes pour
+le remplacer ». Constellation est la première brique ; viendront la lecture, la recherche et l'édition des notes.
+Le plugin Obsidian n'est qu'un pont. À trancher dans une session dédiée : la source du vault sans Obsidian.
+Constellation retenue (2026-10-08) : en fond d'écran derrière le Cockpit, cartes à 75 % d'opacité, points colorés
+par dossier, mise en page façon Obsidian recadrée sur toute la page (rendus `rendus/constellation-v4-*`).
+
+Point de reprise unique. Demande de Thibaut (2026-10-07) : « segmente le travail, on va l'étaler
+sur plusieurs sessions, mais ne perds pas ce que tu as fait ». Règle : **une catégorie à la fois**,
+il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositions de design »).
+
+## Pour reprendre (début de chaque session)
+
+1. `Set-Location C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage-demo` (worktree de la branche `demo/v2` : un `git switch demo/v2` depuis `Apps\dashboard-pilotage` est refusé, la branche est déjà prise par ce worktree)
+2. Lancer les démos en local (lecture seule de la vraie base, sans mot de passe, ce PC seulement) :
+   `npx next dev -p 3100 -H 127.0.0.1`, puis http://127.0.0.1:3100/demo
+   (le fichier `.env.development.local`, non suivi par git, coupe le Basic Auth en dev).
+3. Lire ce fichier, puis `Vault/02 Domaines/Design/Mes goûts en design.md` (ses goûts, par projet
+   et objectif) et la note `Vault/02 Domaines/Design/Recherches/2026-10-07 dashboard-pilotage - Cockpit et studio de vitrines.md`.
+4. La branche `demo/v2` ne se merge jamais : on porte seulement ce qu'il choisit dans le vrai code,
+   sur une branche propre, avec sa PR.
+
+## Déjà fait et décidé
+
+| Étape | État | Où |
+|---|---|---|
+| Cockpit (organisation, rail, Graphite sombre équilibré, liste À ranger, rangement forcé, mails côte à côte) | En production le 2026-10-07 (PR #26, #27, #28) | `docs/refonte-taches/DECISIONS.md` |
+| Logos des apps (Spircle, EDHEC AI) | PR #29 ouverte, à merger | branche `feat/app-logos` |
+| Agenda : plages et tâches en blocs successifs | Règle dans le skill `planifier` | `~/.claude/skills/planifier/SKILL.md` |
+| Recherche (saves Instagram, GitHub, forums, apps de référence, design) | Faite | `RECHERCHE-PROFONDE.md` (synthèse et grille), `recherche/*.md` |
+| **Étape 1 : nom** | **Choisi : Cadran** | `/demo/identite` (6 noms comparés) |
+| **Étape 2 : logo** | **Choisi : l'anneau horaire** (proposition 5), à affiner | `/demo/logo`, SVG `public/demo/logos/cadran-anneau-*` |
+
+## Les sessions suivantes (une catégorie par session)
+
+**Prochaine session (point du 2026-10-09)** : Cadran est en production (PR #30 à #35 mergées). Depuis
+le 2026-10-09, ce point de reprise, `SPEC.md` et `FONCTIONNALITES.md` vivent sur `main`
+(`docs/refonte-taches/`) ; la copie de la branche `demo/v2` n'est plus tenue à jour.
+
+Décision de Thibaut du 2026-10-09 : **aucun lot lancé pour l'instant**. Restent proposés, avec leur coût
+estimé sur les repères mesurés de ce repo :
+- **Second lot de fluidité** : données chargées par vue, agenda autour de la date affichée, objectif
+  accueil et agenda sous 1 s (environ 0,4 à 0,5 M avec la relecture). Reco : en premier.
+- **Lot 2 des fonctionnalités de la SPEC** : date de début, saisie naturelle avec durée, traçabilité de ce
+  que Claude pose (environ 0,65 M avec relecture et corrections).
+
+Reportés par Thibaut le 2026-10-09 (pas aujourd'hui) :
+- **Notifications de Cadran** (toasts) : Sonner (bibliothèque, accessible, 14,5 ko) ou version maison
+  (2 ko, charte exacte, une seule à la fois, annulation par Z, accessibilité à écrire, environ 100k).
+  Reco : maison. Esquisse côte à côte : `notifications-esquisse.html` (même dossier).
+- **Suppression de la copie `Apps\dashboard-pilotage-demo`** (worktree de `demo/v2`, poussée sur GitHub) :
+  possible maintenant que ce point de reprise est sur `main`. Thibaut la supprime lui-même (le mode auto
+  refuse les suppressions de dossier à Claude).
+- **Logo STAGE** : garder le bordeaux ou passer au vert Excel comme Networking. Reco : bordeaux.
+
+À vérifier au premier rangement réel : un A seul dans « À ranger » reste le geste « Affecter ailleurs ».
+
+- **Validé : couleurs des séries de graphiques** : `#244A73`, bordeaux, corail, gris bleu.
+
+1. **Session A, affiner le logo choisi (l'anneau horaire)** : sa faille est le 16 px (il ne reste
+   qu'une couronne coupée) et il se vide les jours sans événement. Proposer 3 variantes de
+   simplification pour le favicon et l'icône, la version vivante (calculée sur la vraie journée)
+   et la piste de couleur (bleu Martini, vert Aston éclairci ou giallo, proposées sur la page).
+   Il tranche, puis on passe à la charte.
+**État au 2026-10-08** : moodboard fait (`/demo/references`, `MOODBOARD.md`) ; votes « J'aime » 1, 3, 6, 7,
+13, 18, 19, 20 ; « Pas pour moi » 2, 4, 5, 8 à 12, 14 à 17. **Charte choisie : Cuir et bordeaux**
+(`/demo/chartes-cadran`, id `cadran-cuir`), **en un seul mode équilibré, ni clair ni sombre**.
+Niveau d'équilibre choisi : **2, brun cuir** (id `cadran-cuir`). **Organisation choisie (2026-10-08) : « tout sur un écran » + bandeau « Maintenant »** (esquisse 2 : rail avec apps en icônes, agenda 5 jours pleine hauteur, colonne droite partagée À ranger en haut et mails Gmail | EDHEC compacts en bas, sans défilement ; bandeau fin au-dessus de l'agenda : tâche en cours, temps restant, prochain bloc, nombre à ranger). En cours et 3 systèmes de boutons dessinés dans cette charte (`/demo/composants-cuir` : Sellerie,
+Planche de bord, Édition). **Fonctionnalités choisies (2026-10-08)** : 2 budget de temps, 3 journée à plafond, 4 Claude propose et
+tu valides, 5 date de début, 7 traçabilité, 8 glisser et report groupé, 12 habitudes à fenêtre
+flexible, 13 saisie naturelle et durée (numéros de `FONCTIONNALITES.md`) ; écartées 1, 6, 9, 10, 11.
+**Boutons** : Sellerie rejetée (« des pointillés partout j'aime pas »). Nouveau cap : « un dashboard
+pro financier qui fait tech », le plus efficace et instinctif, pas le plus original, appuyé sur la
+recherche académique en interfaces (`recherche/papiers-ui.md`, en cours). **Choix finaux (2026-10-08)** : charte appliquée en « cadre cuir, contenu crème » (rail, bandeau
+et en-têtes en brun cuir niveau 2 ; agenda, À ranger et mails en texte sombre sur crème) ; boutons
+« touche de terminal » (lettre encadrée devant, fond tinté, trait d'état de 2 px, 32 px de haut) ; les
+15 règles de `recherche/papiers-ui.md` s'appliquent. **Tous les choix de design sont faits : reste la
+mise en vrai (session E), en lots avec une PR chacun.**
+
+**Revirement du 2026-10-08 au soir** : le lot 1 réalisé (PR #30, non mergée) est jugé « trop chargé et pas
+assez intuitif ». Nouveau cap : même organisation (rail, agenda 5 jours, colonne À ranger puis mails,
+bandeau Maintenant, tout sur un écran), **épurée à la manière d'Apple** (présentation, navigation,
+boutons) et **nouvelle charte de couleurs** : fond bleu gris #8E9CB4, verre sur les barres avec texte
+sombre, cartes blanches opaques, plage gris perle #F1F2F4, tâche et accent bleu acier #3B6A9A, retard
+corail doux #C0664A, fait barré gris, un seul mode, pas de violet. **Agenda (2026-10-08)** : typologie 6 plages
+(cours, examen ou test, rendez-vous, prépa encadrée, sport, journée entière) et 3 tâches (travail de fond,
+courte, urgent), icône au trait par type, états par la forme (en cours anneau, passé transparent, fait
+barré gris, retard filet corail, à confirmer vide, déplacé flèche, conflit anneau corail) ; couleurs :
+cours et sport olive #6E7B45, examens bordeaux plein #7A1E2C, rendez-vous cuir #A0714A, prépa gris bleu
+#8E9CB4, tâches bleu acier #3B6A9A. **Alignement (2026-10-08)** : 1C logo blanc sur bleu acier ; 2A logotype
+dans la police de l'interface ; 3A police Apple (Roboto à comparer) ; 4 rail en icônes, élargi avec
+libellés au survol ; 5B bandeau avec le prochain bloc ; 6 autre chose qu'un trait (à choisir) ; 9B gestes
+toujours visibles sur l'élément choisi ; 10A rangement forcé en feuille iOS ; 12A icônes, pastille, urgent
+en icône ; 15B une liste de mails avec étiquette EDHEC ; 16 téléphone à voir. Suite : 3A police Apple (Segoe sur Windows) ;
+6C bande teintée sur l'heure en cours ; 7A 5 jours glissants ; 8A 8 h à 22 h ; 11 reclassement automatique ;
+16A Cockpit empilé sur téléphone ; Constellation en fond d'écran estompé, clic pour y naviguer (variante à
+valider). Puis reprise de la PR #30.
+
+**Constellation (demande de la session « Mods sur Claude », contrat accepté le 2026-10-08)** : à intégrer
+dans la reprise de la PR #30. Table `vault_graph` (une ligne, `id text primary key` = 'vault', `nodes jsonb`
+[{ id, path, name, group, degree }] avec `path` toujours présent, `links jsonb` [[indexSource,
+indexCible]], `updated_at timestamptz`), RLS active sans policy anon, SQL `supabase/vault-graph.sql` à
+exécuter par Thibaut ; route `POST /api/hooks/vault-graph` (déjà hors Basic Auth), Bearer HOOK_SECRET sinon
+401, 413 au-delà de 5 000 noeuds ou 2 Mo, `group` = premier dossier du chemin ; emplacement vide « en
+attente de la première synchronisation » (onglet du rail ou tuile : choix de Thibaut en attente).
+**Prévenir la session « Mods sur Claude » par message après le commit** ; le dessin du graphe est pour elle.
+**Kit prêt (2026-10-08)** : `C:/Users/thiba/CLAUDE.GLOBAL/Tools/claude-mods/constellation/dashboard-kit/` (README =
+correspondance fichier par fichier : `supabase/vault-graph.sql`, `app/api/hooks/vault-graph/route.js` qui accepte
+`x-hook-secret` et `Authorization: Bearer`, `lib/vault-graph.js` avec `loadVaultGraph()`, `components/Constellation.js`
+en canvas sans dépendance, état vide « En attente de la première synchronisation d'Obsidian »). À intégrer
+dans la reprise de la PR #30 en remplaçant ses couleurs provisoires « Nuit niçoise » par la charte du nouveau cap.
+Plugin Obsidian `constellation-cockpit` prêt mais désactivé ; prévenir la session « Mods sur Claude » quand la
+route est en ligne et la table créée. Emplacement : fond d'écran (rendus A, B, C dans `rendus/`) ou onglet, choix
+de Thibaut en attente.
+
+**Mise en vrai** : lot 1 « nouveau look » (nom, logo, charte cuir et crème, tout sur un écran, bandeau
+Maintenant, boutons touche de terminal) = PR #30 (branche feat/cadran-look), 793k tokens pour 0,8 M
+estimés. Reste : lot 2 (fonctions 5, 13, 7, environ 0,5 M), lot 3 (2, 3, 8, environ 0,8 M), lot 4 (4, 12,
+environ 0,6 M). Défaut connu à traiter d'abord : dans l'agenda, plage et tâches successives côte à
+côte en colonnes étroites, au lieu de tâches posées sur la plage.
+
+2. **Session B, charte** : **Graphite est rejetée** (« je n'aime pas du tout la charte graphique
+   Graphite », 2026-10-07 au soir, alors qu'elle est en production). On repart d'un moodboard de
+   références réelles plébiscitées (`/demo/references`, `MOODBOARD.md`) : il marque « J'aime » /
+   « Pas pour moi » et colle le récapitulatif ; on en tire 3 à 4 chartes nouvelles (pas des
+   variantes de Graphite), avec le logo anneau horaire et l'audit de contraste APCA de
+   `recherche/design.md`. Les 4 chartes « graphite-* » de `/demo/chartes` sont caduques.
+3. **Session C, boutons et micro-interactions** : la première série (Relief, Verre, Trait) a été
+   jugée « pas très innovante ». La refonte audacieuse a été arrêtée avant d'écrire (fenêtre de
+   tokens à 20 %) : son brief est prêt (3 concepts d'objet : planche de bord des années 70 avec
+   interrupteurs à capot, molette crantée, voyants et compteurs à rouleaux ; objet industriel Braun
+   / Teenage Engineering ; un troisième au choix), à relancer APRÈS le choix de la charte pour
+   qu'ils parlent la même langue.
+4. **Session D, fonctionnalités** : `FONCTIONNALITES.md` (paniers indispensables, fortes, bonus)
+   et 4 maquettes sur `/demo/fonctionnalites` (fin de vie par défaut, la tâche comme budget de
+   temps, plafond de la journée, Claude propose et tu valides). Il choisit son panier.
+5. **Session E, mise en vrai** : porter nom, logo, charte, composants et fonctionnalités choisis
+   dans le vrai code (branche propre, PR, SQL éventuel exécuté par lui), avec estimation de tokens
+   annoncée avant de lancer.
+
+## Ce qui n'a pas été fait (à savoir)
+
+- Les juges et l'amélioration automatique des 4 axes ont été arrêtés (passage au pas à pas) :
+  les premières versions de chartes et de fonctionnalités n'ont pas été relues par un juge.
+- Reddit était inaccessible aux outils de recherche : remplacé par Hacker News et des forums.
+- Le test vocal du nom (dicter « ouvre Cadran ») n'a pas été fait.
+
+## Coût en tokens de cette phase (entrée comprise)
+
+| Lot | Tokens |
+|---|---|
+| Recherche rapide et designers coupés par le réseau | 0,69 M |
+| Recherche profonde (7 agents) | 1,48 M |
+| Première version des 4 axes (arrêtée avant juges) | voir journal du workflow wf_1adecdd0-dda |
+| Logo Cadran (5 propositions) | 0,23 M |
+| Refonte des boutons | voir bilan de fin de session |
