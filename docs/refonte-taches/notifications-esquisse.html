@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notifications Cadran</title>
+<style>
+  :root { --page: #8E9CB4; --ink: #1B1F2A; --ink-muted: #475066; --action: #3B6A9A; --action-ink: #2A4F78; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px; background: #EEF0F3; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .intro { color: var(--ink-muted); margin: 0 0 20px; font-size: 15px; }
+  .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; max-width: 980px; }
+  .carte { background: #fff; border-radius: 14px; padding: 16px; }
+  .carte h2 { font-size: 17px; font-weight: 600; margin: 0 0 10px; }
+  .scene { position: relative; background: var(--page); border-radius: 12px; height: 230px; overflow: hidden; padding: 14px; }
+  .scene .faux { background: rgba(255,255,255,.75); border-radius: 10px; height: 60px; margin-bottom: 10px; }
+  .pile { position: absolute; right: 14px; bottom: 14px; width: calc(100% - 28px); max-width: 340px; display: flex; flex-direction: column; gap: 8px; }
+  .sonner { background: #fff; border: 1px solid #ededed; border-radius: 8px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,.1); font-size: 13px; }
+  .sonner.derriere { transform: scale(.94); opacity: .6; margin-bottom: -40px; }
+  .sonner .ok { width: 18px; height: 18px; border-radius: 50%; background: #1a7f37; color: #fff; display: grid; place-items: center; font-size: 11px; flex: none; }
+  .sonner b { display: block; font-weight: 500; color: #171717; }
+  .sonner span.d { color: #6b6b6b; }
+  .sonner .btn { margin-left: auto; background: #171717; color: #fff; border-radius: 6px; padding: 5px 10px; font-size: 12px; white-space: nowrap; }
+  .maison { position: absolute; right: 14px; top: 14px; width: calc(100% - 28px); max-width: 340px; background: rgba(255,255,255,.75); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.6); border-radius: 10px; padding: 10px 12px 10px 14px; display: flex; gap: 10px; align-items: center; font-size: 13px; overflow: hidden; }
+  .maison::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--action); }
+  .maison b { display: block; font-weight: 500; }
+  .maison span.d { color: var(--ink-muted); }
+  .maison .btn { margin-left: auto; color: var(--action-ink); background: rgba(59,106,154,.12); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  ul { margin: 12px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.55; }
+  .reco { display: inline-block; margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--action-ink); background: rgba(59,106,154,.12); border-radius: 6px; padding: 2px 8px; vertical-align: 2px; }
+</style>
+</head>
+<body>
+  <h1>Notifications de Cadran : deux options</h1>
+  <p class="intro">Même message dans les deux cas : un geste « Valider » vient de placer une tâche, on peut l'annuler. Fond et cartes aux couleurs de Cadran.</p>
+  <div class="grille">
+    <div class="carte">
+      <h2>A. Sonner (bibliothèque)</h2>
+      <div class="scene">
+        <div class="faux"></div><div class="faux"></div>
+        <div class="pile">
+          <div class="sonner derriere"><span class="ok">&#10003;</span><div><b>Idée rangée</b></div></div>
+          <div class="sonner"><span class="ok">&#10003;</span><div><b>Tâche placée</b><span class="d">Retravailler le pitch Bain, ven. 9/10 12 h</span></div><span class="btn">Annuler</span></div>
+        </div>
+      </div>
+      <ul>
+        <li>14,5 ko, en bas à droite, notifications empilées.</li>
+        <li>Accessible d'office : annonce aux lecteurs d'écran, pause au survol, glisser pour fermer.</li>
+        <li>Look générique blanc et noir : à retoucher pour coller à la charte.</li>
+      </ul>
+    </div>
+    <div class="carte">
+      <h2>B. Version maison <span class="reco">recommandée</span></h2>
+      <div class="scene">
+        <div class="faux"></div><div class="faux"></div>
+        <div class="maison"><div><b>Tâche placée</b><span class="d">Retravailler le pitch Bain, ven. 9/10 12 h</span></div><span class="btn">Annuler (Z)</span></div>
+      </div>
+      <ul>
+        <li>2 ko, en haut à droite sous le bandeau, une seule notification à la fois.</li>
+        <li>Verre et filet bleu acier de Cadran, annulation par Z (comme dans le rangement forcé).</li>
+        <li>Accessibilité à écrire nous-mêmes (zone d'annonce, pause au survol) : environ 100k tokens au total.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
