@@ -49,7 +49,7 @@ export function Gestures({ g, on, label, ref }) {
       <GestureKey kind="drop" letter="S" disabled={!g.drop} title={g.drop ? undefined : sql} onClick={on.drop}>
         Supprimer
       </GestureKey>
-      <GestureKey kind="later" letter="P" disabled={!g.later} title={g.later ? 'Revient dimanche' : sql} onClick={on.later}>
+      <GestureKey kind="later" letter="P" disabled={!g.later} title={g.later ? 'Revient dimanche' : (g.laterNote ?? sql)} onClick={on.later}>
         Plus tard
       </GestureKey>
     </div>
