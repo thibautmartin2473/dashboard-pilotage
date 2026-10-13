@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { must, nextPosition, rows, touch } from '@/lib/db-ops';
 import { BUCKETS, eventRow, isMissingColumn, isMissingTable, isoToParisLocal, todayParis } from '@/lib/home';
-import { dayError, dayParis, dueForBlock, isRecent, nextSundayParis, sameValue } from '@/lib/ranger';
+import { computeMove, dayError, dayParis, dueForBlock, isRecent, nextSundayParis, sameValue } from '@/lib/ranger';
 
 // Server Actions de la liste « À ranger » et du rangement forcé. Elles passent par la page `/`, donc
 // derrière le Basic Auth de proxy.js, et écrivent avec la clé service_role. Rien ne vient du client
@@ -142,7 +142,8 @@ async function place(db, kind, row, target, now) {
   // Proposition issue d'un mail : réservée (new -> accepted) avant la création, rendue si elle échoue.
   const t = target?.type;
   must(t, 'Destination manquante');
-  if (row.kind === 'event' || row.kind === 'info') must(t === 'accept', "Cette proposition s'accepte telle quelle");
+  if (row.kind === 'event' || row.kind === 'info' || row.kind === 'move') must(t === 'accept', "Cette proposition s'accepte telle quelle");
+  if (row.kind === 'move') return placeMove(db, row, now);
   if (row.kind === 'event') {
     must(row.starts_at, 'Date de début manquante');
     must(Date.parse(row.starts_at) > now.getTime(), "Cet événement est déjà passé : rien à ajouter à l'agenda");
@@ -181,6 +182,32 @@ async function place(db, kind, row, target, now) {
     throw err;
   }
   return { restore: { status: 'new' }, applied: { status: 'accepted' }, createdTaskId, createdTask, createdEventId };
+}
+
+// Proposition de déplacement validée : l'événement visé (relu en base) prend les nouvelles heures ; s'il vient de
+// Google, `pending_move` le fait renvoyer vers Google par la routine (push-agenda.mjs --pending / --ack). Aucun
+// doublon : l'événement existant est modifié, jamais recréé. Réservée (new -> accepted) avant l'écriture, rendue
+// si elle échoue. Les heures posées et d'avant partent dans `movedEvent` pour l'annulation.
+async function placeMove(db, row, now) {
+  must(row.event_id, "Proposition sans événement visé : l'écarter");
+  must(row.starts_at, 'Nouvelle date de début manquante');
+  const [event] = await rows(db.from('calendar_events').select('*').eq('id', row.event_id));
+  must(event, "Événement introuvable dans l'agenda : l'écarter");
+  must(!event.all_day, 'Un événement « toute la journée » ne se déplace pas');
+  const next = computeMove(event, row.starts_at, row.ends_at);
+  must(Date.parse(next.starts_at) > now.getTime(), 'La nouvelle date est déjà passée : écarter la proposition');
+  const google = (event.origin ?? 'google') === 'google';
+  must(!google || 'pending_move' in event, 'Colonne calendar_events.pending_move absente : exécuter supabase/agenda-moves.sql');
+  const applied = { ...next, ...(google ? { pending_move: true } : {}) };
+  const restore = Object.fromEntries(Object.keys(applied).map((k) => [k, event[k] ?? (k === 'pending_move' ? false : null)]));
+  await touch(db.from('notifications').update({ status: 'accepted' }).eq('id', row.id).eq('status', 'new'), 'Proposition déjà traitée');
+  try {
+    await touch(db.from('calendar_events').update(applied).eq('id', event.id), "Événement introuvable dans l'agenda : l'écarter");
+  } catch (err) {
+    await db.from('notifications').update({ status: 'new' }).eq('id', row.id).eq('status', 'accepted');
+    throw err;
+  }
+  return { restore: { status: 'new' }, applied: { status: 'accepted' }, movedEvent: { id: event.id, restore, applied } };
 }
 
 async function done(db, kind, row) {
@@ -229,6 +256,7 @@ async function later(db, kind, row, now) {
     await touch(db.from('brain_notes').update({ snoozed_until: sunday }).eq('id', row.id).eq('status', 'new'));
     return { restore: pick(row, ['snoozed_until']), applied: { snoozed_until: sunday } };
   }
+  must(row.kind !== 'move', "Un déplacement ne se reporte pas : le valider ou l'écarter");
   await touch(db.from('notifications').update({ status: 'accepted' }).eq('id', row.id).eq('status', 'new'), 'Proposition déjà traitée');
   try {
     const due = row.kind === 'event' && row.starts_at ? dayParis(row.starts_at) : row.due_date ?? null;
@@ -311,6 +339,11 @@ const VALID = {
   },
   notification: { status: (v) => ['new', 'accepted', 'dismissed'].includes(v) },
 };
+const MOVE_VALID = {
+  starts_at: (v) => typeof v === 'string' && ISO.test(v),
+  ends_at: (v) => v === null || (typeof v === 'string' && ISO.test(v)),
+  pending_move: (v) => typeof v === 'boolean',
+};
 const TABLES = { task: 'tasks', idea: 'brain_notes', notification: 'notifications' };
 const UNDO_WINDOW_MS = 30 * 60 * 1000; // un horodatage de geste plus vieux ne s'annule plus
 const CREATED_WINDOW_MS = 10 * 60 * 1000; // une tâche ou un événement créé par un geste s'annule pendant 10 minutes
@@ -335,12 +368,24 @@ function checkToken(token) {
     must(snap && typeof snap === 'object', 'Jeton invalide');
     for (const [key, value] of Object.entries(snap)) must(VALID.task[key]?.(value ?? null), 'Jeton invalide');
   }
+  const moved = token.movedEvent;
+  if (moved !== undefined) {
+    must(token.kind === 'notification' && token.gesture === 'place', 'Jeton invalide');
+    must(moved && typeof moved === 'object' && typeof moved.id === 'string' && moved.id.length > 0 && moved.id.length <= 300, 'Jeton invalide');
+    for (const part of ['restore', 'applied']) {
+      const obj = moved[part];
+      must(obj && typeof obj === 'object' && 'starts_at' in obj && 'ends_at' in obj, 'Jeton invalide');
+      for (const [key, value] of Object.entries(obj)) must(MOVE_VALID[key]?.(value), 'Jeton invalide');
+    }
+    must(KEYS(moved.restore) === KEYS(moved.applied), 'Jeton invalide');
+  }
   return {
     kind: token.kind,
     id: token.id,
     gesture: token.gesture,
     restore: token.restore,
     applied: token.applied,
+    movedEvent: moved ? { id: moved.id, restore: moved.restore, applied: moved.applied } : undefined,
     createdTaskId: token.createdTaskId,
     createdTask: snap,
     createdEventId: token.createdEventId,
@@ -360,7 +405,8 @@ async function verifyUndo(db, t, nowMs) {
   const mailTask = t.kind === 'notification' && (row.kind === 'deadline' || row.kind === 'todo');
   const wantsTask = (g === 'place' && (t.kind === 'idea' || mailTask)) || (g === 'later' && t.kind === 'notification');
   const wantsEvent = g === 'place' && t.kind === 'notification' && row.kind === 'event';
-  must(Boolean(t.createdTaskId) === wantsTask && Boolean(t.createdEventId) === wantsEvent, 'Jeton invalide');
+  const wantsMove = g === 'place' && t.kind === 'notification' && row.kind === 'move';
+  must(Boolean(t.createdTaskId) === wantsTask && Boolean(t.createdEventId) === wantsEvent && Boolean(t.movedEvent) === wantsMove, 'Jeton invalide');
   must(!t.createdTaskId || t.createdTask, 'Jeton invalide');
 
   if (t.kind === 'task') {
@@ -419,7 +465,15 @@ async function verifyUndo(db, t, nowMs) {
       must(event.title === String(row.title ?? '').trim(), CANT);
     }
   }
-  return { row, task, event };
+  // Déplacement validé : l'événement doit porter encore exactement les heures (et le drapeau) posées par le geste,
+  // sinon il a bougé depuis (à la main, ou renvoyé vers Google puis acquitté) et on ne touche à rien.
+  let moved = null;
+  if (t.movedEvent) {
+    [moved] = await rows(db.from('calendar_events').select('*').eq('id', t.movedEvent.id));
+    must(moved, "L'événement déplacé est introuvable : annulation refusée");
+    for (const [key, value] of Object.entries(t.movedEvent.applied)) must(sameValue(moved[key], value), CANT);
+  }
+  return { row, task, event, moved };
 }
 
 export async function rangerUndo(tokens) {
@@ -442,7 +496,7 @@ export async function rangerUndo(tokens) {
   let undone = 0;
   try {
     for (const [i, t] of list.entries()) {
-      const { row, task, event } = checked[i];
+      const { row, task, event, moved } = checked[i];
       if (task) {
         const { error } = await db.from('tasks').delete().eq('id', task.id).in('source', ['idea', 'notification']).is('done_at', null);
         if (error) throw error;
@@ -450,6 +504,12 @@ export async function rangerUndo(tokens) {
       if (event) {
         const { error } = await db.from('calendar_events').delete().eq('id', event.id).eq('origin', 'local');
         if (error) throw error;
+      }
+      if (moved) {
+        // Les anciennes heures (et l'ancien drapeau) reviennent, si l'événement porte encore exactement les nouvelles.
+        let q = db.from('calendar_events').update(t.movedEvent.restore).eq('id', moved.id);
+        for (const key of Object.keys(t.movedEvent.applied)) q = moved[key] === null || moved[key] === undefined ? q.is(key, null) : q.eq(key, moved[key]);
+        await touch(q, "L'événement a changé depuis le geste : rien à annuler");
       }
       // Restauration conditionnelle : seulement si la ligne porte encore exactement les valeurs posées (relues à l'instant).
       let query = db.from(TABLES[t.kind]).update(t.restore).eq('id', t.id);

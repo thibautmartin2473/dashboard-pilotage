@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { DEFAULT_CATEGORIES } from '../lib/home.js';
 import {
-  blockOptions, buildRangerItems, cleanBlockTitle, dayError, dueForBlock, fmtSlot, gesturesFor, isRecent, nextSundayParis, sameValue, seriesKey, seriesOf,
+  blockOptions, buildRangerItems, cleanBlockTitle, computeMove, dayError, dueForBlock, fmtSlot, gesturesFor, isRecent, nextSundayParis, sameValue, seriesKey, seriesOf,
   sortItems, suggestPlacement, themesOf, workBlocks,
 } from '../lib/ranger.js';
 
@@ -300,6 +300,61 @@ assert.notEqual(seriesKey('Payer le loyer'), seriesKey('Payer la caution'));
   assert.ok(!isRecent('2026-10-07T09:00:00Z', nowMs, 30 * 60000));
   assert.ok(!isRecent('2026-10-07T10:30:00Z', nowMs, 30 * 60000)); // dans le futur : refusé
   assert.ok(!isRecent(null, nowMs, 30 * 60000));
+}
+
+// --- Propositions de déplacement (kind = move) : l'événement existant est déplacé, jamais dupliqué ---
+{
+  const exam = { ...ev('exam', 'Examen M&A', '2026-11-10', '14:00', '16:00', '11'), starts_at: '2026-11-10T13:00:00.000Z', ends_at: '2026-11-10T15:00:00.000Z' }; // mardi 10/11 14h-16h (heure d'hiver)
+  const evs = [...events, exam, { ...ev('allday2', 'Séminaire', '2026-11-12', '00:00', '23:00'), all_day: true }];
+  const move = (o = {}) => notif({ id: 'm1', kind: 'move', title: 'Examen M&A reporté', event_id: 'exam', starts_at: new Date('2026-11-09T14:30:00+01:00').toISOString(), ends_at: null, dedupe_key: 'mail:move', ...o });
+  const build = (list, e = evs) => buildRangerItems({ events: e, categories: cats, now, notifications: list });
+
+  // Durée d'origine gardée quand la fin est absente ; fin donnée prise telle quelle ; fin incohérente ignorée.
+  assert.deepEqual(computeMove(exam, '2026-11-09T14:30:00+01:00'), { starts_at: '2026-11-09T13:30:00.000Z', ends_at: '2026-11-09T15:30:00.000Z' });
+  assert.deepEqual(computeMove(exam, '2026-11-09T14:30:00+01:00', '2026-11-09T17:00:00+01:00').ends_at, '2026-11-09T16:00:00.000Z');
+  assert.deepEqual(computeMove(exam, '2026-11-09T14:30:00+01:00', '2026-11-09T14:00:00+01:00').ends_at, '2026-11-09T15:30:00.000Z');
+  assert.equal(computeMove({ id: 'x', starts_at: exam.starts_at, ends_at: null }, '2026-11-09T14:30:00+01:00').ends_at, null);
+
+  const [it] = build([move()]).items;
+  assert.equal(it.notifKind, 'move');
+  assert.equal(it.notifLabel, 'Déplacement');
+  assert.equal(it.title, 'Déplacer Examen M&A : mar. 10/11 14h-16h vers lun. 9/11 14h30-16h30');
+  assert.equal(it.suggestion.kind, 'accept');
+  assert.deepEqual(it.suggestion.target, { type: 'accept' });
+  assert.match(it.suggestion.reason, /de mar\. 10\/11 14h-16h vers lun\. 9\/11 14h30-16h30/);
+  assert.equal(it.late, 0);
+  assert.equal(it.due, '2026-11-09');
+  const g = gesturesFor(it);
+  assert.deepEqual([g.validate, g.elsewhere, g.later, g.drop, g.doneLabel], [true, false, false, true, 'Déjà fait']);
+  assert.ok(g.laterNote);
+  assert.equal(gesturesFor(it, { ready: false }).later, false);
+
+  // Événement introuvable (ou colonne event_id absente) : dit clairement, Valider désactivé, mais Supprimer reste possible.
+  for (const bad of [move({ event_id: 'fantome' }), move({ event_id: undefined })]) {
+    const [x] = build([bad]).items;
+    assert.match(x.title, /introuvable/);
+    assert.equal(x.suggestion.target, null);
+    assert.match(x.suggestion.reason, /introuvable/);
+    assert.equal(gesturesFor(x).validate, false);
+    assert.equal(gesturesFor(x).drop, true);
+  }
+  // Déjà à cette date, nouvelle date passée, événement « toute la journée » : rien à valider.
+  const same = build([move({ starts_at: exam.starts_at, ends_at: exam.ends_at })]).items[0];
+  assert.equal(same.suggestion.target, null);
+  assert.match(same.suggestion.reason, /déjà au/);
+  const past = build([move({ starts_at: '2026-10-01T09:00:00+02:00' })]).items[0];
+  assert.equal(past.suggestion.target, null);
+  assert.match(past.suggestion.reason, /passée/);
+  assert.equal(past.late, 0); // un déplacement passé n'est pas « en retard » : il s'écarte
+  const allDay = build([move({ event_id: 'allday2' })]).items[0];
+  assert.equal(allDay.suggestion.target, null);
+  assert.match(allDay.suggestion.reason, /toute la journée/);
+  // Le doublon d'un événement local (kind = event) reste un événement : seul `move` déplace.
+  const plain = build([notif({ id: 'e1', kind: 'event', title: 'Examen M&A', starts_at: new Date('2026-11-09T14:30:00+01:00').toISOString() })]).items[0];
+  assert.equal(plain.notifKind, 'event');
+  assert.ok(!plain.title.startsWith('Déplacer'));
+  // Une proposition déjà traitée n'apparaît plus.
+  assert.equal(build([move({ status: 'accepted' })]).items.length, 0);
 }
 
 console.log('check-ranger : tout est bon');

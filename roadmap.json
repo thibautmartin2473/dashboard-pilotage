@@ -112,6 +112,10 @@
     {
       "label": "Agenda : catégories nommables et recolorables, créables et supprimables",
       "status": "done"
+    },
+    {
+      "label": "Mails : proposition de déplacement d'un événement, validée dans À ranger",
+      "status": "blocked"
     }
   ]
 }
