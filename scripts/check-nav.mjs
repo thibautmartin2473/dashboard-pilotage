@@ -13,7 +13,7 @@ assert.equal(r.href, null);
 assert.equal(r.consommer, false, '`g` seul n\'est pas consommé');
 assert.equal(r.etat.armeA, 1000);
 
-const attendus = { c: '/', a: '/agenda', m: '/mails', r: '/a-ranger', i: '/brain', v: '/constellation' };
+const attendus = { c: '/', a: '/agenda', m: '/mails', e: '/avancement', r: '/a-ranger', i: '/brain', v: '/constellation' };
 for (const [lettre, href] of Object.entries(attendus)) {
   const apresG = suite(ETAT_INITIAL, ev('g'), 5000).etat;
   const fin = suite(apresG, ev(lettre), 5000 + 300);
@@ -27,7 +27,7 @@ assert.deepEqual(Object.keys(NAV_KEYS).sort(), Object.keys(attendus).sort());
 assert.equal(suite(suite(ETAT_INITIAL, ev('G'), 0).etat, ev('A'), 100).href, '/agenda');
 
 // Une lettre SEULE ne navigue pas et n'est pas consommée : V A C S P restent aux gestes de la liste.
-for (const lettre of ['v', 'a', 'c', 's', 'p', 'z', 'm', 'r', 'i']) {
+for (const lettre of ['v', 'a', 'c', 's', 'p', 'z', 'm', 'r', 'i', 'e']) {
   const seul = suite(ETAT_INITIAL, ev(lettre), 100);
   assert.equal(seul.href, null, `${lettre} seul ne navigue pas`);
   assert.equal(seul.consommer, false, `${lettre} seul reste au geste`);
@@ -105,6 +105,7 @@ assert.equal(shortcutLabel('/agenda', 'Agenda'), 'Agenda (G puis A)');
 assert.equal(shortcutLabel('/', 'Cockpit'), 'Cockpit (G puis C)');
 assert.equal(shortcutLabel('/a-ranger', 'À ranger'), 'À ranger (G puis R)');
 assert.equal(shortcutLabel('/brain', 'Idées'), 'Idées (G puis I)');
+assert.equal(shortcutLabel('/avancement', 'Avancement'), 'Avancement (G puis E)');
 assert.equal(shortcutLabel('/constellation', 'Constellation'), 'Constellation (G puis V)');
 assert.equal(shortcutLabel('/apps', 'Apps et projets'), 'Apps et projets', 'pas de raccourci : libellé seul');
 

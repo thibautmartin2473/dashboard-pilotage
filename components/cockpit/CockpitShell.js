@@ -2,7 +2,7 @@ import CommandPalette from '@/components/CommandPalette';
 import NowBar from '@/components/cockpit/NowBar';
 import { supabaseConfigured } from '@/lib/supabase';
 
-// Contenu propre à chaque vue du Cockpit (/, /agenda, /a-ranger, /mails, /brain) : bandeau « Maintenant » en
+// Contenu propre à chaque vue du Cockpit (/, /agenda, /a-ranger, /mails, /avancement, /brain) : bandeau « Maintenant » en
 // haut, messages d'indisponibilité, puis la zone (`children`) qui occupe tout le reste, et la fenêtre Commande
 // (Ctrl+K). Le cadre qui ne doit PAS se remonter d'une vue à l'autre (fond Constellation, relecture
 // automatique, raccourcis, hauteur de la fenêtre) est dans `app/(cadran)/layout.js`. Ce composant reste dans
