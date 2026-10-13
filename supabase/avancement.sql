@@ -14,7 +14,7 @@
 
 create table if not exists avancement (
   cle text primary key,                -- ex. sb:etape:synthese, sb:lettres, cours:afa, autre:spircle, note:strategy-boost
-  groupe text not null,                -- strategy-boost | carriere | cours | autre
+  groupe text not null,                -- strategy-boost | carriere | cours | autre | general (notes d'en-tête : avertissements, export)
   ordre integer not null default 0,    -- rang dans le groupe : du plus en retard au plus en avance, sans mesure à la fin
   type_label text,                     -- étiquette courte de la ligne (Méthode de cas, Test en ligne, Réseau...)
   libelle text not null,
@@ -35,3 +35,8 @@ create table if not exists avancement (
 );
 
 alter table avancement enable row level security;
+
+-- Réglage d'affichage (aucun SQL à ajouter) : la clé `avancement_afficher_masques` de la table existante
+-- `dashboard_settings` (supabase/dashboard-edit.sql), valeur json true/false. Absente ou false : le groupe « Autre »
+-- (Spircle, EDHEC AI) et la ligne Master Project sont masqués dans l'onglet Avancement ; true : ils sont affichés.
+-- Le bouton de l'onglet l'écrit (Server Action), les lignes restent calculées et stockées dans tous les cas.
