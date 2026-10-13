@@ -89,12 +89,32 @@ function ecrireEtat(etat) {
 
 const dir = join(root, today);
 const partial = `${dir}.partial`;
+const old = `${dir}.old`;
+
+// Nettoyage au démarrage : tout dossier *.partial de la racine (restes d'exports interrompus, quelle que soit leur
+// date) est supprimé ; un AAAA-MM-JJ.old (crash entre les deux renommages) est restauré si le dossier définitif
+// manque, supprimé sinon. Garde-fou : jamais hors de la racine de sauvegarde.
+function nettoyerRestes() {
+  if (!existsSync(root)) return;
+  for (const e of readdirSync(root, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue;
+    const target = resolve(root, e.name);
+    if (!target.startsWith(root + sep)) continue;
+    if (e.name.endsWith('.partial')) {
+      rmSync(target, { recursive: true, force: true });
+    } else if (/^\d{4}-\d{2}-\d{2}\.old$/.test(e.name)) {
+      const final = target.slice(0, -'.old'.length);
+      if (existsSync(final)) rmSync(target, { recursive: true, force: true });
+      else renameSync(target, final);
+    }
+  }
+}
 
 async function main() {
   const tables = await listTables();
   if (!tables.length) throw new Error('Aucune table trouvée : rien exporté.');
   if (!dry) {
-    rmSync(partial, { recursive: true, force: true }); // reste d'un export interrompu
+    nettoyerRestes();
     mkdirSync(partial, { recursive: true });
   }
   const manifest = { date: today, genere_le: new Date().toISOString(), tables: {} };
@@ -111,9 +131,17 @@ async function main() {
     return;
   }
   writeFileSync(join(partial, '_export.json'), JSON.stringify(manifest, null, 1));
-  // Fin de l'export : le dossier prend son nom définitif (un export du même jour est remplacé).
-  if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  renameSync(partial, dir);
+  // Fin de l'export : le dossier prend son nom définitif. Un export du même jour est d'abord mis de côté (.old),
+  // supprimé seulement après le succès du renommage, restauré s'il échoue : jamais de jour sans sauvegarde.
+  const avaitAncien = existsSync(dir);
+  if (avaitAncien) renameSync(dir, old);
+  try {
+    renameSync(partial, dir);
+  } catch (err) {
+    if (avaitAncien) renameSync(old, dir);
+    throw err;
+  }
+  if (avaitAncien) rmSync(old, { recursive: true, force: true });
 
   // Rotation : seuls comptent (et seuls sont supprimés) les dossiers AAAA-MM-JJ DIRECTEMENT sous la racine qui
   // contiennent _export.json (un dossier sans manifeste n'est pas un export : on n'y touche pas).
