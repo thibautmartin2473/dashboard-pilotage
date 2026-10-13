@@ -26,11 +26,14 @@ If fso.FileExists(logFile) Then
   Set f = fso.OpenTextFile(logFile, 1)
   contenu = f.ReadAll
   f.Close
-  lignes = Split(contenu, vbCrLf)
+  ' Découpage sur vbLf : la sortie de Node est en LF (seules les lignes « === » de cmd sont en CRLF, leur CR reste
+  ' dans la ligne et est réécrit tel quel). Un découpage sur vbCrLf ne coupait presque rien.
+  If Right(contenu, 1) = vbLf Then contenu = Left(contenu, Len(contenu) - 1)
+  lignes = Split(contenu, vbLf)
   If UBound(lignes) >= 500 Then
     garde = ""
     For i = UBound(lignes) - 499 To UBound(lignes)
-      garde = garde & lignes(i) & vbCrLf
+      garde = garde & lignes(i) & vbLf
     Next
     Set f = fso.OpenTextFile(logFile, 2)
     f.Write garde

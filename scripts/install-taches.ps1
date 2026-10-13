@@ -8,7 +8,7 @@
 # Usage (PowerShell 5.1) :
 #   Set-Location "C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage"; .\scripts\install-taches.ps1
 # Pour les retirer :  Unregister-ScheduledTask -TaskName "CLAUDE.GLOBAL - Avancement Cadran" -Confirm:$false
-# Journal d'exécution : %LOCALAPPDATA%\Cadran\taches.log (scripts\lancer-masque.vbs, qui n'en garde que les 500 dernières lignes).
+# Journal d'exécution : %LOCALAPPDATA%\Cadran\taches.log (scripts\lancer-masque.vbs, qui n'en garde que les 500 dernières lignes, comptées en fins de ligne LF comme la sortie de Node).
 
 $ErrorActionPreference = 'Stop'
 
