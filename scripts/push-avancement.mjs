@@ -53,10 +53,10 @@ const HISTOIRES_OBJECTIF = 6; // 2 par dimension du PEI McKinsey
 // Pitchs attendus pour le conseil (Fit.md, « Pitchs attendus », sans la finance « le jour venu »).
 const PITCHS_ATTENDUS = ['Présentation conseil (2 min)', 'Présentation anglais', 'Pourquoi le conseil', 'Qualités et défauts', 'Projet professionnel'];
 // Partiels, lecture PESSIMISTE (2026-10-13) : valeur et statut = notions réellement acquises (niveau 3) sur le total.
-// Le suivi de révision commence le 2026-10-11 (plan des finals) ; à l'examen, la cible est d'avoir acquis 75 % des
-// notions (les notions de faible poids peuvent rester au niveau 2). L'année des examens est lue dans plan.md.
+// Le suivi de révision commence le 2026-10-11 (plan des finals) ; à l'examen, la cible est d'avoir acquis 85 % des
+// notions (décision de Thibaut du 2026-10-13, lecture pessimiste). L'année des examens est lue dans plan.md.
 const COURS_DEBUT = '2026-10-11';
-const COURS_CIBLE = 0.75;
+const COURS_CIBLE = 0.85;
 // Master Project (+ Research Methodology) : jalons datés (feuille de route du 13/10/2026). Aucun marqueur
 // « fait » n'existe dans le vault : un jalon compte comme tenu quand sa date est passée.
 const MASTER_JALONS = [
