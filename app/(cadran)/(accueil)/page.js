@@ -1,8 +1,10 @@
 import AgendaPanel from '@/components/AgendaPanel';
 import MailsPanel from '@/components/MailsPanel';
+import Avancement from '@/components/cockpit/Avancement';
 import CockpitShell from '@/components/cockpit/CockpitShell';
 import RangerColumn from '@/components/cockpit/RangerColumn';
 import RangerForced from '@/components/cockpit/RangerForced';
+import { loadAvancement } from '@/lib/avancement-data';
 import { loadCockpitData } from '@/lib/cockpit-data';
 
 // Les données personnelles sont lues à chaque requête (jamais figées au build).
@@ -17,47 +19,59 @@ export const dynamic = 'force-dynamic';
 // (Constellation s'y branche), derrière tout, avec des cartes à 75 % qui le laissent voir.
 // Chaque zone a sa vue plein écran (/agenda, /a-ranger, /mails) : le titre de la carte y mène.
 // Chargement des données et cadre : lib/cockpit-data.js et components/cockpit/CockpitShell.js.
+// Sous le Cockpit (hors de la hauteur de fenêtre, on y descend en faisant défiler la page) : le bloc « Avancement »
+// (components/cockpit/Avancement.js, table `avancement` écrite par scripts/push-avancement.mjs). Le cadre
+// app/(cadran)/layout.js laisse la page défiler quand #avancement est présent ; la disposition du Cockpit
+// (xl:h-dvh, zones qui défilent à l'intérieur) ne change pas.
 export default async function HomePage() {
-  const data = await loadCockpitData();
+  const [data, avancement] = await Promise.all([loadCockpitData(), loadAvancement()]);
   const { events, mails, done, ranger, ideas, categories, kindOverrides, week, allTasks, activeTasks, list, today, now } = data;
 
   return (
-    <CockpitShell
-      data={data}
-      after={
-        // Hors de #cockpit-content : le reste de la page devient inerte pendant le rangement forcé.
-        <RangerForced items={list.dueItems} options={list.options} ready={ranger.ready} today={today} />
-      }
-    >
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div id="agenda" className="min-h-0 min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
-          <AgendaPanel
-            week={week}
-            state={events}
-            now={now.getTime()}
-            ideas={ideas.data ?? []}
-            tasks={activeTasks}
-            openTasks={allTasks}
-            done={done.data ?? []}
-            categories={categories}
-            kindOverrides={kindOverrides}
-            focusHref="/agenda"
-          />
-        </div>
-        <div className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-1">
-          <RangerColumn
-            items={list.items}
-            todayTasks={list.todayTasks}
-            options={list.options}
-            ready={ranger.ready}
-            today={today}
-            focusHref="/a-ranger"
-          />
-        </div>
-        <div id="mails" className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-2">
-          <MailsPanel state={mails} now={now.getTime()} focusHref="/mails" />
-        </div>
+    <>
+      {/* Le Cockpit garde sa hauteur de fenêtre sur grand écran ; on descend ensuite jusqu'à l'avancement. */}
+      <div className="flex min-h-0 flex-1 flex-col xl:h-dvh xl:flex-none">
+        <CockpitShell
+          data={data}
+          after={
+            // Hors de #cockpit-content : le reste de la page devient inerte pendant le rangement forcé.
+            <RangerForced items={list.dueItems} options={list.options} ready={ranger.ready} today={today} />
+          }
+        >
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,3fr)_minmax(0,2fr)]">
+            <div id="agenda" className="min-h-0 min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
+              <AgendaPanel
+                week={week}
+                state={events}
+                now={now.getTime()}
+                ideas={ideas.data ?? []}
+                tasks={activeTasks}
+                openTasks={allTasks}
+                done={done.data ?? []}
+                categories={categories}
+                kindOverrides={kindOverrides}
+                focusHref="/agenda"
+              />
+            </div>
+            <div className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-1">
+              <RangerColumn
+                items={list.items}
+                todayTasks={list.todayTasks}
+                options={list.options}
+                ready={ranger.ready}
+                today={today}
+                focusHref="/a-ranger"
+              />
+            </div>
+            <div id="mails" className="min-h-0 min-w-0 xl:col-start-2 xl:row-start-2">
+              <MailsPanel state={mails} now={now.getTime()} focusHref="/mails" />
+            </div>
+          </div>
+        </CockpitShell>
       </div>
-    </CockpitShell>
+      <div className="p-3 pt-0">
+        <Avancement rows={avancement} now={now.getTime()} />
+      </div>
+    </>
   );
 }
