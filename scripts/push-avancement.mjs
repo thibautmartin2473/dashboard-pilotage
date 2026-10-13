@@ -18,7 +18,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  asList, calculeLe, countNetworking, dashboardZone, daysBetween, expectedAt, isReadyStatus, lettreFichier, makeRow, nextTargets, nextTargetsText,
+  anyNoteHas, asList, calculeLe, countNetworking, dashboardZone, daysBetween, expectedAt, isReadyStatus, lettreFichier, makeRow, nextTargets, nextTargetsText,
   norm, parseEtapes, parseFrontmatter, parseNotionsDetail, parseTests, parseVitesse, partielArgs, planWrite, planYear, priorityRank,
   resolveCabinet, tableRows,
 } from '../lib/avancement-calc.js';
@@ -289,8 +289,10 @@ if (cabinetsOk) {
 const netDir = join(VAULT, '03 Ressources/Networking');
 if (cabinetsOk) {
   const fichiers = listMd(netDir);
-  if (!fichiers?.length) {
-    sourceFail(`Source illisible : dossier Networking (${netDir}) absent ou sans note.`, { keys: ['sb:reseau'] });
+  // Dossier non vide mais sans aucune propriété `cabinet:` : source cassée, pas un vrai 0.
+  const sansCabinet = fichiers?.length && !anyNoteHas(fichiers.map((f) => read(join(netDir, f))), 'cabinet');
+  if (!fichiers?.length || sansCabinet) {
+    sourceFail(`Source illisible : dossier Networking (${netDir}) ${fichiers?.length ? 'sans note exploitable (aucune propriété cabinet)' : 'absent ou sans note'}.`, { keys: ['sb:reseau'] });
     placeholder({ cle: 'sb:reseau', groupe: 'strategy-boost', typeLabel: 'Réseau', libelle: 'Personnes parlées dans les cabinets', explication: "Source illisible : la valeur précédente est conservée s'il y en a une" });
   } else {
     const notes = [];
@@ -336,8 +338,8 @@ const fitDir = join(VAULT, '02 Domaines/Carrière/Fit');
 {
   // « Prête » : statut rédigée, rodée, prête, validée ou finalisée (modèle Histoire : brouillon, rédigée, rodée).
   const histoires = statuts(join(fitDir, 'Histoires'));
-  if (!histoires) {
-    sourceFail(`Source illisible : dossier des histoires de fit (${join(fitDir, 'Histoires')}) absent ou vide.`, { keys: ['carriere:histoires'] });
+  if (!histoires || !histoires.some((h) => h.statut)) {
+    sourceFail(`Source illisible : dossier des histoires de fit (${join(fitDir, 'Histoires')}) ${histoires ? 'sans note exploitable (aucune propriété statut)' : 'absent ou vide'}.`, { keys: ['carriere:histoires'] });
     placeholder({ cle: 'carriere:histoires', groupe: 'carriere', typeLabel: 'Fit', libelle: 'Histoires de fit prêtes', explication: "Source illisible : la valeur précédente est conservée s'il y en a une" });
   } else {
     const pretes = histoires.filter((h) => isReadyStatus(h.statut));
@@ -352,8 +354,8 @@ const fitDir = join(VAULT, '02 Domaines/Carrière/Fit');
   const pitchs = statuts(join(fitDir, 'Pitchs'));
   const fitMd = read(join(fitDir, 'Fit.md')) ?? '';
   for (const titre of PITCHS_ATTENDUS) if (fitMd && !norm(fitMd).includes(norm(titre))) warn(`Pitch attendu « ${titre} » absent de Fit.md : mettre à jour PITCHS_ATTENDUS.`);
-  if (!pitchs) {
-    sourceFail(`Source illisible : dossier des pitchs (${join(fitDir, 'Pitchs')}) absent ou vide.`, { keys: ['carriere:pitchs'] });
+  if (!pitchs || !pitchs.some((p) => p.statut)) {
+    sourceFail(`Source illisible : dossier des pitchs (${join(fitDir, 'Pitchs')}) ${pitchs ? 'sans note exploitable (aucune propriété statut)' : 'absent ou vide'}.`, { keys: ['carriere:pitchs'] });
     placeholder({ cle: 'carriere:pitchs', groupe: 'carriere', typeLabel: 'Fit', libelle: 'Pitchs prêts', explication: "Source illisible : la valeur précédente est conservée s'il y en a une" });
   } else {
     const pitchsPrets = pitchs.filter((p) => isReadyStatus(p.statut));

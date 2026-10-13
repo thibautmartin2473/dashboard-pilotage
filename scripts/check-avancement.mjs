@@ -3,7 +3,7 @@
 // maîtrise pondérée, statut « prête », cabinets à viser, regroupement et tri pour la page).
 import assert from 'node:assert/strict';
 import {
-  asList, cabinetFromField, calculeLe, countNetworking, dashboardZone, daysBetween, exchangeDate, expectedAt, fraction, isReadyStatus,
+  anyNoteHas, asList, cabinetFromField, calculeLe, countNetworking, dashboardZone, daysBetween, exchangeDate, expectedAt, fraction, isReadyStatus,
   lettreFichier, makeRow, masteryPercent, nextTargets, nextTargetsText, norm, parseEtapes, parseFrontmatter, parseFr, parseNotions,
   parseNotionsDetail, parseTests, parseVitesse, partielArgs, personneKey, planWrite, planYear, priorityRank, resolveCabinet, statusOf,
 } from '../lib/avancement-calc.js';
@@ -241,6 +241,11 @@ const fmWin = parseFrontmatter('﻿---\r\ncabinet:\r\n  - Bain\r\n  - "[[Oliver 
 assert.deepEqual(fmWin.cabinet, ['Bain', '[[Oliver Wyman|OW]]']);
 assert.equal(fmWin.personne, 'Ada Lovelace');
 assert.deepEqual(asList(fmWin.cabinet), ['Bain', 'Oliver Wyman']);
+// Élément de liste YAML non indenté (« cabinet: » puis « - Bain » en colonne 0) : lu comme une liste, comme l'indenté.
+const fmFlat = parseFrontmatter('---\ncabinet:\n- Bain\n- "[[Oliver Wyman|OW]]"\npersonne: Ada\n---\n# t');
+assert.deepEqual(fmFlat.cabinet, ['Bain', '[[Oliver Wyman|OW]]']);
+assert.equal(fmFlat.personne, 'Ada', 'la clé suivante repart normalement');
+assert.deepEqual(parseFrontmatter('---\n- orphelin\nstatut: rédigée\n---\n').statut, 'rédigée', 'tiret sans clé précédente : ignoré');
 assert.deepEqual(asList('[Bain, "BCG"]'), ['Bain', 'BCG']);
 assert.deepEqual(asList('[[Oliver Wyman]]'), ['Oliver Wyman']);
 assert.deepEqual(asList(''), []);
@@ -261,6 +266,8 @@ assert.equal(personneKey({ personne: 'Morgane Tabary' }, '2026-10-01 Morgane Tab
 assert.equal(exchangeDate({ 'date-échange': '2026-10-05' }, 'x.md'), '2026-10-05');
 assert.equal(exchangeDate({}, '2026-10-02 A.md'), '2026-10-02');
 assert.equal(exchangeDate({}, 'A.md'), null);
+assert.equal(exchangeDate({ 'date-échange': '' }, '2026-10-02 A.md'), '2026-10-02', 'propriété vide : repli sur le nom de fichier');
+assert.equal(exchangeDate({ 'date-échange': 'bientôt' }, '2026-10-02 A.md'), null, 'propriété sans date : pas de repli silencieux');
 
 const note = (file, fm) => ({ file, text: `---\n${fm}\n---\n# ${file}` });
 const net = countNetworking(
@@ -283,6 +290,18 @@ assert.equal(n('Boston Consulting Group'), 0, 'call préparé mais pas passé : 
 assert.equal(n('McKinsey & Company'), 1, 'cabinet: en liste');
 assert.equal(n('Roland Berger'), 1);
 assert.equal(net.warnings.length, 2);
+// date-échange présente mais sans date AAAA-MM-JJ : avertissement dédié, note non comptée (pas de repli sur le nom).
+const netBad = countNetworking([note('2026-10-02 Hugo (Bain).md', 'cabinet: Bain\npersonne: Hugo H\ndate-échange: bientôt')], cabsNet, '2026-10-13');
+assert.equal(netBad.personnes.get('Bain & Company').size, 0);
+assert.equal(netBad.warnings.length, 1);
+assert.match(netBad.warnings[0], /Hugo \(Bain\)\.md.*date-échange « bientôt » sans date AAAA-MM-JJ.*non comptée/);
+// Dossier non vide mais sans note exploitable : détecté (le script appelle alors sourceFail au lieu d'écrire 0).
+assert.equal(anyNoteHas(['---\npersonne: A\n---\n', 'pas de frontmatter', '---\ncabinet:\n---\n'], 'cabinet'), false);
+assert.equal(anyNoteHas(['---\npersonne: A\n---\n', '---\ncabinet: Bain\n---\n'], 'cabinet'), true);
+assert.equal(anyNoteHas(['---\ncabinet:\n- Bain\n---\n'], 'cabinet'), true);
+assert.equal(anyNoteHas(['---\nstatut: rodée\n---\n', '---\ntitre: x\n---\n'], 'statut'), true);
+assert.equal(anyNoteHas(['---\ntitre: x\n---\n', null], 'statut'), false);
+assert.equal(anyNoteHas([], 'statut'), false);
 assert.match(net.warnings.join('\n'), /Sans cabinet\.md.*pas de propriété cabinet/);
 assert.match(net.warnings.join('\n'), /Goldman Sachs.*pas de fiche suivie/);
 
