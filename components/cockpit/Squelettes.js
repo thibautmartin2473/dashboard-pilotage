@@ -173,3 +173,25 @@ export function SqueletteIdees() {
     </Cadre>
   );
 }
+
+export function SqueletteAvancement() {
+  return (
+    <Cadre label="Chargement de l'avancement">
+      <div className="min-h-0 min-w-0 flex-1">
+        <Carte titre="Avancement">
+          <ul className="space-y-4">
+            {Array.from({ length: 7 }, (_, i) => (
+              <li key={i} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Bar w={i < 2 ? 'w-1/2' : 'w-1/3'} h={i < 2 ? 'h-4' : 'h-3'} />
+                  <Bar w="w-24" h="h-3" className="shrink-0" />
+                </div>
+                <Bar w="w-full" h="h-2" className="rounded-full" />
+              </li>
+            ))}
+          </ul>
+        </Carte>
+      </div>
+    </Cadre>
+  );
+}

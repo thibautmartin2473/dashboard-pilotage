@@ -9,6 +9,7 @@ import {
   isMissingTable, reorderUpdates, capKindEntries, resolveCategories, resolveKindEntries, slugify, splitTasks, todayParis,
 } from '@/lib/home';
 import { extractIdeaLink, matchIdeaTarget } from '@/lib/command';
+import { REGLAGE_MASQUES } from '@/lib/avancement';
 
 // Server Actions d'édition de l'accueil et des pages projet : tout ce que Thibaut
 // ajoute, modifie ou supprime depuis le site. Elles passent par les pages, donc
@@ -399,5 +400,13 @@ export async function saveKindOverride({ eventId, kind }) {
     delete entries[eventId];
     if (kind) entries[eventId] = { kind, at: Date.now() };
     await saveSetting(db, 'agenda_kind_overrides', capKindEntries(entries, eventId, KIND_OVERRIDES_MAX));
+  });
+}
+
+// ---- Onglet Avancement : afficher ou masquer le groupe « Autre » et Master Project (dashboard_settings, clé avancement_afficher_masques) ----
+// Valeur json true / false (absente = masqués). Les lignes restent calculées et stockées dans tous les cas.
+export async function setAvancementMasques(afficher) {
+  return run(async (db) => {
+    await saveSetting(db, REGLAGE_MASQUES, afficher === true);
   });
 }

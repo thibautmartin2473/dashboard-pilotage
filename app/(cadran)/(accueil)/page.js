@@ -1,6 +1,6 @@
 import AgendaPanel from '@/components/AgendaPanel';
 import MailsPanel from '@/components/MailsPanel';
-import Avancement from '@/components/cockpit/Avancement';
+import AvancementResume from '@/components/cockpit/AvancementResume';
 import CockpitShell from '@/components/cockpit/CockpitShell';
 import RangerColumn from '@/components/cockpit/RangerColumn';
 import RangerForced from '@/components/cockpit/RangerForced';
@@ -19,12 +19,13 @@ export const dynamic = 'force-dynamic';
 // (Constellation s'y branche), derrière tout, avec des cartes à 75 % qui le laissent voir.
 // Chaque zone a sa vue plein écran (/agenda, /a-ranger, /mails) : le titre de la carte y mène.
 // Chargement des données et cadre : lib/cockpit-data.js et components/cockpit/CockpitShell.js.
-// Sous le Cockpit (hors de la hauteur de fenêtre, on y descend en faisant défiler la page) : le bloc « Avancement »
-// (components/cockpit/Avancement.js, table `avancement` écrite par scripts/push-avancement.mjs). Le cadre
-// app/(cadran)/layout.js laisse la page défiler quand #avancement est présent ; la disposition du Cockpit
-// (xl:h-dvh, zones qui défilent à l'intérieur) ne change pas.
+// Sous le Cockpit (hors de la hauteur de fenêtre, on y descend en faisant défiler la page) : un résumé COMPACT de
+// l'avancement (components/cockpit/AvancementResume.js : une barre par grand poste, retards d'abord, table
+// `avancement` écrite par scripts/push-avancement.mjs). Tout le détail est dans l'onglet /avancement. Le cadre
+// app/(cadran)/layout.js laisse la page défiler quand #avancement (le résumé) est présent ; la disposition du
+// Cockpit (xl:h-dvh, zones qui défilent à l'intérieur) ne change pas.
 export default async function HomePage() {
-  const [data, avancement] = await Promise.all([loadCockpitData(), loadAvancement()]);
+  const [data, { rows: avancement, showHidden }] = await Promise.all([loadCockpitData(), loadAvancement()]);
   const { events, mails, done, ranger, ideas, categories, kindOverrides, week, allTasks, activeTasks, list, today, now } = data;
 
   return (
@@ -70,7 +71,7 @@ export default async function HomePage() {
         </CockpitShell>
       </div>
       <div className="p-3 pt-0">
-        <Avancement rows={avancement} now={now.getTime()} />
+        <AvancementResume rows={avancement} showHidden={showHidden} now={now.getTime()} />
       </div>
     </>
   );

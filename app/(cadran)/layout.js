@@ -1,14 +1,14 @@
 import AutoRefresh from '@/components/AutoRefresh';
 import ConstellationFond from '@/components/ConstellationFond';
 
-// Cadre commun des cinq vues du Cockpit (/, /agenda, /a-ranger, /mails, /brain). Les noms de dossier entre
+// Cadre commun des six vues du Cockpit (/, /agenda, /a-ranger, /mails, /avancement, /brain). Les noms de dossier entre
 // parenthèses ne changent pas l'URL (groupe de routes). Un layout n'est pas remonté quand on passe d'une vue
 // à l'autre : ce qui est ici garde son état et ses éléments DOM pendant toute la navigation.
 //  - le fond Constellation (#cadran-fond) : un seul canvas, le graphe (/api/vault-graph) n'est téléchargé et
 //    calculé qu'une fois, au lieu d'une fois par vue ;
 //  - AutoRefresh : un seul minuteur de relecture (60 s), qui ne repart pas à zéro à chaque navigation ;
 //  - la hauteur de la fenêtre : sur grand écran (>= 1280 px) la page tient dans la fenêtre (`xl:h-dvh`), seule
-//    la zone de chaque vue défile. Exception : l'accueil, dont le bloc « Avancement » (#avancement) se pose SOUS
+//    la zone de chaque vue défile. Exception : l'accueil, dont le résumé d'avancement (#avancement) se pose SOUS
 //    la hauteur de fenêtre du Cockpit : la page défile alors (`has-[#avancement]`), le Cockpit garde sa
 //    hauteur de fenêtre dans sa propre enveloppe (app/(cadran)/(accueil)/page.js).
 // Le rail est dans le layout racine (app/layout.js). Le bandeau « Maintenant » et la fenêtre Commande restent

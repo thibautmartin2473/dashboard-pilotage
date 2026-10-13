@@ -39,6 +39,12 @@ const ICONS = {
       <path d="m4 7 8 6 8-6" />
     </>
   ),
+  avancement: (
+    <>
+      <path d="M4 7h9M4 12h13M4 17h6" />
+      <path d="M17.5 6.5v11" />
+    </>
+  ),
   idees: (
     <>
       <path d="M9 18h6M10 21h4" />
@@ -84,6 +90,7 @@ const MAIN = [
   { href: '/a-ranger', label: 'À ranger', icon: 'ranger', match: (p) => p.startsWith('/a-ranger') },
   { href: '/agenda', label: 'Agenda', icon: 'agenda', match: (p) => p.startsWith('/agenda') },
   { href: '/mails', label: 'Mails', icon: 'mails', match: (p) => p.startsWith('/mails') },
+  { href: '/avancement', label: 'Avancement', icon: 'avancement', match: (p) => p.startsWith('/avancement') },
   { href: '/brain', label: 'Idées', icon: 'idees', match: (p) => p.startsWith('/brain') },
   { href: '/constellation', label: 'Constellation', icon: 'constellation', match: (p) => p.startsWith('/constellation') },
 ];
