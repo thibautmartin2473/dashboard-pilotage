@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 const STATUSES = ['new', 'triaged', 'done'];
 
-// Appelée par claude.brain/pull-notes.mjs (via une session Claude Code
+// Appelée par Systeme/claude.brain/pull-notes.mjs (via une session Claude Code
 // locale) après avoir rangé la note au bon endroit — même secret que
 // GET /api/brain-notes, car appelée depuis une machine externe.
 export async function PATCH(request, { params }) {

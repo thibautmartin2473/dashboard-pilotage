@@ -12,12 +12,12 @@ il tranche, puis on construit l'étape suivante (CLAUDE.md global, « Propositio
 
 ## Pour reprendre (début de chaque session)
 
-1. `Set-Location C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage-demo` (worktree de la branche `demo/v2` : un `git switch demo/v2` depuis `Apps\dashboard-pilotage` est refusé, la branche est déjà prise par ce worktree)
+1. `Set-Location C:\Users\thiba\GLOBAL\Projets\dashboard-pilotage-demo` (worktree de la branche `demo/v2` : un `git switch demo/v2` depuis `Projets\dashboard-pilotage` est refusé, la branche est déjà prise par ce worktree)
 2. Lancer les démos en local (lecture seule de la vraie base, sans mot de passe, ce PC seulement) :
    `npx next dev -p 3100 -H 127.0.0.1`, puis http://127.0.0.1:3100/demo
    (le fichier `.env.development.local`, non suivi par git, coupe le Basic Auth en dev).
-3. Lire ce fichier, puis `Vault/02 Domaines/Design/Mes goûts en design.md` (ses goûts, par projet
-   et objectif) et la note `Vault/02 Domaines/Design/Recherches/2026-10-07 dashboard-pilotage - Cockpit et studio de vitrines.md`.
+3. Lire ce fichier, puis `Vault/02 Projets/Design/Mes goûts en design.md` (ses goûts, par projet
+   et objectif) et la note `Vault/02 Projets/Design/Recherches/2026-10-07 dashboard-pilotage - Cockpit et studio de vitrines.md`.
 4. La branche `demo/v2` ne se merge jamais : on porte seulement ce qu'il choisit dans le vrai code,
    sur une branche propre, avec sa PR.
 
@@ -90,7 +90,7 @@ exécuter par Thibaut ; route `POST /api/hooks/vault-graph` (déjà hors Basic A
 401, 413 au-delà de 5 000 noeuds ou 2 Mo, `group` = premier dossier du chemin ; emplacement vide « en
 attente de la première synchronisation » (onglet du rail ou tuile : choix de Thibaut en attente).
 **Prévenir la session « Mods sur Claude » par message après le commit** ; le dessin du graphe est pour elle.
-**Kit prêt (2026-10-08)** : `C:/Users/thiba/CLAUDE.GLOBAL/Tools/claude-mods/constellation/dashboard-kit/` (README =
+**Kit prêt (2026-10-08)** : `C:/Users/thiba/GLOBAL/Systeme/Tools/claude-mods/constellation/dashboard-kit/` (README =
 correspondance fichier par fichier : `supabase/vault-graph.sql`, `app/api/hooks/vault-graph/route.js` qui accepte
 `x-hook-secret` et `Authorization: Bearer`, `lib/vault-graph.js` avec `loadVaultGraph()`, `components/Constellation.js`
 en canvas sans dépendance, état vide « En attente de la première synchronisation d'Obsidian »). À intégrer

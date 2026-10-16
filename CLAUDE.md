@@ -98,11 +98,11 @@ Un push sur `main` redéploie en production : ne jamais pousser sans accord expl
 **Idées d'amélioration de Thibaut** : les noter dans `BACKLOG.md`, sans coder ni ouvrir de PR
 à chaque idée ; une PR groupée seulement quand il y en a assez ou qu'il le demande.
 
-Contexte ajouté lors de la mise en place de l'architecture CLAUDE.GLOBAL :
+Contexte ajouté lors de la mise en place de l'architecture GLOBAL :
 historique complet dans `../../ARCHITECTURE.md`.
 
 ## Contexte détaillé (vault Obsidian)
 
 Note de reprise (état réel du projet, décisions, points « À vérifier ») :
-`C:\Users\thiba\CLAUDE.GLOBAL\Vault\01 Projets\dashboard-pilotage\dashboard-pilotage.md` : à lire
+`C:\Users\thiba\GLOBAL\Vault\02 Projets\Fiches projets\dashboard-pilotage\dashboard-pilotage.md` : à lire
 avant de fouiller le dossier. Le vault résume ; `../../ARCHITECTURE.md` et le code font foi.

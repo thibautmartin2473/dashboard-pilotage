@@ -6,7 +6,7 @@
 // Source : les notes Obsidian du skill instagram-memoire (frontmatter `source:
 // instagram`, `url`, `author`, `saved_at`, `topics`; légende = corps de la note
 // avant « ## Transcription »). Par défaut le dossier
-// Vault/03 Ressources/Instagram. Idempotent : upsert sur `url`, on peut relancer.
+// Vault/03 Perso et ressources/Ressources/Instagram. Idempotent : upsert sur `url`, on peut relancer.
 // N'appelle jamais Instagram. --dry-run n'écrit rien et n'exige pas Supabase.
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 const args = process.argv.slice(2);
 const dry = args.includes('--dry-run');
 const dir =
-  args.find((a) => !a.startsWith('--')) ?? fileURLToPath(new URL('../../../Vault/03 Ressources/Instagram', import.meta.url));
+  args.find((a) => !a.startsWith('--')) ?? fileURLToPath(new URL('../../../Vault/03 Perso et ressources/Ressources/Instagram', import.meta.url));
 
 function fail(message) {
   console.error(message);

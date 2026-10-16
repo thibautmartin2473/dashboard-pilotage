@@ -3,7 +3,7 @@ mise en page par forces (numpy), puis page HTML du Cockpit épuré avec le graph
 import json, os, re, sys
 import numpy as np
 
-VAULT = r"C:\Users\thiba\CLAUDE.GLOBAL\Vault"
+VAULT = r"C:\Users\thiba\GLOBAL\Vault"
 OUT = os.path.dirname(os.path.abspath(__file__))
 
 notes = {}

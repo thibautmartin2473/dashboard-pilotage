@@ -2,7 +2,7 @@
 
 Fichier unique à lire par la session qui construit. Tout ce qui suit a été choisi par Thibaut, en
 visuel, une question à la fois. Historique et raisons : `SUITE.md` (même dossier) et le vault
-(`Vault/02 Domaines/Design/Mes goûts en design.md`, note de recherche « Cockpit et studio de vitrines »).
+(`Vault/02 Projets/Design/Mes goûts en design.md`, note de recherche « Cockpit et studio de vitrines »).
 
 ## 0. Vision et méthode
 
@@ -90,7 +90,7 @@ confondue avec un bouton.
   gris bleu `#4E5C78` à faible opacité. Rendu de référence : `rendus/constellation-v4-*.png` et
   `rendus/build.py` (mise en page calculée sur le vrai vault).
 - **Kit à intégrer** (préparé par la session « Mods sur Claude ») :
-  `C:/Users/thiba/CLAUDE.GLOBAL/Tools/claude-mods/constellation/dashboard-kit/` (README) :
+  `C:/Users/thiba/GLOBAL/Systeme/Tools/claude-mods/constellation/dashboard-kit/` (README) :
   `supabase/vault-graph.sql` (à exécuter par Thibaut), `app/api/hooks/vault-graph/route.js`,
   `lib/vault-graph.js`, `components/Constellation.js` ; remplacer ses couleurs provisoires « Nuit niçoise »
   par celles ci-dessus. **Prévenir la session « Mods sur Claude » par message** quand la route est en ligne et

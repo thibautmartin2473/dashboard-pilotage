@@ -1,6 +1,6 @@
 -- claude.brain : idées/notes libres ajoutées depuis le dashboard (page /brain),
 -- à ranger ensuite vers le bon projet/dossier par une session Claude Code
--- locale (voir CLAUDE.GLOBAL/claude.brain/CLAUDE.md).
+-- locale (voir GLOBAL/Systeme/claude.brain/CLAUDE.md).
 --
 -- À exécuter une fois manuellement dans l'éditeur SQL Supabase du projet.
 

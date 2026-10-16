@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { corsHeaders } from '@/lib/cors';
 
-// GET est appelé par le script local claude.brain/pull-notes.mjs (protégé
+// GET est appelé par le script local Systeme/claude.brain/pull-notes.mjs (protégé
 // par le même secret que le hook de fin de session, car il lit des notes
 // personnelles depuis une machine externe).
 export async function GET(request) {
