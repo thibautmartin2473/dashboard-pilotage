@@ -312,7 +312,7 @@ assert.equal(etapesTrou[1].brut, 'n.d.');
 const notionsDec = parseNotionsDetail('| Notion | Sujet | Poids | Niveau | Dernier test |\n|---|---|---|---|---|\n| N1 | A | 3 | 1,5 | 2026-10-12 |\n| N2 | B | 2,5 | 2.5 | 2026-10-12 |\n| N3 | C | 4 | ? | - |\n| N4 | D | 3 (2 avant S8) | 3 | 2026-10-13 |');
 assert.deepEqual(notionsDec.notions.map((x) => [x.poids, x.niveau]), [[3, 1.5], [2.5, 2.5], [3, 3]], '« 1,5 » n\'est pas tronqué en 1');
 assert.equal(notionsDec.ignorees, 1);
-assert.equal(calculeLe('_Calculé le 2026-10-13 par `Tools/x.py` : ne pas éditer._'), '2026-10-13');
+assert.equal(calculeLe('_Calculé le 2026-10-13 par `Systeme/Tools/x.py` : ne pas éditer._'), '2026-10-13');
 assert.equal(calculeLe('rien'), null);
 
 // ---- A4 : partiels, lecture pessimiste ---------------------------------------------------------------------------

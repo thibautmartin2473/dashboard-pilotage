@@ -28,11 +28,11 @@ import {
 // ============================================================================================================
 
 // Chemins (lecture seule). Surchargeables par variable d'environnement pour les essais.
-const VAULT = process.env.AVANCEMENT_VAULT ?? 'C:/Users/thiba/CLAUDE.GLOBAL/Vault';
+const VAULT = process.env.AVANCEMENT_VAULT ?? 'C:/Users/thiba/GLOBAL/Vault';
 const SKILLS = process.env.AVANCEMENT_SKILLS ?? 'C:/Users/thiba/.claude/skills';
 // État du dernier export de la base, écrit par scripts/export-supabase.mjs (succès ou échec) ; relayé dans la table
 // pour que l'onglet Avancement puisse le signaler.
-const EXPORT_ETAT = process.env.AVANCEMENT_EXPORT_ETAT ?? 'C:/Users/thiba/CLAUDE.GLOBAL/Backups/supabase/_etat.json';
+const EXPORT_ETAT = process.env.AVANCEMENT_EXPORT_ETAT ?? 'C:/Users/thiba/GLOBAL/Backups/supabase/_etat.json';
 
 // Départ commun des trajectoires (niveaux et compteurs) : le trait « où il devrait être aujourd'hui » est
 // l'interpolation LINÉAIRE entre la valeur de départ à cette date et la cible à l'échéance.
@@ -156,7 +156,7 @@ const TESTS = {
 };
 const slug = (s) => norm(s).replace(/ /g, '-');
 
-const progressionPath = join(VAULT, '02 Domaines/EDHEC/Strategy Boost/Entraînement/Progression.md');
+const progressionPath = join(VAULT, '01 Carrière et études/EDHEC/Strategy Boost/Entraînement/Progression.md');
 const progression = read(progressionPath);
 const zone = progression ? dashboardZone(progression) : null;
 const ligneSource = (cle, libelle, typeLabel) => ({ cle, groupe: 'strategy-boost', typeLabel, libelle, explication: "Source illisible : les valeurs précédentes sont conservées s'il y en a" });
@@ -215,7 +215,7 @@ if (!zone) {
 // Cabinets suivis : dossiers de Strategy Boost qui ont une fiche <Nom>/<Nom>.md avec `priorité:`
 // ============================================================================================================
 
-const sbDir = join(VAULT, '02 Domaines/EDHEC/Strategy Boost');
+const sbDir = join(VAULT, '01 Carrière et études/EDHEC/Strategy Boost/Cabinets');
 const cabinets = [];
 try {
   for (const d of readdirSync(sbDir)) {
@@ -244,7 +244,7 @@ if (!cabinetsOk) {
 // `statut` n'existe sur les lettres). Objectif : une lettre prête par cabinet P1 et P2. Les lettres d'avant la
 // campagne (préfixe de date antérieur au mois de DEBUT : finance, candidatures passées) sont ignorées sans bruit ;
 // une lettre de la campagne dont l'entreprise n'est pas un cabinet suivi est signalée.
-const lettresDir = join(VAULT, '02 Domaines/Carrière/Lettres');
+const lettresDir = join(VAULT, '01 Carrière et études/Carrière/Lettres');
 if (cabinetsOk) {
   const notes = listMd(lettresDir)?.filter((x) => /^\d{4}-\d{2} /.test(x));
   if (!notes?.length) {
@@ -283,10 +283,10 @@ if (cabinetsOk) {
 }
 
 // ---- Networking ---------------------------------------------------------------------------------------
-// Une personne parlée = une note d'échange 03 Ressources/Networking/*.md (`cabinet:` = cabinet suivi, nom court,
+// Une personne parlée = une note d'échange 03 Perso et ressources/Ressources/Networking/*.md (`cabinet:` = cabinet suivi, nom court,
 // alias, lien ou liste), comptée une fois par personne (propriété `personne:`, à défaut nom de fichier nettoyé), et
 // seulement si la date de l'échange est passée ou du jour. Au plus RESEAU_PAR_CABINET par cabinet dans le total.
-const netDir = join(VAULT, '03 Ressources/Networking');
+const netDir = join(VAULT, '03 Perso et ressources/Ressources/Networking');
 if (cabinetsOk) {
   const fichiers = listMd(netDir);
   // Dossier non vide mais sans aucune propriété `cabinet:` : source cassée, pas un vrai 0.
@@ -334,7 +334,7 @@ const decompte = (list) => {
   for (const x of list) m.set(x.statut || 'sans statut', (m.get(x.statut || 'sans statut') ?? 0) + 1);
   return [...m].map(([s, n]) => `${s} (${n})`).join(' ; ');
 };
-const fitDir = join(VAULT, '02 Domaines/Carrière/Fit');
+const fitDir = join(VAULT, '01 Carrière et études/Carrière/Fit');
 {
   // « Prête » : statut rédigée, rodée, prête, validée ou finalisée (modèle Histoire : brouillon, rédigée, rodée).
   const histoires = statuts(join(fitDir, 'Histoires'));
@@ -440,8 +440,8 @@ function cases(path) {
   return { ouvertes: all.filter((m) => m[1] === ' ').length, cochees: all.filter((m) => m[1] !== ' ').length };
 }
 for (const p of [
-  { cle: 'spircle', nom: 'Spircle', note: join(VAULT, '01 Projets/Spircle/Spircle.md'), explication: 'Application de bars et site, en cours de lancement' },
-  { cle: 'edhec-ai', nom: 'EDHEC AI', note: join(VAULT, '01 Projets/EDHEC AI/EDHEC AI.md'), explication: 'Cartes de révision générées depuis les cours' },
+  { cle: 'spircle', nom: 'Spircle', note: join(VAULT, '02 Projets/Fiches projets/Spircle/Spircle.md'), explication: 'Application de bars et site, en cours de lancement' },
+  { cle: 'edhec-ai', nom: 'EDHEC AI', note: join(VAULT, '02 Projets/Fiches projets/EDHEC AI/EDHEC AI.md'), explication: 'Cartes de révision générées depuis les cours' },
 ]) {
   const c = cases(p.note);
   if (c == null) sourceFail(`Source illisible : note du projet ${p.nom} (${p.note}).`);

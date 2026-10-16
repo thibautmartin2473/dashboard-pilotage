@@ -27,7 +27,7 @@ Quand quelque chose ne peut être fait que par Thibaut (secret, console Vercel/S
 ## Avant d'écrire une ligne
 
 1. Reformule la tâche en une phrase et écris **le critère d'acceptation observable** (« `GET /api/x` renvoie 200 avec `{...}` », « la page `/y` affiche Z »).
-2. `CLAUDE.md` et `AGENTS.md` sont déjà chargés : ne les relis pas. Ne lis le vault (`../../Vault/01 Projets/dashboard-pilotage/`) que si la tâche touche une décision passée.
+2. `CLAUDE.md` et `AGENTS.md` sont déjà chargés : ne les relis pas. Ne lis le vault (`../../Vault/02 Projets/Fiches projets/dashboard-pilotage/`) que si la tâche touche une décision passée.
 3. Localise avec `Grep`, lis uniquement les fichiers concernés (`app/api/*` = routes, `lib/` = accès données, `components/` = UI). Pas de balayage du repo.
 4. **Next.js 16 n'est pas celui que tu connais** (`proxy.js` remplace `middleware`, autres ruptures). Avant d'utiliser une API Next, `Grep` dans `node_modules/next/dist/docs/` le mot-clé précis et lis la page trouvée, pas le dossier.
 5. Réutilise avant de créer : `lib/data.js`, `lib/cors.js`, `lib/supabase-admin.js`, `lib/brain.js`, `lib/format.js`, `lib/constants.js`, `lib/db-ops.js` (écritures qui reçoivent le client) et, pour l'interface, `components/ui.js` (boutons, champs, confirmation de suppression : tout composant s'appuie dessus).
@@ -67,7 +67,7 @@ Le projet `dashboard-pilotage` est suivi comme les autres sur le site, ses jalon
 5. **Les libellés sont lisibles publiquement** (`/api/public/overview`, sans authentification) : pas de secret, pas de détail de faille, pas de donnée personnelle. Un résultat par jalon, en français, 80 caractères max.
 6. Si la synchro échoue, dis-le dans le rapport avec le message exact ; ne contourne pas en écrivant dans la base par un autre moyen.
 
-Si ta tâche rend fausse une ligne de « Ce qui existe » dans `CLAUDE.md`, corrige-la dans la même PR et signale-le (le vault résume ce fichier : la note est à réaligner via `Tools/vault-sync`).
+Si ta tâche rend fausse une ligne de « Ce qui existe » dans `CLAUDE.md`, corrige-la dans la même PR et signale-le (le vault résume ce fichier : la note est à réaligner via `Systeme/Tools/vault-sync`).
 
 ## Livraison : branche et PR, jamais `main`
 
@@ -106,7 +106,7 @@ Pour chaque étape retenue, un guide qu'on peut suivre sans réfléchir :
 1. **Pourquoi** : une phrase, avec la conséquence si on ne le fait pas.
 2. **Où** : l'adresse ou le chemin de menu exact (ex. Vercel → projet `dashboard-pilotage` → Settings → Environment Variables).
 3. **Étapes numérotées**, une action par ligne, avec les valeurs exactes à saisir. Pour un secret, donne le nom de la variable et où trouver sa valeur, jamais la valeur.
-4. **Commande** à copier-coller dans un bloc de code à part, quand il y en a une. Le terminal de Thibaut est **Windows PowerShell 5.1** : pas de `&&` ni de `||` (enchaîne avec `;`), chemins Windows, et indique d'abord le dossier où la lancer (`Set-Location "C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage"`).
+4. **Commande** à copier-coller dans un bloc de code à part, quand il y en a une. Le terminal de Thibaut est **Windows PowerShell 5.1** : pas de `&&` ni de `||` (enchaîne avec `;`), chemins Windows, et indique d'abord le dossier où la lancer (`Set-Location "C:\Users\thiba\GLOBAL\Projets\dashboard-pilotage"`).
 5. **Vérification** : comment savoir que c'est bon (ce qu'on doit voir, ou la commande à lancer et son résultat attendu).
 6. **Durée** estimée.
 

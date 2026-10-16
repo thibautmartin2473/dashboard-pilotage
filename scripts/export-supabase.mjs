@@ -6,7 +6,7 @@
 // LECTURE SEULE : aucune écriture en base. Les tables sont découvertes par la description OpenAPI de PostgREST
 // (clé service_role) ; chaque table est lue page par page (pagination suivie, tri par clé primaire) jusqu'à la
 // dernière ligne, chaque requête avec un délai maximal de 30 s. Sortie : <racine>\AAAA-MM-JJ\<table>.json
-// (+ _export.json : tables, nombres de lignes), la racine par défaut étant C:\Users\thiba\CLAUDE.GLOBAL\Backups\supabase,
+// (+ _export.json : tables, nombres de lignes), la racine par défaut étant C:\Users\thiba\GLOBAL\Backups\supabase,
 // qui part dans la sauvegarde OneDrive de 21 h.
 // L'export s'écrit d'abord dans AAAA-MM-JJ.partial puis le dossier est renommé À LA FIN : un export interrompu ne
 // ressemble jamais à un export complet. La rotation ne compte et ne supprime que des dossiers AAAA-MM-JJ qui
@@ -19,7 +19,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
-const ROOT_DEFAUT = 'C:/Users/thiba/CLAUDE.GLOBAL/Backups/supabase';
+const ROOT_DEFAUT = 'C:/Users/thiba/GLOBAL/Backups/supabase';
 const GARDER = 8; // nombre d'exports conservés
 const PAGE = 1000; // lignes par requête (plafond par défaut de PostgREST)
 const DELAI_MS = 30000; // délai maximal d'une requête
