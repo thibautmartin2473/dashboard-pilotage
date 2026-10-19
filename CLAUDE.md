@@ -23,7 +23,13 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   sessions du PC, envoi détaché) → `POST /api/hooks/activite` (HOOK_SECRET) → fonction `activite_noter`,
   tables `activite_sessions` et `activite_evenements` (`supabase/activite-jour.sql`, à exécuter par Thibaut,
   RLS sans policy anon). Lecture : `GET /api/public/activite?cle=&depuis=&vue=sessions|evenements`, clé
-  `ACTIVITE_CLE` (variable Vercel, distincte de HOOK_SECRET), lue par le connecteur Vercel de l'artifact.
+  `ACTIVITE_CLE` (variable Vercel, distincte de HOOK_SECRET). L'artifact ne passe PAS par cette route : le
+  connecteur Vercel de claude.ai est refusé sur l'équipe « spircle » (403 au contournement de protection,
+  2026-10-19) ; il lit les tables par le connecteur Supabase (`execute_sql`, thème recalculé en SQL avec les
+  mêmes motifs que `lib/activite.js` : garder les deux alignés). La route reste pour tout autre lecteur.
+  L'artifact lit aussi `avancement` (objectifs) et `tasks` ; pour que les niveaux soient en direct, le même hook
+  relance `scripts/push-avancement.mjs` (checkout principal) à chaque fin de tour d'une session de travail, au plus
+  toutes les 3 minutes, en plus de la tâche planifiée de 20h50.
   Titres de session, thème, heures, nombre de messages ; jamais le contenu. Thème déduit du titre puis du
   dossier (`lib/activite.js`, testé par `scripts/check-activite.mjs`) ; routine = balise `<scheduled-task`.
 - **Claude Brain** : table `brain_notes`, `GET`/`POST /api/brain-notes`,
