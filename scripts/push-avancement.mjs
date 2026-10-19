@@ -20,7 +20,7 @@ import { join } from 'node:path';
 import {
   anyNoteHas, asList, calculeLe, countNetworking, dashboardZone, daysBetween, expectedAt, isReadyStatus, lettreFichier, makeRow, nextTargets, nextTargetsText,
   norm, parseEtapes, parseFrontmatter, parseNotionsDetail, parseTests, parseVitesse, partielArgs, planWrite, planYear, priorityRank,
-  resolveCabinet, tableRows,
+  resolveCabinet, tableRows, jourLogique, questionsDuJour, suiviDuJour,
 } from '../lib/avancement-calc.js';
 
 // ============================================================================================================
@@ -91,6 +91,8 @@ function todayParis() {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 const today = todayArg ?? todayParis();
+// Jour logique (4h à 4h) pour la progression du jour de l'artifact « Ma journée ».
+const jourLog = todayArg ?? jourLogique();
 if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) {
   console.error('--today doit être au format AAAA-MM-JJ.');
   process.exit(1);
@@ -411,7 +413,9 @@ for (const m of MATIERES) {
     continue;
   }
   if (ignorees) warn(`Suivi de révision de ${m.libelle} : ${ignorees} notion(s) au poids ou au niveau illisible, ignorée(s).`);
-  add({ seuil: SEUIL, ...partielArgs({ code: m.code, libelle: m.libelle, notions, date, quand, today, debut: COURS_DEBUT, cible: COURS_CIBLE }) });
+  const pa = partielArgs({ code: m.code, libelle: m.libelle, notions, date, quand, today, debut: COURS_DEBUT, cible: COURS_CIBLE });
+  if (pa.extra) pa.extra = { ...pa.extra, questions_jour: questionsDuJour(suivi, jourLog) };
+  add({ seuil: SEUIL, ...pa });
 }
 {
   const passes = MASTER_JALONS.filter((j) => j.date < today).length;
@@ -513,8 +517,11 @@ if (dry) {
     process.exit(1);
   };
 
-  const { data: existingRows, error: selErr } = await db.from('avancement').select('cle');
+  const { data: existingRows, error: selErr } = await db.from('avancement').select('cle, extra');
   if (selErr) fail('Lecture impossible', selErr);
+  // Points du début de journée gardés d'un relevé à l'autre (progression du jour de l'artifact « Ma journée »).
+  const anciens = new Map((existingRows ?? []).map((r) => [r.cle, r.extra]));
+  for (const r of rows) if (r.extra && r.extra.points != null) r.extra = suiviDuJour({ extra: r.extra, ancien: anciens.get(r.cle), jour: jourLog });
   const plan2 = planWrite({ rows, existing: (existingRows ?? []).map((r) => r.cle), protectedKeys, protectedPrefixes });
 
   if (plan2.upsert.length) {
