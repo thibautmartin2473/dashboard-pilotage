@@ -6,7 +6,7 @@
 # Idempotent : relancer le script remplace les deux tâches. Elles pointent vers le checkout PRINCIPAL (le dossier
 # du repo qui contient ce script ; à lancer depuis le checkout principal, après le merge de la PR).
 # Usage (PowerShell 5.1) :
-#   Set-Location "C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage"; .\scripts\install-taches.ps1
+#   Set-Location "C:\Users\thiba\GLOBAL\Projets\dashboard-pilotage"; .\scripts\install-taches.ps1
 # Pour les retirer :  Unregister-ScheduledTask -TaskName "CLAUDE.GLOBAL - Avancement Cadran" -Confirm:$false
 # Journal d'exécution : %LOCALAPPDATA%\Cadran\taches.log (scripts\lancer-masque.vbs, qui n'en garde que les 500 dernières lignes, comptées en fins de ligne LF comme la sortie de Node).
 
@@ -17,7 +17,7 @@ $repo = Split-Path -Parent $scripts
 # Garde-fou : jamais depuis un worktree git (son dossier disparaît avec la branche, les tâches pointeraient dans le vide).
 # Dans un worktree, `.git` est un FICHIER ; on refuse aussi les chemins de worktree connus.
 if ((Test-Path -LiteralPath (Join-Path $repo '.git') -PathType Leaf) -or ($repo -match '[\\/]\.claude[\\/]worktrees[\\/]') -or ($repo -match '-wt-')) {
-  throw "Lancement refusé depuis un worktree ($repo). Lancer ce script depuis le checkout principal : C:\Users\thiba\CLAUDE.GLOBAL\Apps\dashboard-pilotage"
+  throw "Lancement refusé depuis un worktree ($repo). Lancer ce script depuis le checkout principal : C:\Users\thiba\GLOBAL\Projets\dashboard-pilotage"
 }
 $launcher = Join-Path $scripts 'lancer-masque.vbs'
 if (-not (Test-Path $launcher)) { throw "Introuvable : $launcher" }
@@ -48,7 +48,7 @@ Register-Tache -Nom 'CLAUDE.GLOBAL - Avancement Cadran' -Script 'push-avancement
 
 Register-Tache -Nom 'CLAUDE.GLOBAL - Export Supabase' -Script 'export-supabase.mjs' `
   -Trigger (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At '20:40') `
-  -Description 'Exporte toutes les tables Supabase en JSON vers CLAUDE.GLOBAL\Backups\supabase (8 exports gardés), avant la sauvegarde OneDrive de 21 h.'
+  -Description 'Exporte toutes les tables Supabase en JSON vers GLOBAL\Backups\supabase (8 exports gardés), avant la sauvegarde OneDrive de 21 h.'
 
 Write-Output "Dépôt : $repo ; Node : $node"
 Write-Output 'Lancer une tâche tout de suite pour tester : Start-ScheduledTask -TaskName "CLAUDE.GLOBAL - Avancement Cadran"'

@@ -35,8 +35,8 @@ const THEME_COLORS = {
   'Carrière': '#CFE0F5',
   'Claude & Outils': '#3F6FAF',
   Finance: '#9DB8DC',
-  '03 Ressources': '#5E6678',
-  '01 Projets': '#8E9CB4',
+  '03 Perso et ressources/Ressources': '#5E6678',
+  '02 Projets/Fiches projets': '#8E9CB4',
 };
 const LINK_DEFAULT = '#3A4256';
 
