@@ -22,7 +22,7 @@
 // absentes du fichier : tous les mails, mais uniquement les événements d'origine "google" pas encore
 // terminés (les événements créés sur le site, origin = 'local', ne sont jamais touchés ; un événement
 // fini reste en base comme historique, consultable avec les flèches de l'agenda).
-// "meeting_url" (facultatif) : lien de visio de l'événement (Meet, Teams, Zoom, Webex, Jitsi, Whereby ; https),
+// "meeting_url" (facultatif) : lien de visio de l'événement (Meet, Teams, Zoom, Webex, Jitsi, Whereby, Blackboard Collaborate ; https),
 // "meeting_source" = "google" (défaut : lien porté par l'événement, hangoutLink ou conferenceData) ou "mail"
 // (lien trouvé dans un mail et rattaché à l'événement). Rangé dans dashboard_settings, clé agenda_meeting_links
 // (lib/meeting.js) : un lien de mail survit aux synchros suivantes même si le fichier ne le redonne pas.

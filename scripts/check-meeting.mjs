@@ -8,6 +8,8 @@ assert.equal(meetingProvider('https://teams.microsoft.com/l/meetup-join/19%3amee
 assert.equal(meetingProvider('https://teams.live.com/meet/9876543210'), 'Teams');
 assert.equal(meetingProvider('https://us02web.zoom.us/j/123456789?pwd=abc'), 'Zoom');
 assert.equal(meetingProvider('https://edhec.webex.com/meet/jdupont'), 'Webex');
+assert.equal(meetingProvider('https://eu.bbcollab.com/guest/fa39b743ae8b4fb3a5986d13cdd27c66'), 'Blackboard');
+assert.equal(meetingProvider('https://eu-lti.bbcollab.com/recording/abc123'), null);
 assert.equal(meetingProvider('https://meet.google.com/'), null);
 assert.equal(meetingProvider('http://meet.google.com/abc-defg-hij'), null);
 assert.equal(meetingProvider('https://evilzoom.us/j/1'), null);
