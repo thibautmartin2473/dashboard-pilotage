@@ -5,7 +5,8 @@
 //
 // Le site ne peut pas lire Google : Claude récupère les données en session, écrit
 // ce fichier, puis lance ce script. Format (dates ISO 8601 avec fuseau) :
-//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link", "origin", "colorId" }],
+//   { "events": [{ "id", "title", "start", "end", "all_day", "location", "link", "origin", "colorId",
+//                  "meeting_url", "meeting_source" }],
 //     "mails":  [{ "id", "from", "subject", "received_at", "source", "unread", "link" }] }
 // Un événement « toute la journée » accepte aussi une date seule (AAAA-MM-JJ).
 // "origin" (facultatif) : "google" par défaut ; "local" = créé sur le site, jamais purgé.
@@ -21,6 +22,13 @@
 // absentes du fichier : tous les mails, mais uniquement les événements d'origine "google" pas encore
 // terminés (les événements créés sur le site, origin = 'local', ne sont jamais touchés ; un événement
 // fini reste en base comme historique, consultable avec les flèches de l'agenda).
+// "meeting_url" (facultatif) : lien de visio de l'événement (Meet, Teams, Zoom, Webex, Jitsi, Whereby ; https),
+// "meeting_source" = "google" (défaut : lien porté par l'événement, hangoutLink ou conferenceData) ou "mail"
+// (lien trouvé dans un mail et rattaché à l'événement). Rangé dans dashboard_settings, clé agenda_meeting_links
+// (lib/meeting.js) : un lien de mail survit aux synchros suivantes même si le fichier ne le redonne pas.
+// Liens seuls, sans resynchroniser l'agenda (session qui rattache un lien de mail) :
+//   node --env-file=.env.local scripts/push-agenda.mjs --meetings <fichier.json> [--dry-run]
+//     fichier = [{ "event_id", "url", "source": "mail" }] (event_id = id de calendar_events).
 // --dry-run valide le fichier et n'écrit rien (n'exige pas Supabase).
 //
 // Déplacements faits sur le site (glisser-déposer, poignées, flèches) : un événement Google déplacé
@@ -36,11 +44,13 @@
 
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { MEETING_LINKS_KEY, meetingProvider, mergeMeetingLinks } from '../lib/meeting.js';
 
 const args = process.argv.slice(2);
 const dry = args.includes('--dry-run');
 const ackAt = args.indexOf('--ack');
-const file = args.find((a, i) => !a.startsWith('--') && (ackAt < 0 || i !== ackAt + 1));
+const meetAt = args.indexOf('--meetings');
+const file = args.find((a, i) => !a.startsWith('--') && (ackAt < 0 || i !== ackAt + 1) && (meetAt < 0 || i !== meetAt + 1));
 
 function fail(message) {
   console.error(message);
@@ -80,6 +90,50 @@ async function pendingMoves(db) {
   return data;
 }
 
+// Liens de visio -> dashboard_settings (clé agenda_meeting_links), fusion sans perte (lib/meeting.js).
+async function saveMeetingLinks(db, incoming) {
+  const { data, error } = await db.from('dashboard_settings').select('value').eq('key', MEETING_LINKS_KEY);
+  if (error) dbFail(error);
+  const value = mergeMeetingLinks(data?.[0]?.value, incoming);
+  const { error: upError } = await db
+    .from('dashboard_settings')
+    .upsert({ key: MEETING_LINKS_KEY, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  if (upError) dbFail(upError);
+  console.log(`agenda_meeting_links : ${Object.keys(incoming).length} lien(s) reçu(s), ${Object.keys(value).length} en tout.`);
+}
+
+if (meetAt >= 0) {
+  const path = args[meetAt + 1];
+  if (!path) fail('Usage : node --env-file=.env.local scripts/push-agenda.mjs --meetings <fichier.json> [--dry-run]');
+  let list;
+  try {
+    list = JSON.parse(readFileSync(path, 'utf-8'));
+  } catch (err) {
+    fail(`Fichier illisible ou JSON invalide (${path}) : ${err.message}`);
+  }
+  if (!Array.isArray(list)) fail('Format invalide : un tableau [{ "event_id", "url", "source" }] est attendu.');
+  const bad = [];
+  const incoming = {};
+  list.forEach((m, i) => {
+    if (!m?.event_id || typeof m.event_id !== 'string') bad.push(`[${i}] : "event_id" requis.`);
+    else if (!meetingProvider(m.url)) bad.push(`[${i}] : "url" n'est pas un lien de visio reconnu (${JSON.stringify(m.url)}).`);
+    else incoming[m.event_id] = { url: m.url, src: m.source === 'google' ? 'google' : 'mail' };
+  });
+  if (bad.length) fail(`Fichier invalide :\n- ${bad.join('\n- ')}`);
+  if (dry) {
+    console.log(`[dry-run] ${Object.keys(incoming).length} lien(s) valide(s), rien écrit.`);
+    process.exit(0);
+  }
+  const db = connect();
+  const { data: known, error } = await db.from('calendar_events').select('id').in('id', Object.keys(incoming));
+  if (error) dbFail(error);
+  const ids = new Set(known.map((r) => r.id));
+  const missing = Object.keys(incoming).filter((id) => !ids.has(id));
+  if (missing.length) console.error(`Événement introuvable dans calendar_events (lien gardé quand même) : ${missing.join(', ')}`);
+  await saveMeetingLinks(db, incoming);
+  process.exit(0);
+}
+
 if (args.includes('--pending')) {
   console.log(JSON.stringify(await pendingMoves(connect()), null, 2));
   process.exit(0);
@@ -106,7 +160,8 @@ if (!file) {
   fail(
     'Usage : node --env-file=.env.local scripts/push-agenda.mjs <fichier.json> [--dry-run]\n' +
       '        node --env-file=.env.local scripts/push-agenda.mjs --pending\n' +
-      '        node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>'
+      '        node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>\n' +
+      '        node --env-file=.env.local scripts/push-agenda.mjs --meetings <fichier.json> [--dry-run]'
   );
 }
 
@@ -175,6 +230,7 @@ function oneOf(where, field, value, allowed, fallback) {
 const syncedAt = new Date().toISOString();
 // Map par id : deux entrées identiques ne doivent pas se heurter dans un même upsert.
 const events = new Map();
+const meetings = {}; // liens de visio, rangés à part (dashboard_settings), voir l'en-tête
 input.events.forEach((e, i) => {
   const where = `events[${i}]`;
   const all_day = bool(where, 'all_day', e?.all_day);
@@ -193,6 +249,10 @@ input.events.forEach((e, i) => {
   };
   if (row.ends_at && row.starts_at && row.ends_at < row.starts_at) errors.push(`${where} : "end" est avant "start".`);
   if (id) events.set(id, row);
+  if (e?.meeting_url != null && e.meeting_url !== '') {
+    if (!meetingProvider(e.meeting_url)) errors.push(`${where} : "meeting_url" n'est pas un lien de visio reconnu (${JSON.stringify(e.meeting_url)}).`);
+    else if (id) meetings[id] = { url: e.meeting_url, src: oneOf(where, 'meeting_source', e.meeting_source, ['google', 'mail'], 'google') };
+  }
 });
 
 const mails = new Map();
@@ -231,6 +291,7 @@ const tables = [
   { name: 'mail_items', rows: recent.slice(0, MAIL_LIMIT), purge: (q) => q },
 ];
 for (const t of tables) console.log(`${t.name} : ${t.rows.length} ligne(s) dans le fichier.`);
+console.log(`liens de visio : ${Object.keys(meetings).length} dans le fichier.`);
 
 if (dry) {
   console.log('[dry-run] fichier valide, rien écrit.');
@@ -270,3 +331,5 @@ for (const { name, rows, purge } of tables) {
   }
   console.log(`${name} : ${rows.length} upsertée(s), ${stale.length} supprimée(s).`);
 }
+
+if (Object.keys(meetings).length) await saveMeetingLinks(db, meetings);

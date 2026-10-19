@@ -13,6 +13,7 @@ import {
   blockWidthPx, clampOffset, describeWhen, doneEventIds, eventForm, hasAllDay, isNarrow, isToConfirm, shiftEvent, showBlockIcon, snapMinutes, timeParis,
   titleClearance, todayParis,
 } from '@/lib/home';
+import { meetingProvider } from '@/lib/meeting';
 
 const HOUR_PX_MIN = 36; // hauteur minimale d'une heure dans la grille (téléphone, petite fenêtre)
 const HOUR_PX_MAX = 72; // plafond quand l'agenda remplit un grand écran (page « tout sur un écran »)
@@ -255,6 +256,18 @@ function EventDetail({ event, today, categories, onClose, ideas, tasks, onMove, 
                 <PlacedTask key={t.id} task={t} />
               ))}
             </ul>
+          )}
+          {event.meeting_url && (
+            // Le navigateur propose ensuite d'ouvrir l'application (Teams, Zoom) ou rejoint Meet directement.
+            <Button
+              level="primary"
+              className="self-start"
+              data-testid="join-meeting"
+              title={event.meeting_url}
+              onClick={() => window.open(event.meeting_url, '_blank', 'noopener,noreferrer')}
+            >
+              Rejoindre la réunion ({meetingProvider(event.meeting_url)})
+            </Button>
           )}
           {event.conflict && <p className="text-sm font-semibold text-[var(--late-text)]">Conflit avec un autre événement</p>}
           {event.link && (
