@@ -18,6 +18,14 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   (`scripts/claude-hook-session-end.mjs`, à copier dans chaque repo suivi) →
   `POST /api/hooks/session-end`. Actif dans EDHEC AI, Stage et 3 sous-projets
   Spircle ; pas encore installé sur ce repo.
+- **Activité du jour** (2026-10-19, pour l'artifact « Ma journée » de Thibaut, qui doit être en direct) :
+  hook global `GLOBAL/Systeme/Hooks/activite-jour/activite-jour.js` (UserPromptSubmit + Stop, toutes les
+  sessions du PC, envoi détaché) → `POST /api/hooks/activite` (HOOK_SECRET) → fonction `activite_noter`,
+  tables `activite_sessions` et `activite_evenements` (`supabase/activite-jour.sql`, à exécuter par Thibaut,
+  RLS sans policy anon). Lecture : `GET /api/public/activite?cle=&depuis=&vue=sessions|evenements`, clé
+  `ACTIVITE_CLE` (variable Vercel, distincte de HOOK_SECRET), lue par le connecteur Vercel de l'artifact.
+  Titres de session, thème, heures, nombre de messages ; jamais le contenu. Thème déduit du titre puis du
+  dossier (`lib/activite.js`, testé par `scripts/check-activite.mjs`) ; routine = balise `<scheduled-task`.
 - **Claude Brain** : table `brain_notes`, `GET`/`POST /api/brain-notes`,
   `PATCH /api/brain-notes/[id]` (voir `../../claude.brain/CLAUDE.md`).
 - **API publique** `GET /api/public/overview` (CORS ouvert, sans secret) : statut
