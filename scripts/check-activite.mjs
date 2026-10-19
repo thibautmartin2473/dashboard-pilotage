@@ -5,6 +5,7 @@ import { dossierCourt, lignesEvenements, lignesSessions, lireDepuis, lirePayload
 // Thème : le titre prime sur le dossier, « Système » par défaut.
 assert.equal(themeOf({ titre: 'Révision AFA : entraînement', dossier: 'C:\\x\\tests-conseil' }), 'Cours EDHEC');
 assert.equal(themeOf({ titre: 'Bilan tests-conseil 2026-10-19', dossier: 'C:\\x\\tests-conseil' }), 'Carrière');
+assert.equal(themeOf({ titre: 'Activité et progression quotidienne', dossier: 'C:\\x\\tests-conseil' }), 'Système');
 assert.equal(themeOf({ titre: 'Veille offres stage et premier CDI' }), 'Carrière');
 assert.equal(themeOf({ titre: 'Cadran persistance', dossier: 'C:\\GLOBAL\\Projets\\bureau-cadran' }), 'Dashboard');
 assert.equal(themeOf({ titre: 'Veille design : nouveaux concepts' }), 'Design');
@@ -55,21 +56,19 @@ const evs = [
   { session_id: 's3', at: '2026-10-19T08:00:00Z', evenement: 'stop' }, // session inconnue : gardée, sans titre
 ];
 const ls = lignesSessions(sessions, evs);
-assert.deepEqual(ls.map((r) => r.id), ['s3', 's1', 's2']);
-assert.deepEqual(ls[1], {
+assert.deepEqual(ls.map((r) => r.id), ['s1', 's2']); // s3 sans titre : écartée
+assert.deepEqual(ls[0], {
   id: 's1', titre: 'Révision AFA', theme: 'Cours EDHEC', type: 'travail', dossier: 'tests-conseil',
   debut: '2026-10-19T07:30:00.000Z', derniere: '2026-10-19T07:50:00.000Z', messages: 2,
 });
-assert.equal(ls[2].type, 'routine');
-assert.equal(ls[2].dossier, 'sans dossier');
-assert.equal(ls[0].titre, 'Session sans titre');
-assert.equal(ls[0].messages, 0);
+assert.equal(ls[1].type, 'routine');
+assert.equal(ls[1].dossier, 'sans dossier');
 assert.deepEqual(lignesSessions([], []), []);
 
 const le = lignesEvenements(sessions, evs);
-assert.equal(le.length, 5);
+assert.equal(le.length, 4);
 assert.equal(le[0].session_id, 's2');
 assert.equal(le[0].type, 'routine');
-assert.equal(le[4].theme, 'Système');
+assert.ok(le.every((e) => e.session_id !== 's3'));
 
 console.log('check-activite : OK');
