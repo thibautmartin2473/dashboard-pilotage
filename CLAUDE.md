@@ -27,6 +27,9 @@ Statut au 2026-09-20 : construit et déployé sur Vercel
   connecteur Vercel de claude.ai est refusé sur l'équipe « spircle » (403 au contournement de protection,
   2026-10-19) ; il lit les tables par le connecteur Supabase (`execute_sql`, thème recalculé en SQL avec les
   mêmes motifs que `lib/activite.js` : garder les deux alignés). La route reste pour tout autre lecteur.
+  L'artifact lit aussi `avancement` (objectifs) et `tasks` ; pour que les niveaux soient en direct, le même hook
+  relance `scripts/push-avancement.mjs` (checkout principal) à chaque fin de tour d'une session de travail, au plus
+  toutes les 3 minutes, en plus de la tâche planifiée de 20h50.
   Titres de session, thème, heures, nombre de messages ; jamais le contenu. Thème déduit du titre puis du
   dossier (`lib/activite.js`, testé par `scripts/check-activite.mjs`) ; routine = balise `<scheduled-task`.
 - **Claude Brain** : table `brain_notes`, `GET`/`POST /api/brain-notes`,
