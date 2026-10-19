@@ -28,8 +28,9 @@
 // script ne l'écrase pas et ne le purge pas, même s'il est dans le fichier ou absent de celui-ci.
 // Cycle, en session Claude :
 //   node --env-file=.env.local scripts/push-agenda.mjs --pending
-//     -> JSON [{ "id", "title", "starts_at", "ends_at" }] sur la sortie standard (ISO UTC) ;
-//   écrire ces heures dans Google Agenda (même id d'événement), puis acquitter :
+//     -> JSON [{ "id", "title", "location", "starts_at", "ends_at" }] sur la sortie standard (ISO UTC) ;
+//   écrire ces heures, ce titre et ce lieu dans Google Agenda (même id d'événement ; le Bureau Cadran
+//   marque aussi un titre ou un lieu modifié), puis acquitter :
 //   node --env-file=.env.local scripts/push-agenda.mjs --ack <id1,id2,...>
 //     -> remet pending_move = false ; la synchro suivante reprend l'événement tel que dans Google.
 
@@ -68,7 +69,7 @@ function dbFail(error) {
 async function pendingMoves(db) {
   const { data, error } = await db
     .from('calendar_events')
-    .select('id, title, starts_at, ends_at')
+    .select('id, title, location, starts_at, ends_at')
     .eq('pending_move', true)
     .order('starts_at');
   if (error && ['PGRST204', '42703'].includes(error.code)) {
