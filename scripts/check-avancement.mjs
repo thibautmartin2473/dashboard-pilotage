@@ -415,4 +415,21 @@ assert.equal(vSrc.groups[0].calculeLe, '2026-10-13');
 assert.equal(vSrc.groups[0].lignes[0].ancienne, '', 'ligne à jour');
 assert.equal(vSrc.groups[0].lignes[1].ancienne, '10 oct.', 'valeur gardée d\'un calcul précédent (source illisible)');
 
+// Progression du jour (artifact « Ma journée »).
+{
+  const { jourLogique, questionsDuJour, suiviDuJour } = await import('../lib/avancement-calc.js');
+  assert.equal(jourLogique(new Date('2026-10-19T09:00:00Z')), '2026-10-19', 'matin : même jour');
+  assert.equal(jourLogique(new Date('2026-10-20T00:30:00Z')), '2026-10-19', '2h30 à Paris : encore la veille');
+  assert.equal(jourLogique(new Date('2026-10-20T02:30:00Z')), '2026-10-20', '4h30 à Paris : nouveau jour');
+  const j = ['## Journal', '- 2026-10-19 · N1 · cas 4', '- 2026-10-18 · N2 · x', '  - 2026-10-19 · N3 · y', 'texte 2026-10-19 · pas une ligne'].join(String.fromCharCode(10));
+  assert.equal(questionsDuJour(j, '2026-10-19'), 2, 'lignes datées du jour');
+  assert.equal(questionsDuJour(null, '2026-10-19'), 0);
+  const e = { points: 50, total_points: 138 };
+  assert.deepEqual(suiviDuJour({ extra: e, ancien: { points: 43 }, jour: '2026-10-19' }), { points: 50, total_points: 138, jour: '2026-10-19', points_debut_jour: 43 }, 'premier relevé du jour : départ = relevé précédent');
+  assert.equal(suiviDuJour({ extra: e, ancien: { points: 48, jour: '2026-10-19', points_debut_jour: 43 }, jour: '2026-10-19' }).points_debut_jour, 43, 'même jour : départ gardé');
+  assert.equal(suiviDuJour({ extra: e, ancien: { points: 60, jour: '2026-10-18', points_debut_jour: 40 }, jour: '2026-10-19' }).points_debut_jour, 60, 'nouveau jour : départ = points de la veille');
+  assert.equal(suiviDuJour({ extra: e, ancien: undefined, jour: '2026-10-19' }).points_debut_jour, 50, 'aucun relevé avant : départ = maintenant');
+  assert.deepEqual(suiviDuJour({ extra: { passe: true }, ancien: {}, jour: '2026-10-19' }), { passe: true }, 'sans points : inchangé');
+}
+
 console.log('check-avancement : OK');
