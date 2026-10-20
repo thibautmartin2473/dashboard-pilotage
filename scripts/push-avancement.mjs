@@ -199,10 +199,10 @@ if (!zone) {
     const cle = `sb:test:${t.id.toLowerCase()}`;
     if (t.niveau == null) {
       if (t.brut && t.brut !== '-') warn(`Progression.md : niveau « ${t.brut} » illisible pour le test ${t.id} : ligne sans mesure.`);
-      add({ cle, groupe: 'strategy-boost', typeLabel: 'Test en ligne', libelle, explication, kind: 'sans_mesure', valeurTexte: 'pas de mesure', echeance: ECHEANCE_CANDIDATURE, detail: `${t.seances} séance${t.seances > 1 ? 's' : ''} de drill` });
+      add({ cle, groupe: 'strategy-boost', typeLabel: 'Test en ligne', libelle, explication, kind: 'sans_mesure', valeurTexte: 'pas de mesure', echeance: ECHEANCE_CANDIDATURE, detail: `${t.seances} séance${t.seances > 1 ? 's' : ''} de drill`, extra: { seances: t.seances } });
       continue;
     }
-    add({ cle, groupe: 'strategy-boost', typeLabel: 'Test en ligne', libelle, explication, kind: 'niveau', valeur: t.niveau, max: 5, attendu: niveauAttendu(ECHEANCE_CANDIDATURE), echeance: ECHEANCE_CANDIDATURE, detail: `${t.seances} séance${t.seances > 1 ? 's' : ''} de drill` });
+    add({ cle, groupe: 'strategy-boost', typeLabel: 'Test en ligne', libelle, explication, kind: 'niveau', valeur: t.niveau, max: 5, attendu: niveauAttendu(ECHEANCE_CANDIDATURE), echeance: ECHEANCE_CANDIDATURE, detail: `${t.seances} séance${t.seances > 1 ? 's' : ''} de drill`, extra: { seances: t.seances } });
   }
   // Vitesse de la semaine + fraîcheur réelle de la source (« Calculé le » de Progression.md), affichées en tête du groupe.
   const vitesse = parseVitesse(zone);
@@ -521,7 +521,7 @@ if (dry) {
   if (selErr) fail('Lecture impossible', selErr);
   // Points du début de journée gardés d'un relevé à l'autre (progression du jour de l'artifact « Ma journée »).
   const anciens = new Map((existingRows ?? []).map((r) => [r.cle, r.extra]));
-  for (const r of rows) if (r.extra && r.extra.points != null) r.extra = suiviDuJour({ extra: r.extra, ancien: anciens.get(r.cle), jour: jourLog });
+  for (const r of rows) if (r.extra && (r.extra.points != null || r.extra.seances != null)) r.extra = suiviDuJour({ extra: r.extra, ancien: anciens.get(r.cle), jour: jourLog });
   const plan2 = planWrite({ rows, existing: (existingRows ?? []).map((r) => r.cle), protectedKeys, protectedPrefixes });
 
   if (plan2.upsert.length) {
