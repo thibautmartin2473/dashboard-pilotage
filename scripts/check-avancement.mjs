@@ -429,6 +429,9 @@ assert.equal(vSrc.groups[0].lignes[1].ancienne, '10 oct.', 'valeur gardée d\'un
   assert.equal(suiviDuJour({ extra: e, ancien: { points: 48, jour: '2026-10-19', points_debut_jour: 43 }, jour: '2026-10-19' }).points_debut_jour, 43, 'même jour : départ gardé');
   assert.equal(suiviDuJour({ extra: e, ancien: { points: 60, jour: '2026-10-18', points_debut_jour: 40 }, jour: '2026-10-19' }).points_debut_jour, 60, 'nouveau jour : départ = points de la veille');
   assert.equal(suiviDuJour({ extra: e, ancien: undefined, jour: '2026-10-19' }).points_debut_jour, 50, 'aucun relevé avant : départ = maintenant');
+  const sx = suiviDuJour({ extra: { seances: 5 }, ancien: { seances: 4 }, jour: '2026-10-20' });
+  assert.equal(sx.seances_debut_jour, 4, 'séances : départ = relevé précédent');
+  assert.equal(suiviDuJour({ extra: { seances: 6 }, ancien: { seances: 5, jour: '2026-10-20', seances_debut_jour: 4 }, jour: '2026-10-20' }).seances_debut_jour, 4, 'séances : départ gardé le même jour');
   assert.deepEqual(suiviDuJour({ extra: { passe: true }, ancien: {}, jour: '2026-10-19' }), { passe: true }, 'sans points : inchangé');
 }
 
