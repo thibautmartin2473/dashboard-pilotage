@@ -14,7 +14,7 @@ Site construit et déployé sur Vercel
   `GLOBAL\Systeme\Branches\agenda-taches.md`, « Une seule surface ») : ne branche pas de nouvelle vue
   dessus.
 - **Sécurité** : Basic Auth (`proxy.js`), sauf les routes cron, hooks, public et
-  brain-notes. RLS activé sur les 6 tables (`supabase/enable_rls.sql`, exécuté
+  brain-notes. RLS activé sur les 6 tables d'origine (les tables ajoutées depuis l'ont aussi, voir ci-dessous) (`supabase/enable_rls.sql`, exécuté
   par Thibaut le 2026-09-20) : la clé anon ne peut que lire, les écritures
   passent par le client admin. `brain_notes` est lue côté serveur (`lib/brain.js`) ;
   `supabase/ideas.sql` retire sa lecture anon.
