@@ -8,7 +8,7 @@
 // 20h50 (scripts/install-taches.ps1). Les sources sont en LECTURE SEULE ; la table est un cache : les lignes qui
 // ne sont plus produites sont supprimées, SAUF celles d'une source illisible (voir plus bas). Logique pure et
 // lecture des tableaux : lib/avancement-calc.js, vérifiée par scripts/check-avancement.mjs. Règles complètes :
-// CLAUDE.md, section « Avancement ».
+// docs/claude-branches/avancement.md.
 //
 // Source illisible (fichier absent, dossier vide, tableau introuvable) : jamais de 0 inventé, jamais d'effacement.
 // Les lignes de cette source gardent leur ancienne valeur (ni écrasées ni supprimées), une ligne « source illisible »

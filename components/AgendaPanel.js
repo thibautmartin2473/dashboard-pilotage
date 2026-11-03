@@ -399,7 +399,7 @@ function AddMenu({ disabled, onAdd, onCategories }) {
 // cinquième de la largeur de la bande), moins sur téléphone (DAY_MIN_REM). Elle s'ouvre sur aujourd'hui ; on la fait glisser à la main
 // (souris : appui sur le fond de la grille ; pavé tactile, doigt, Maj + molette : défilement natif)
 // ou aux flèches, avec un aimant sur chaque jour. Heures fixes de 8 h à 22 h. Blocs façon Calendrier
-// d'Apple (type, icône, états : voir lib/home.js blockKind et la section « Agenda » de CLAUDE.md), les
+// d'Apple (type, icône, états : voir lib/home.js blockKind et les feuilles agenda-affichage.md et agenda-sync.md de docs/claude-branches), les
 // tâches posées par-dessus leur plage. La colonne des heures reste fixe.
 export default function AgendaPanel({ week: serverWeek, state, now, ideas, tasks, openTasks, done, categories, kindOverrides = NO_OVERRIDES, visibleDays = VISIBLE_DAYS, focusHref }) {
   const [selectedId, setSelectedId] = useState(null);
