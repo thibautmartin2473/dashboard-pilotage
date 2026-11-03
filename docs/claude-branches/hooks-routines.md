@@ -5,7 +5,7 @@ Périmètre : tout ce qui écrit dans la base sans clic de Thibaut ou à heure f
 - **Suivi des sessions Claude** : hook de fin de session
   (`scripts/claude-hook-session-end.mjs`, à copier dans chaque repo suivi) →
   `POST /api/hooks/session-end`. Actif dans EDHEC AI, Stage et 3 sous-projets
-  Spircle ; pas encore installé sur ce repo.
+  Spircle ; non installé sur ce repo au 2026-11-03 (aucun hook dans `.claude/settings.local.json`).
 - **Activité du jour** (2026-10-19, pour l'artifact « Ma journée » de Thibaut, qui doit être en direct) :
   hook global `GLOBAL/Systeme/Hooks/activite-jour/activite-jour.js` (UserPromptSubmit + Stop, toutes les
   sessions du PC, envoi détaché) → `POST /api/hooks/activite` (HOOK_SECRET) → fonction `activite_noter`,
